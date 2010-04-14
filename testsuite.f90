@@ -46,9 +46,6 @@ program TestSuite
   !Initialize tensor
   A = new_MPSTensor(2,2,3)
   
-  !set data
-  call set_element(A,1,1,1, 1.0d0)
-  call set_element(A,2,1,1, 1.0d0)
 
 
 ! ##### END TESTING, FINAL REPORT

@@ -23,6 +23,7 @@ module Tensor
 
  contains
 
+   
 !###########  new
    function new_MPSTensor (s,DL,DR) result (this)
      integer,intent(in) :: s,DL,DR
@@ -99,25 +100,6 @@ module Tensor
 !###########       
 
 !###########       Accessor methods
-   subroutine Set_Tensor_Element_C(this,s,i,j,value,error)
-     type(MPSTensor),intent(IN) :: this
-     integer s,i,j
-     complex(8) value
-     integer,optional :: error
-
-     if(.not.(this%initialized)) then
-        call ThrowException('Set_Tensor_Element_C','Tensor not initialized',NoErrorCode,CriticalError)
-        if(present(error)) error=CriticalError
-        return
-     endif
-
-     if(s>this%spin.or.s<1.or.i<1.or.i>this%DLeft.or.j<1.or.j>this%DRight) then
-        call ThrowException('Set_Tensor_Element_C','Spin or bond dimension out of bounds',NoErrorCode,Warning)
-        if(present(error)) error=Warning
-        return
-     endif
-
-     this%data(i,j,s)=value
 
 
 end module Tensor
