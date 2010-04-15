@@ -100,6 +100,37 @@ module Tensor
 !###########       
 
 !###########       Accessor methods
+   integer function Spin(this) result(s)
+     type(MPSTensor),intent(IN) :: this
+     if(.not.(this%initialized)) then
+        call ThrowException('Spin','Tensor not initialized',NoErrorCode,Warning)
+        return
+     else
+        s=this%spin
+     endif
+   end function Spin
 
+   integer function DLeft(this) result(DL)
+     type(MPSTensor),intent(IN) :: this
+     if(.not.(this%initialized)) then
+        call ThrowException('DLeft','Tensor not initialized',NoErrorCode,Warning)
+        return
+     else
+        DL=this%DLeft
+     endif
+   end function DLeft
+
+   integer function DRight(this) result(DR)
+     type(MPSTensor),intent(IN) :: this
+     if(.not.(this%initialized)) then
+        call ThrowException('DRight','Tensor not initialized',NoErrorCode,Warning)
+        return
+     else
+        DR=this%DRight
+     endif
+   end function DRight
+
+!############        Left and right product
+   
 
 end module Tensor

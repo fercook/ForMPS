@@ -56,7 +56,7 @@ clean :
 
 #-----------------------------------------------------------------------
 #
-testsuite: $(OBJS) testsuite.f90
-	$(FCOMP) $(FLAGS) $(OBJS) testsuite.f90 -o Testsuite
+testsuite: $(OBJS) testsuite.f90 testhelp.o
+	$(FCOMP) $(FLAGS) $(OBJS) testhelp.o testsuite.f90 -o Testsuite
 	./Testsuite > test.output
 #

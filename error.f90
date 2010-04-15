@@ -1,3 +1,9 @@
+! Module for standard error handling
+! it exports constants that describe normal behavior or slight or
+!  critical errors. Main routine is ThrowException, that is called
+!   when an error is found, it informs the user, and then evaluates
+!    if aborting the program is necessary.
+
 module ErrorHandling
   
   integer,parameter :: MaxErrorAllowed=0

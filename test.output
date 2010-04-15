@@ -19,9 +19,12 @@
  (0.000000000000000E+000,0.000000000000000E+000)
  (0.000000000000000E+000,0.000000000000000E+000)
  (0.000000000000000E+000,0.000000000000000E+000)
- .print.tensor                       = PASSED 
- Delete tensor                       = PASSED 
+ .print.tensor  = PASSED 
+ Delete tensor = PASSED 
+ Spin Accessor = PASSED 
+ DLeft Accessor = PASSED 
+ DRight Accessor = PASSED 
      ###########################   
  ####      SUMMARY OF TESTS     ####
      ###########################   
- Tests PASSED :           3  out of            3
+ Tests PASSED :           6  out of            6
