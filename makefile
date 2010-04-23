@@ -28,7 +28,7 @@ LINKFLAGS=
 endif
 
 BINARIES=_$(SYS)
-SOURCES = error.f90 tensor.f90
+SOURCES =  constants.f90 error.f90 tensor.f90 
 OBJS = $(SOURCES:.f90=.o)
 
 all: fullmake

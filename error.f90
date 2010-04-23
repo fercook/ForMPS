@@ -6,13 +6,16 @@
 
 module ErrorHandling
   
-  integer,parameter :: MaxErrorAllowed=0
+  integer :: MaxErrorAllowed=0
+
   integer,parameter :: Warning = -1
   integer,parameter :: Normal = 0
   integer,parameter :: MinorError = 1
   integer,parameter :: CriticalError = 2
   integer,parameter :: NoErrorCode = 0
   
+  logical :: ErrorFlagged = .false.
+
 contains
   
   subroutine ThrowException(caller,message,errorcode,errordegree)
@@ -28,8 +31,25 @@ contains
        stop
     else
        print *,'Continuing...'
+       ErrorFlagged=.true.
        print *,'####### WARNING ####### '
     endif
   end subroutine ThrowException
+
+  subroutine LowerFlag(verbose)
+    logical,intent(IN) :: verbose
+    
+    if(verbose) print *,'Lowering error flag'
+
+    ErrorFlagged=.false.
+  end subroutine LowerFlag
+
+  logical function WasThereError(verbose) result(answer)
+    logical,intent(IN) :: verbose
+
+    if(verbose) print *,'Error flagged = ',Errorflagged
+    answer=ErrorFlagged
+    return
+  end function WasThereError
 
 end module ErrorHandling
