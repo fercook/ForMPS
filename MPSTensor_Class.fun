@@ -1,5 +1,5 @@
 test_suite MPSTensor_Class
-  type(MPSTensor) :: A,B,C
+  type(MPSTensor) :: A,B,C,D,E,F
   logical :: Verbose=.false.
   integer error
   integer :: BondL=3
@@ -23,6 +23,7 @@ test type_creation_deletion
   B=new_MPSTensor(SpinT,BondL,BondR)
   assert_equal(B%Print(),Normal)
   assert_equal(B%delete(),Normal)
+  assert_false(WasThereError(verbose))
 end test
 
 test accesors_work
@@ -30,6 +31,7 @@ test accesors_work
   assert_equal(A%spin(),SpinT)
   assert_equal(A%DLeft(),BondL)
   assert_equal(A%DRight(),BondR)
+  assert_false(WasThereError(verbose))
 end test
 
 test Comparison_Of_Dimensions
@@ -39,6 +41,202 @@ test Comparison_Of_Dimensions
   error=B%delete()
   B=new_MPSTensor(SpinT,BondL,BondR)
   assert_true(A.equaldims.B)
+  assert_false(WasThereError(verbose))
+end test
+
+test Multiplication_By_Number
+  integer :: I = 2
+  real :: R = 2.0
+  real(8) :: R8 = 2.0d0
+  complex :: C = 2.0
+  complex(8) :: C8 = 2.0d0
+  A=new_MPSTensor(SpinT,BondL,BondR)
+  B=new_MPSTensor(A)
+  assert_equal_within((I*A).diff.(R*B),0.0d0, 1.0e-8)
+  assert_equal_within((R8*A).diff.(C*B),0.0d0, 1.0e-8)
+  assert_equal_within((I*A).diff.(C8*B),0.0d0, 1.0e-8)
+  assert_false(WasThereError(verbose))
+end test
+
+test L_product_single
+  integer,parameter :: DleftT=1, DrightT=4
+  complex(8) :: data(DleftT,DrightT,spinT)
+  complex(8) :: CorrectResult(DrightT,DrightT,1)
+  integer :: shape(3)
+  integer n,i,j,k,s
+  do i=1,DleftT
+     do j=1,DrightT
+        do s=1,spinT
+           data(i,j,s)=one*(i+(j-1)*DleftT+(s-1)*DrightT)
+        enddo
+     enddo
+  enddo
+  shape = [DrightT,DrightT,1]
+  CorrectResult=reshape([26, 32, 38, 44, 32, 40, 48, 56, 38, 48, 58, 68, 44, 56, 68, 80], shape)
+  A=new_MPSTensor(SpinT,DLeftT,DRightT,data)
+  C=new_MPSTensor(1,DrightT,DrightT,CorrectResult)
+  D=MPS_Left_Product(A,A)
+  assert_equal_within(D.diff.C, 0.0d0, 1.0e-8)
+  assert_false(WasThereError(verbose))
+end test
+
+
+test L_product_withMatrix
+!
+!  Mathematica code: NOTICE THE TRANSPOSE TO GET THE ORDER RIGHT
+! With[{DL = 3, DR = 4, spin = 2}, 
+!   At = Table[
+!     DR*(s - 1) + (j - 1)*DL + i, {s, 1, 2}, {i, 1, DL}, {j, 1, DR}];
+!   mat = Table[I^i + (j - 1)*DL, {i, 1, DL}, {j, 1, DL}]];
+!  Flatten[Transpose[LProduct[At, At, mat]]]
+!
+  integer,parameter :: DleftT=3, DrightT=4
+  complex(8) :: data(DleftT,DrightT,spinT)
+  complex(8) :: matrix(DleftT,DleftT,1)
+  complex(8) :: CorrectResult(DrightT,DrightT,1)
+  integer :: shape(3)
+  integer n,i,j,k,s
+  do i=1,DleftT
+     do j=1,DrightT
+        do s=1,spinT
+           data(i,j,s)=one*(i+(j-1)*DleftT+(s-1)*DrightT)
+        enddo
+     enddo
+  enddo
+  do i=1,DleftT
+     do j=1,DleftT
+        matrix(i,j,1)=(II**i+(j-1)*DleftT)
+     enddo
+  enddo
+  shape = [DrightT,DrightT,1]
+  CorrectResult=reshape([1104 - 48*II, 1788 - 48*II, 2472 - 48*II, 3156 - 48*II, 1680 - &
+       &  84*II, 2796 - 84*II, 3912 - 84*II, 5028 - 84*II, 2256 - 120*II, 3804 - &
+       &  120*II, 5352 - 120*II, 6900 - 120*II, 2832 - 156*II, 4812 - &
+       &  156*II, 6792 - 156*II, 8772 - 156*II], shape)
+  A=new_MPSTensor(SpinT,DLeftT,DRightT,data)
+  B=new_MPSTensor(1,DleftT,DleftT,matrix)
+  C=new_MPSTensor(1,DrightT,DrightT,CorrectResult)
+  D=MPS_Left_Product(A,A,B)
+  assert_equal_within(D.diff.C, 0.0d0, 1.0e-8)
+  assert_false(WasThereError(verbose))
+end test
+
+test R_product_single
+!!  Mathematica test code:
+!!  With[{DL = 4, DR = 1, spin = 2}, 
+!!  At = Table[
+!!    DR*(s - 1) + (j - 1)*DL + i, {s, 1, 2}, {i, 1, DL}, {j, 1, DR}]];
+!!  Flatten[Transpose[RProduct[At, At]]]
+!!
+  integer,parameter :: DleftT=4, DrightT=1
+  complex(8) :: data(DleftT,DrightT,spinT)
+  complex(8) :: CorrectResult(DleftT,DleftT,1)
+  integer :: shape(3)
+  integer n,i,j,k,s
+  do i=1,DleftT
+     do j=1,DrightT
+        do s=1,spinT
+           data(i,j,s)=one*(i+(j-1)*DleftT+(s-1)*DrightT)
+        enddo
+     enddo
+  enddo
+  shape = [DleftT,DleftT,1]
+  CorrectResult=reshape([5, 8, 11, 14, 8, 13, 18, 23, 11, 18, 25, 32, 14, 23, 32, 41], shape)
+  A=new_MPSTensor(SpinT,DLeftT,DRightT,data)
+  C=new_MPSTensor(1,DLeftT,DLeftT,CorrectResult)
+  D=MPS_Right_Product(A,A)
+  assert_equal_within(D.diff.C, 0.0d0, 1.0e-8)
+  assert_false(WasThereError(verbose))
+end test
+
+
+test R_product_withMatrix
+!! Mathematica code: (NOTICE TRANSPOSE TO GET ORDER RIGHT)
+!!
+!! With[{DL = 4, DR = 3, spin = 2}, 
+!!  At = Table[
+!!    DR*(s - 1) + (j - 1)*DL + i, {s, 1, 2}, {i, 1, DL}, {j, 1, DR}];
+!!  mat = Table[I^i + (j - 1)*DR, {i, 1, DR}, {j, 1, DR}]];
+!! Flatten[Transpose[RProduct[At, At, mat]]]
+!!
+  integer,parameter :: DleftT=4, DrightT=3
+  complex(8) :: data(DleftT,DrightT,spinT)
+  complex(8) :: matrix(DrightT,DrightT,1)
+  complex(8) :: CorrectResult(DleftT,DleftT,1)
+  integer :: shape(3)
+  integer n,i,j,k,s
+  do i=1,DleftT
+     do j=1,DrightT
+        do s=1,spinT
+           data(i,j,s)=one*(i+(j-1)*DleftT+(s-1)*DrightT)
+        enddo
+     enddo
+  enddo
+  do i=1,DrightT
+     do j=1,DrightT
+        matrix(i,j,1)=(II**i+(j-1)*DrightT)
+     enddo
+  enddo
+  shape = [DleftT,DleftT,1]
+  CorrectResult=reshape([3072 - 312*II, 3528 - 312*II, 3984 - 312*II, 4440 - 312*II, 3384 - &
+       & 360*II, 3888 - 360*II, 4392 - 360*II, 4896 - 360*II, 3696 - & 
+       & 408*II, 4248 - 408*II, 4800 - 408*II, 5352 - 408*II, 4008 - &
+       & 456*II, 4608 - 456*II, 5208 - 456*II, 5808 - 456*II], shape)
+  A=new_MPSTensor(SpinT,DLeftT,DRightT,data)
+  B=new_MPSTensor(1,DrightT,DrightT,matrix)
+  C=new_MPSTensor(1,DleftT,DleftT,CorrectResult)
+  D=MPS_Right_Product(A,A,B)
+  assert_equal_within(D.diff.C, 0.0d0, 1.0e-8)
+  assert_false(WasThereError(verbose))
+end test
+
+test Mult_by_Matrix
+  integer,parameter :: DleftT=4, DrightT=3
+  complex(8) :: data(DleftT,DrightT,spinT)
+  complex(8) :: matrix(DrightT,DLeftT,1)
+  complex(8) :: CorrectByRight(DleftT,DLeftT,spinT)
+  complex(8) :: CorrectByLeft(DrightT,DrightT,spinT)
+
+  integer :: i,j,k
+  !Initialization
+  forall (i=1:DleftT ,j=1:DrightT, k=1:SpinT) data(i,j,k)=one*(i+(j-1)*DleftT+(k-1)*DrightT)
+  forall (j=1:DleftT ,i=1:DrightT ) matrix(i,j,1)=(II**i+(j-1)*DrightT)
+
+  CorrectByRight(:,:,1)=Reshape( [-5 - 8*II, -6 - 8*II, -7 - 8*II, -8 - 8*II, 40 - 8*II, 48 - 8*II, 56 - &
+      &  8*II, 64 - 8*II, 85 - 8*II, 102 - 8*II, 119 - 8*II, 136 - 8*II, 130 - &
+      &  8*II, 156 - 8*II, 182 - 8*II, 208 - 8*II], [DleftT,DleftT])
+  CorrectByRight(:,:,2)=Reshape( [-8 - 8*II, -9 - 8*II, -10 - 8*II, -11 - 8*II, 64 - 8*II, 72 - 8*II, 80 - &
+      & 8*II, 88 - 8*II, 136 - 8*II, 153 - 8*II, 170 - 8*II, 187 - 8*II, 208 - &
+      & 8*II, 234 - 8*II, 260 - 8*II, 286 - 8*II],[DLeftT,DLeftT])
+  CorrectByLeft(:,:,1)=Reshape( [60 + 10*II, 50, 60 - 10*II, 132 + 26*II, 106, 132 - 26*II, 204 + &
+      & 42*II, 162, 204 - 42*II],[DRightT,DRightT])
+  CorrectByLeft(:,:,2)=Reshape([114 + 22*II, 92, 114 - 22*II, 186 + 38*II, 148, 186 - 38*II, 258 + &
+      & 54*II, 204, 258 - 54*II],[DRightT,DRightT])
+
+   A=new_MPSTensor(SpinT,DLeftT,DrightT,data)
+   B=new_MPSTensor(1,DrightT,DLeftT,matrix)
+
+   C=new_MPSTensor(spinT,DrightT,DrightT,CorrectByLeft)
+   D=new_MPSTensor(2,DrightT,DrightT)
+   D=B*A !Matrix_times_MPSTensor(B,A)
+   assert_equal_within(D.diff.C, 0.0d0, 1.0e-8)
+
+   i=C%delete()
+   i=D%delete()
+   C=new_MPSTensor(spinT,DLeftT,DLeftT,CorrectByRight)
+   D=new_MPSTensor(2,DLeftT,DLeftT)
+   D=A*B !Matrix_times_MPSTensor(A,B)
+   assert_equal_within(D.diff.C, 0.0d0, 1.0e-8)
+				     
 end test
 
 end test_suite
+
+
+
+!  print *,shape(data(:,:,:))
+! print *,'And now'
+!  print *,shape(transpose(data(:,:,:)))
+!!  print *,'And finally'
+!  print *,shape(reshape(data,[DLeftT,spinT*DrightT]))
+!  assert_true(.true.)

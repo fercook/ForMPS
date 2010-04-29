@@ -6,7 +6,7 @@ ARCH:=$(shell uname)
 
 ifeq ($(ARCH),Darwin)
 SYS = MacOSX-x86-64
-LAPACK=
+LAPACK=-L$MKLPATH -I$MKLINCLUDE -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lpthread
 BLAS=
 FLAGS= -O3
 RM=rm
@@ -28,7 +28,7 @@ LINKFLAGS=
 endif
 
 BINARIES=_$(SYS)
-SOURCES =  constants.f90 error.f90 tensor.f90 
+SOURCES =  constants.f90 error.f90 MPSTensor_Class.f90 
 OBJS = $(SOURCES:.f90=.o)
 
 all: fullmake
@@ -53,10 +53,10 @@ install:
 
 clean :
 	@ ${RM} -rf *.o *.mod $(BINARIES)
-
+	funit --clean
 #-----------------------------------------------------------------------
 #
-testsuite: $(OBJS) testsuite.f90 testhelp.o
-	$(FCOMP) $(FLAGS) $(OBJS) testhelp.o testsuite.f90 -o Testsuite
-	./Testsuite > test.output
+testsuite: 
+	funit MPSTensor_Class > test.results
+	tail test.results
 #
