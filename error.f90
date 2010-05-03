@@ -13,7 +13,9 @@ module ErrorHandling
   integer,parameter :: MinorError = 1
   integer,parameter :: CriticalError = 2
   integer,parameter :: NoErrorCode = 0
-  
+
+  logical :: VerboseLevel = .false.
+
   logical :: ErrorFlagged = .false.
 
 contains
@@ -32,22 +34,19 @@ contains
     else
        print *,'Continuing...'
        ErrorFlagged=.true.
-       print *,'####### WARNING ####### '
+       print *,'####  END WARNING  #### '
     endif
   end subroutine ThrowException
 
-  subroutine LowerFlag(verbose)
-    logical,intent(IN) :: verbose
+  subroutine LowerFlag()
     
-    if(verbose) print *,'Lowering error flag'
+    if(VerboseLevel) print *,'Lowering error flag'
 
     ErrorFlagged=.false.
   end subroutine LowerFlag
 
-  logical function WasThereError(verbose) result(answer)
-    logical,intent(IN) :: verbose
-
-    if(verbose) print *,'Error flagged = ',Errorflagged
+  logical function WasThereError() result(answer)
+    if(VerboseLevel) print *,'Error flagged = ',Errorflagged
     answer=ErrorFlagged
     return
   end function WasThereError

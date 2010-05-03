@@ -1,5 +1,7 @@
 !!  This module describes an object with three legs as used by MPS algorithms.
 !!  One leg is "special", it is the physical leg of the tensor.
+!!  In notation it is nice to have the spin as the first index, but in the implementation 
+!!  it is the third, as it makes it better for performance
 
 module MPSTensor_Class
 
@@ -8,7 +10,6 @@ module MPSTensor_Class
 
   implicit none
 
-  !Set maximum bond dimensions and spin
   integer,parameter :: MAX_spin = 2, MAX_D = 100
 
 !###############################
@@ -16,9 +17,9 @@ module MPSTensor_Class
 !###############################
   type MPSTensor
      private
-     integer spin_,DLeft_,DRight_ !D is bond dimension
+     integer spin_,DLeft_,DRight_ 
      logical :: initialized_=.false.
-     complex(8) data_(MAX_D,MAX_D,MAX_spin) !Now uses fixed max dimensions and internal variables to adjust
+     complex(8) data_(MAX_D,MAX_D,MAX_spin) !!$TODO: Now uses fixed max dimensions and internal variables, change to allocatable
    contains
      procedure delete => delete_MPSTensor
      procedure print => print_MPSTensor
@@ -26,7 +27,7 @@ module MPSTensor_Class
      procedure DLeft => DLeft_MPSTensor
      procedure Spin => Spin_MPSTensor
      procedure LCanonize => Left_Canonize_MPSTensor
-     procedure RCanonize => Right_Canonize_MPSTensor
+!     procedure RCanonize => Right_Canonize_MPSTensor !!$TODO: Right canonization
   end type MPSTensor
 
 !###############################
@@ -111,11 +112,9 @@ module MPSTensor_Class
         return
      endif
 
-     !initialize internal variables
      this%spin_=spin
      this%DLeft_=DLeft
      this%DRight_=DRight
-     !initialize data
      this%data_=zero
      do n=1,spin
         do beta=1,DRight
@@ -124,7 +123,6 @@ module MPSTensor_Class
            enddo
         enddo
      enddo
-     !flip flag
      this%initialized_=.true.
 
    end function new_MPSTensor_withData
@@ -145,11 +143,9 @@ module MPSTensor_Class
         return
      endif
 
-     !initialize internal variables
      this%spin_=spin
      this%DLeft_=DLeft
      this%DRight_=DRight
-     !initialize data
      this%data_=zero
      do n=1,spin
         do beta=1,DRight
@@ -158,7 +154,6 @@ module MPSTensor_Class
            enddo
         enddo
      enddo
-     !flip flag
      this%initialized_=.true.
 
    end function new_MPSTensor_withConstant
@@ -173,14 +168,11 @@ module MPSTensor_Class
         return
      endif
 
-     !initialize internal variables
      this%spin_=tensor%spin_
      this%DLeft_=tensor%DLeft_
      this%DRight_=tensor%DRight_
-     !initialize data
      this%data_=zero
      this%data_=tensor%data_
-     !flip flag
      this%initialized_=.true.
 
    end function new_MPSTensor_fromMPSTensor
@@ -361,7 +353,7 @@ module MPSTensor_Class
 
 !##################################################################
 !###  IMPORTANT NOTE ON THE INTERFACE OF Matrix_times_MPSTensor:
-!###  One of the arguments must be a "matrix", i.e. a MPSTensor with spin=1
+!###  One of the arguments must be a "matrix", i.e. a MPSTensor with spin=MatrixSpin=1
 !###  The order of the arguments is VERY important
 !###  If the first argument is a matrix, then the result is matrix.tensor
 !###  otherwise the result is tensor.matrix
@@ -373,17 +365,17 @@ module MPSTensor_Class
 
      if(tensorA%initialized_.and.tensorB%initialized_) then
         if(tensorA%DRight_.eq.tensorB%DLeft_) then
-           !Recognize the matrix because it has spin_=1
-           if (tensorA%spin_.eq.1) then
+           !The trick of using a tensor as a matrix is used here:
+           if (tensorA%spin_.eq.MatrixSpin) then
               this = new_MPSTensor(tensorB%spin_,tensorA%DLeft_,tensorB%DRight_,zero)
               do s=1,tensorB%spin_
-                 call mymatmul(tensorA%data_(:,:,1),tensorB%data_(:,:,s),this%data_(:,:,s), &
+                 call mymatmul(tensorA%data_(:,:,MatrixSpin),tensorB%data_(:,:,s),this%data_(:,:,s), &
                       & tensorA%DLeft_,tensorB%DLeft_,tensorB%DRight_,'N')
               enddo
-           else if (tensorB%spin_.eq.1) then
+           else if (tensorB%spin_.eq.MatrixSpin) then
               this = new_MPSTensor(tensorA%spin_,tensorA%DLeft_,tensorB%DRight_,zero)
               do s=1,tensorA%spin_
-                 call mymatmul(tensorA%data_(:,:,s),tensorB%data_(:,:,1),this%data_(:,:,s), &
+                 call mymatmul(tensorA%data_(:,:,s),tensorB%data_(:,:,MatrixSpin),this%data_(:,:,s), &
                       & tensorA%DLeft_,tensorB%DLeft_,tensorB%DRight_,'N')
               enddo              
            else
@@ -482,20 +474,18 @@ module MPSTensor_Class
            return           
         endif
      else
-        L_in_matrix=new_MPSTensor(1,TensorB%DLeft_,TensorA%DLeft_,one)
+        L_in_matrix=new_MPSTensor(MatrixSpin,TensorB%DLeft_,TensorA%DLeft_,one)
      endif
 
-     matrixout=new_MPSTensor(1, TensorB%DRight_,TensorA%DRight_, zero)
-     TempMatrix=new_MPSTensor(1,TensorB%DLeft_ ,TensorA%DRight_, zero)
+     matrixout=new_MPSTensor(MatrixSpin, TensorB%DRight_,TensorA%DRight_, zero)
+     TempMatrix=new_MPSTensor(MatrixSpin,TensorB%DLeft_ ,TensorA%DRight_, zero)
 
      !The multiplications are done by hand because I could not get ZGEMM to work properly
      do s=1,TensorA%Spin_
-        !TempMatrix = InternalMatrix * TensorA
         Tempmatrix%data_=0.0d0        
-        call mymatmul(L_in_matrix%data_(:,:,1),TensorA%data_(:,:,s),Tempmatrix%data_(:,:,1), &
+        call mymatmul(L_in_matrix%data_(:,:,MatrixSpin),TensorA%data_(:,:,s),Tempmatrix%data_(:,:,MatrixSpin), &
              & TensorB%DLeft_,TensorA%DLeft_,TensorA%DRight_,'N')
-        ! matrixout = TensorB^\dagger * TempMatrix
-        call mymatmul(TensorB%data_(:,:,s),Tempmatrix%data_(:,:,1), MatrixOut%data_(:,:,1), &
+        call mymatmul(TensorB%data_(:,:,s),Tempmatrix%data_(:,:,MatrixSpin), MatrixOut%data_(:,:,MatrixSpin), &
              & TensorB%DRight_,TensorB%DLeft_,TensorA%DRight_,'A')
     enddo
     return 
@@ -521,8 +511,8 @@ module MPSTensor_Class
        return
     endif
     
-    matrixout=new_MPSTensor(1, TensorA%DLeft_,TensorB%DLeft_, zero)
-    TempMatrix=new_MPSTensor(1,TensorA%DLeft_ ,TensorB%DRight_, zero)
+    matrixout=new_MPSTensor(MatrixSpin, TensorA%DLeft_,TensorB%DLeft_, zero)
+    TempMatrix=new_MPSTensor(MatrixSpin,TensorA%DLeft_ ,TensorB%DRight_, zero)
     
     if (present(matrixin)) then
        if(matrixin%initialized_) then
@@ -532,17 +522,15 @@ module MPSTensor_Class
           return           
        endif
     else
-       R_in_matrix=new_MPSTensor(1,TensorA%DRight_,TensorB%DRight_,one)
+       R_in_matrix=new_MPSTensor(MatrixSpin,TensorA%DRight_,TensorB%DRight_,one)
     endif
     
     !The multiplications are done by hand because I could not get ZGEMM to work properly
     do s=1,TensorA%Spin_
        Tempmatrix%data_=0.0d0  
-       !TempMatrix =  TensorA * InternalMatrix
-       call mymatmul(TensorA%data_(:,:,s),R_in_matrix%data_(:,:,1),Tempmatrix%data_(:,:,1), &
+       call mymatmul(TensorA%data_(:,:,s),R_in_matrix%data_(:,:,MatrixSpin),Tempmatrix%data_(:,:,MatrixSpin), &
             & TensorA%DLeft_,TensorA%DRight_,TensorB%DRight_,'N')
-       ! matrixout =  TempMatrix * TensorB^\dagger
-       call mymatmul(Tempmatrix%data_(:,:,1),TensorB%data_(:,:,s),MatrixOut%data_(:,:,1), &
+       call mymatmul(Tempmatrix%data_(:,:,MatrixSpin),TensorB%data_(:,:,s),MatrixOut%data_(:,:,MatrixSpin), &
             & TensorA%DLeft_,TensorB%DRight_,TensorB%DLeft_,'B')
     enddo
     return 
@@ -559,20 +547,69 @@ module MPSTensor_Class
   function Left_Canonize_MPSTensor(this) result(matrix)
     class(MPSTensor),intent(INOUT) :: this
     type(MPSTensor) :: matrix
-    complex(8), allocatable :: u(:,:),v(:,:),w(:,:),collapsedTensor(:,:)
-    integer :: dims
+    complex(8), allocatable :: U(:,:),vTransposed(:,:),collapsedTensor(:,:)
+    real(8),allocatable :: Sigma(:)
+    integer :: Spin,LeftBond,RightBond
+    integer :: newLeftBond,newRightBond
+    integer :: jj,kk
 
     if(.not.this%initialized_) then
        call ThrowException('Left_Canonize_MPSTensor','Tensor not initialized',NoErrorCode,CriticalError)
        return
     endif
 
-    allocate(collapsedTensor((this%spin_)*(this%DLeft_),this%DRight_))
-    allocate(u((this%spin_)*(this%DLeft_),(this%spin_)*(this%DLeft_)))
-    allocate(v((this%spin_)*(this%DLeft_),this%DRight_))
-    allocate(w(this%DRight_,this%DRight_))
+    Spin=this%spin_
+    LeftBond=this%DLeft_
+    RightBond=this%DRight_
 
-    
+    allocate(collapsedTensor(Spin*LeftBond,RightBond))
+    allocate(U(Spin*LeftBond,Spin*LeftBond))
+    allocate(Sigma(Min(Spin*LeftBond,RightBond)))
+    allocate(vTransposed(RightBond,RightBond))
+
+    call CollapseSpinWithBond(this,collapsedTensor,FirstDimension)
+    if (WasThereError()) then
+       call ThrowException('Left_Canonize_MPSTensor','Could not collapse the tensor',NoErrorCode,CriticalError)
+       return
+    endif
+
+do jj=1,Spin*LeftBond
+do kk=1,RightBond
+    print *,jj,kk,CollapsedTensor(jj,kk)
+enddo
+enddo
+
+    if(Spin*LeftBond.gt.MAX_D) then
+       call ThrowException('Left_Canonize_MPSTensor','Working dimension larger than Maximum',NoErrorCode,CriticalError)
+       return
+    endif
+
+    kk= SingularValueDecomposition(CollapsedTensor,U,Sigma,vTransposed)
+    print *,'Output of SVD:',kk
+
+    newLeftBond=LeftBond
+    newRightBond=Min(Spin*LeftBond,RightBond)
+
+    print *,'U'
+    print *,U
+
+    print *,'Sigma'
+    print *,Sigma
+
+    print *,'V'
+    print *,vTransposed
+
+!    this=(Partition[u, {newLeftBond, newRightBond}] [[All, 1]])
+    call SplitSpinFromBond(U,this,FirstDimension,newLeftBond,newRightBond)
+    if (WasThereError()) then
+       call ThrowException('Left_Canonize_MPSTensor','Could not split the matrix',NoErrorCode,CriticalError)
+       return
+    endif
+
+    !matrix is Sigma*V^\dagger and reshaped to fit the product with the tensor on the right
+    matrix=new_MPSTensor(MatrixSpin,newRightBond,RightBond, & 
+         & reshape(vecmul(Sigma,conjg(vTransposed)) , [newRightBond,RightBond,MatrixSpin], &
+         & Pad= [ (zero, kk=1,newRightBond*RightBond*MatrixSpin) ]   ) )  !! Pad with zeros at the end
 
   end function Left_Canonize_MPSTensor
   
@@ -635,6 +672,102 @@ module MPSTensor_Class
 !#######################################################################################
 !#######################################################################################
 
+  subroutine CollapseSpinWithBond(this,collapsed,whichDimension)
+    Type(MPSTensor),intent(IN) :: this
+    complex(8),intent(OUT) :: collapsed(:,:)
+    integer,intent(IN) :: whichDimension
+    integer :: s,alpha,beta,leftIndex,rightIndex,leftStep,rightStep,leftDimension,rightDimension
+
+    if(.not.this%initialized_) then
+       call ThrowException('CollapseSpinWithBond','Tensor not initialized',NoErrorCode,CriticalError)
+       return
+    endif
+
+    if (whichDimension.eq.FirstDimension) then
+       leftStep=this%DLeft_
+       rightStep=0
+       leftDimension=(this%spin_*this%DLeft_)
+       rightDimension=(this%DRight_)
+    else if (whichDimension.eq.SecondDimension) then
+       leftStep=0
+       rightStep=this%DRight_
+       leftDimension=(this%DLeft_)
+       rightDimension=(this%spin_*this%DRight_)
+    else
+       call ThrowException('CollapseSpinWithBond','Wrong Dimension parameter',whichDimension,CriticalError)
+       return
+    endif
+    if ((size(collapsed,1).ne.leftDimension).and.(size(collapsed,2).ne.rightDimension)) then
+       call ThrowException('CollapseSpinWithBond','Matrix for collapsed tensor does not have right dimensions',whichDimension,CriticalError)
+       return
+    endif
+
+    !This always puts the spin before the bond dimension,
+    !      [(s,alpha),(beta)]   or  [(alpha),(s,beta)]
+    do s=1,this%Spin_
+       do beta=1,this%DRight_
+          rightIndex=beta+(s-1)*rightStep
+          do alpha=1,this%DLeft_
+             leftIndex=alpha+(s-1)*leftStep
+             collapsed(leftIndex,rightIndex)=this%data_(alpha,beta,s)
+          enddo
+       enddo
+    enddo
+             
+  end subroutine CollapseSpinWithBond
+
+
+!#######################################################################################
+
+
+  subroutine SplitSpinFromBond(matrix,tensor,whichDimension,LeftBond,RightBond)
+    complex(8),intent(IN) :: matrix(:,:)
+    type(MPSTensor),intent(INOUT) :: tensor
+    integer :: whichDimension,LeftBond,RightBond
+    integer :: alpha,beta,s,spin
+    integer :: leftIndex,rightIndex,leftStep,rightStep,leftDimension,rightDimension
+
+    if(.not.tensor%initialized_) then
+       call ThrowException('SplitSpinFromBond','Tensor not initialized',NoErrorCode,CriticalError)
+       return
+    endif
+    
+    spin=tensor%spin_
+    if (whichDimension.eq.FirstDimension) then
+       leftStep=LeftBond
+       rightStep=0
+       leftDimension=Spin*LeftBond
+       rightDimension=RightBond
+    else if (whichDimension.eq.SecondDimension) then
+       leftStep=0
+       rightStep=RightBond
+       leftDimension=LeftBond
+       rightDimension=Spin*RightBond
+    else
+       call ThrowException('CollapseSpinWithBond','Wrong Dimension parameter',whichDimension,CriticalError)
+       return
+    endif
+    if ((size(matrix,1).lt.leftDimension).and.(size(matrix,2).lt.rightDimension)) then
+       call ThrowException('SplitSpinFromBond','Matrix to split does not have right dimensions',whichDimension,CriticalError)
+       return
+    endif
+
+    !This is the best way I found to zero out the tensor
+    tensor=new_MPSTensor(Spin,LeftBond,RightBond,zero)
+    do s=1,Spin
+       do beta=1,RightBond
+          rightIndex=beta+(s-1)*rightStep
+          do alpha=1,LeftBond
+             leftIndex=alpha+(s-1)*leftStep
+             tensor%data_(alpha,beta,s)=matrix(leftIndex,rightIndex)
+          enddo
+       enddo
+    enddo
+            
+  end subroutine SplitSpinFromBond
+
+
+
 
    subroutine mymatmul(A,B,C,indexL,indexC,indexR,mode)
      complex(8) :: A(:,:),B(:,:),C(:,:)
@@ -684,7 +817,106 @@ module MPSTensor_Class
      endif
    end subroutine mymatmul
 
+   function vecmul(vector,matrix) result(this)
+     real(8),intent(IN) :: vector(:)
+     complex(8),intent(IN) :: matrix(:,:)
+     complex(8) :: this(size(matrix,1),size(matrix,2))
+     integer :: LengthOfVector,LeftDimension,RightDimension
+     integer :: i,j
 
+     LengthOfVector=size(vector,1)
+     LeftDimension=size(matrix,1)
+     RightDimension=size(matrix,2)
+
+     this=zero
+     do i=1,min(LeftDimension,LengthOfVector)
+        this(i,:)=vector(i)*matrix(i,:)
+     enddo
+    
+   end function vecmul
+
+   !Simplified interface for LAPACK's ZGESDD routine
+   integer function SingularValueDecomposition(matrix,U,Sigma,vTransposed) result(ErrorCode)
+     complex(8),intent(IN) :: matrix(:,:)
+     complex(8),intent(OUT) :: U(:,:),vTransposed(:,:)
+     real(8),intent(OUT) :: Sigma(:)
+     integer :: LeftDimension,RightDimension
+     !Lapack ugly variables
+     integer :: Lwork,LRWork,LIWork,info
+     complex(8),allocatable :: Work(:)
+     real(8),allocatable :: RWork(:)
+     integer(8),allocatable :: IWork(:)
+     character,parameter :: Jobz='S' !Always get the minimum only, hopefully the rest of the matrix is zeroed out
+
+     LeftDimension=size(matrix,1); RightDimension=size(matrix,2)
+
+     !Checks
+     if( (size(U,1).ne.LeftDimension).or.(size(U,2).ne.LeftDimension).or. &
+          & (size(vTransposed,1).ne.RightDimension).or.(size(vTransposed,2).ne.RightDimension).or. &
+          & (size(Sigma).ne.Min(LeftDimension,RightDimension)) ) then
+        call ThrowException('SingularValueDecomposition','Dimensions of matrices do not match',ErrorCode,CriticalError)
+        return
+     endif        
+
+     !Recommended values of memory allocation from LAPACK documentation
+     LWork=(Min(LeftDimension,RightDimension)*(Min(LeftDimension,RightDimension)+2)+Max(LeftDimension,RightDimension))
+     LRWork=5*Min(LeftDimension,RightDimension)*(Min(LeftDimension,RightDimension)+1)
+     LIWork=8*Min(LeftDimension,RightDimension)
+
+     allocate(Work(LWork),RWork(LRWork),IWork(LIWork),STAT=ErrorCode)
+     If (ErrorCode.ne.Normal) then
+        call ThrowException('SingularValueDecomposition','Could not allocate memory',ErrorCode,CriticalError)
+        return
+     endif
+     !For some reason I need to call LAPACK with LWork=-1 first
+     !And find out the optimum work storage, otherwise it returns an error
+     LWork=-1
+     call ZGESDD(JOBZ, LeftDimension, RightDimension, matrix, LeftDimension, Sigma, U, LeftDimension, vTransposed, RightDimension,WORK,LWORK,RWORK,IWORK,ErrorCode )
+     If (ErrorCode.ne.Normal) then
+        call ThrowException('SingularValueDecomposition','Lapack returned error in ZGESDD',ErrorCode,CriticalError)
+        return
+     endif
+     !And now call with right value of LWork
+     LWork=Max(LWork,Int(Work(1)))
+     deallocate(Work)
+     Allocate(Work(LWork))
+     call ZGESDD(JOBZ, LeftDimension, RightDimension, matrix, LeftDimension, Sigma, U, LeftDimension, vTransposed, RightDimension,WORK,LWORK,RWORK,IWORK,ErrorCode )
+     If (ErrorCode.ne.Normal) then
+        call ThrowException('SingularValueDecomposition','Lapack returned error in ZGESDD',ErrorCode,CriticalError)
+        return
+     endif
+
+     !Clean up
+     deallocate(Work,RWork,IWork,STAT=ErrorCode)
+     If (ErrorCode.ne.Normal) then
+        call ThrowException('SingularValueDecomposition','Problems in deallocation',ErrorCode,CriticalError)
+        return
+     endif
+
+     ErrorCode=Normal
+     
+   end function SingularValueDecomposition
+     
+   real function Difference_btw_Matrices(matrix1, matrix2) result(diff)
+     complex(8) :: matrix1(:,:),matrix2(:,:)
+     integer :: n,m,alpha,beta
+
+     alpha=size(matrix1,1)
+     beta=size(matrix1,2)
+     diff=0.0d0
+     if(alpha.eq.size(matrix2,1).and.beta.eq.size(matrix2,2)) then
+        do n=1,alpha
+           do m=1,beta
+              diff=diff+(abs(matrix1(n,m)-matrix2(n,m)))**2
+           enddo
+        enddo
+     else
+        call ThrowException('Difference_btw_Matrices','Matrices of different shape',NoErrorCode,CriticalError)
+     endif
+     diff=sqrt(diff)
+     return 
+
+   end function Difference_btw_Matrices
 
 
  end module MPSTensor_Class

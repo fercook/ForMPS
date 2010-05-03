@@ -1,6 +1,5 @@
 test_suite MPSTensor_Class
   type(MPSTensor) :: A,B,C,D,E,F
-  logical :: Verbose=.false.
   integer error
   integer :: BondL=3
   integer :: BondR=5
@@ -17,13 +16,13 @@ end teardown
 
 test type_creation_deletion
   A=new_MPSTensor(SpinT,BondL,BondR)
-  assert_false(WasThereError(verbose))
+  assert_false(WasThereError())
   assert_false(B%Print().eq.Normal)
-  call LowerFlag(verbose)
+  call LowerFlag()
   B=new_MPSTensor(SpinT,BondL,BondR)
   assert_equal(B%Print(),Normal)
   assert_equal(B%delete(),Normal)
-  assert_false(WasThereError(verbose))
+  assert_false(WasThereError())
 end test
 
 test accesors_work
@@ -31,7 +30,7 @@ test accesors_work
   assert_equal(A%spin(),SpinT)
   assert_equal(A%DLeft(),BondL)
   assert_equal(A%DRight(),BondR)
-  assert_false(WasThereError(verbose))
+  assert_false(WasThereError())
 end test
 
 test Comparison_Of_Dimensions
@@ -41,7 +40,7 @@ test Comparison_Of_Dimensions
   error=B%delete()
   B=new_MPSTensor(SpinT,BondL,BondR)
   assert_true(A.equaldims.B)
-  assert_false(WasThereError(verbose))
+  assert_false(WasThereError())
 end test
 
 test Multiplication_By_Number
@@ -55,7 +54,7 @@ test Multiplication_By_Number
   assert_equal_within((I*A).diff.(R*B),0.0d0, 1.0e-8)
   assert_equal_within((R8*A).diff.(C*B),0.0d0, 1.0e-8)
   assert_equal_within((I*A).diff.(C8*B),0.0d0, 1.0e-8)
-  assert_false(WasThereError(verbose))
+  assert_false(WasThereError())
 end test
 
 test L_product_single
@@ -77,7 +76,7 @@ test L_product_single
   C=new_MPSTensor(1,DrightT,DrightT,CorrectResult)
   D=MPS_Left_Product(A,A)
   assert_equal_within(D.diff.C, 0.0d0, 1.0e-8)
-  assert_false(WasThereError(verbose))
+  assert_false(WasThereError())
 end test
 
 
@@ -118,7 +117,7 @@ test L_product_withMatrix
   C=new_MPSTensor(1,DrightT,DrightT,CorrectResult)
   D=MPS_Left_Product(A,A,B)
   assert_equal_within(D.diff.C, 0.0d0, 1.0e-8)
-  assert_false(WasThereError(verbose))
+  assert_false(WasThereError())
 end test
 
 test R_product_single
@@ -146,7 +145,7 @@ test R_product_single
   C=new_MPSTensor(1,DLeftT,DLeftT,CorrectResult)
   D=MPS_Right_Product(A,A)
   assert_equal_within(D.diff.C, 0.0d0, 1.0e-8)
-  assert_false(WasThereError(verbose))
+  assert_false(WasThereError())
 end test
 
 
@@ -187,7 +186,7 @@ test R_product_withMatrix
   C=new_MPSTensor(1,DleftT,DleftT,CorrectResult)
   D=MPS_Right_Product(A,A,B)
   assert_equal_within(D.diff.C, 0.0d0, 1.0e-8)
-  assert_false(WasThereError(verbose))
+  assert_false(WasThereError())
 end test
 
 test Mult_by_Matrix
@@ -227,8 +226,103 @@ test Mult_by_Matrix
    D=new_MPSTensor(2,DLeftT,DLeftT)
    D=A*B !Matrix_times_MPSTensor(A,B)
    assert_equal_within(D.diff.C, 0.0d0, 1.0e-8)
-				     
+   assert_false(WasThereError())	 				     
 end test
+
+
+test Collapse1
+   integer,parameter :: DleftT=4, DrightT=3
+   complex(8) :: data(DleftT,DrightT,spinT)
+   complex(8) :: matrix(SpinT*DleftT,DrightT)
+   complex(8) :: Correct(SpinT*DleftT,DrightT)
+   integer :: i,j,k
+
+   !Initialization
+   forall (i=1:DleftT ,j=1:DrightT, k=1:SpinT) data(i,j,k)=one*(i+(j-1)*DleftT+(k-1)*DrightT) 
+   Correct=Reshape( [1., 2., 3., 4., 4., 5., 6., 7., 5., 6., 7., 8., 8., 9., 10., 11., 9., &
+                   & 10., 11., 12., 12., 13., 14., 15.], [SpinT*DleftT,DrightT])
+     A=new_MPSTensor(SpinT,DleftT,DrightT,data)
+     call CollapseSpinWithBond(A,matrix,FirstDimension)
+     assert_equal_within(Difference_btw_Matrices(matrix,correct), 0.0d0, 1.0e-8)
+     B=new_MPSTensor(SpinT,DleftT,DrightT,zero)
+     call SplitSpinFromBond(matrix,B,FirstDimension,DleftT,DrightT)
+     assert_equal_within(A.diff.B, 0.0d0, 1.0e-8)
+     assert_false(WasThereError())
+
+end test
+     
+test Collapse2
+   integer,parameter :: DleftT=4, DrightT=3
+   complex(8) :: data(DleftT,DrightT,spinT)
+   complex(8) :: matrix(DleftT,SpinT*DrightT)
+   complex(8) :: Correct(DleftT,SpinT*DrightT)
+   integer :: i,j,k
+
+   !Initialization
+   forall (i=1:DleftT ,j=1:DrightT, k=1:SpinT) data(i,j,k)=one*(i+(j-1)*DleftT+(k-1)*DrightT) 
+   Correct=Reshape( [1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 4., 5., 6., 7., &
+   		    & 8., 9., 10., 11., 12., 13., 14., 15.], [DleftT,SpinT*DrightT])
+     A=new_MPSTensor(SpinT,DleftT,DrightT,data)
+     call CollapseSpinWithBond(A,matrix,SecondDimension)
+     assert_equal_within(Difference_btw_Matrices(matrix,correct), 0.0d0, 1.0e-8)
+     B=new_MPSTensor(SpinT,DleftT,DrightT,zero)
+     call SplitSpinFromBond(matrix,B,SecondDimension,DleftT,DrightT)
+     assert_equal_within(A.diff.B, 0.0d0, 1.0e-8)
+     assert_false(WasThereError())
+end test
+
+test SingularVD
+   integer,parameter :: DleftT=4, DrightT=3
+   complex(8) :: data(DleftT,DrightT,spinT)
+   complex(8) :: matrix(SpinT*DleftT,DrightT)
+   complex(8) :: U(SpinT*DleftT,SpinT*DleftT)
+   complex(8) :: V(DrightT,DrightT)
+   real(8) :: sigma(DrightT)
+   complex(8) :: diagonal(SpinT*DleftT,DrightT)
+   complex(8) :: Correct(SpinT*DleftT,DrightT)
+   integer :: i,j,k
+
+   !Initialization
+   forall (i=1:DleftT ,j=1:DrightT, k=1:SpinT) data(i,j,k)=one*(i+(j-1)*DleftT+(k-1)*DrightT) 
+   A=new_MPSTensor(SpinT,DleftT,DrightT,data)
+   call CollapseSpinWithBond(A,matrix,FirstDimension)
+   Correct=matrix
+   i=SingularValueDecomposition(matrix,U,Sigma,V)
+   assert_equal(i,0)
+   diagonal=zero
+   do i=1,DRightT
+      diagonal(i,i)=Sigma(i)
+   enddo
+   assert_equal_within(Difference_btw_Matrices(Correct,matmul(Matmul(U,diagonal),V)), 0.0d0, 1.0e-10)
+   assert_false(WasThereError())
+end test
+
+test LeftCanon
+   integer,parameter :: DleftT=4, DrightT=3
+   complex(8) :: data(DleftT,DrightT,spinT)
+   complex(8) :: matrix(DleftT,DLeftT,1)
+   complex(8) :: Correct(DleftT,DrightT,spinT)
+   integer :: i,j,k
+
+   !Initialization
+   forall (i=1:DleftT ,j=1:DrightT, k=1:SpinT) data(i,j,k)=one*(i+(j-1)*DleftT+(k-1)*DrightT) 
+   Correct(:,:,1)=Reshape( [-0.120802, -0.736476, 0.639716, -0.0536866, -0.304505, -0.320898, &
+-0.325939, -0.200223, -0.488209, 0.0946794, 0.17894, 0.76573], [DleftT,DrightT])
+   Correct(:,:,1)=Reshape( [-0.258579, -0.424792, -0.512473, -0.130085, -0.442283, -0.00921493, &
+-0.298086, 0.183901, -0.625986, 0.406363, 0.317842, -0.565636], [DleftT,DrightT])
+   matrix(:,:,1)=Reshape ( [-18.1216, -20.362, -22.6023, -24.8427, 1.61461, 0.624272, -0.366067, &
+   			 & -1.35641, 0., 0., 0., 0., 0., 0., 0., 0.], [DLeftT,DLeftT] )
+     A=new_MPSTensor(SpinT,DleftT,DrightT,data)
+     B=new_MPSTensor(SpinT,DleftT,DrightT,Correct)
+     C=A%LCanonize()
+     D=new_MPSTensor(SpinT,DleftT,DleftT,matrix)
+     assert_equal_within(A.diff.B, 0.0d0, 1.0e-8)
+     assert_equal_within(C.diff.D, 0.0d0, 1.0e-8)
+     assert_false(WasThereError())
+
+end test
+     
+
 
 end test_suite
 

@@ -6,7 +6,8 @@ ARCH:=$(shell uname)
 
 ifeq ($(ARCH),Darwin)
 SYS = MacOSX-x86-64
-LAPACK=-L$MKLPATH -I$MKLINCLUDE -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lpthread
+LAPACK=-framework vecLib
+#-L$MKLPATH -I$MKLINCLUDE -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lpthread
 BLAS=
 FLAGS= -O3
 RM=rm
