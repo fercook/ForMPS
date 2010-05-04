@@ -23,6 +23,7 @@ module MPSTensor_Class
    contains
      procedure delete => delete_MPSTensor
      procedure print => print_MPSTensor
+     procedure PrintDimensions => Print_MPSTensor_Dimensions
      procedure DRight => DRight_MPSTensor
      procedure DLeft => DLeft_MPSTensor
      procedure Spin => Spin_MPSTensor
@@ -34,7 +35,8 @@ module MPSTensor_Class
 !#####  Operators and methods
 !###############################
   interface new_MPSTensor
-     module procedure new_MPSTensor_Random,new_MPSTensor_fromMPSTensor,new_MPSTensor_withData,new_MPSTensor_withConstant
+     module procedure new_MPSTensor_Random,new_MPSTensor_fromMPSTensor,new_MPSTensor_withData, &
+          & new_MPSTensor_withConstant,new_MPSTensor_fromMatrix
   end interface
 
   interface operator (*)
@@ -42,8 +44,16 @@ module MPSTensor_Class
           & Complex8_times_MPSTensor,Matrix_times_MPSTensor
   end interface
 
+  interface assignment (=)
+     module procedure new_MPSTensor_fromAssignment
+  end interface
+
   interface operator (.diff.)
      module procedure Difference_btw_MPSTensors
+  end interface
+
+  interface operator (.absdiff.)
+     module procedure Difference_btw_MPSTensors_WithAbsoluteValue
   end interface
 
   interface operator (.equaldims.)
@@ -177,6 +187,76 @@ module MPSTensor_Class
 
    end function new_MPSTensor_fromMPSTensor
 
+   subroutine new_MPSTensor_fromAssignment(lhs,rhs)
+     type(MPSTensor),intent(out) :: lhs
+     type(MPSTensor),intent(in) :: rhs
+
+     if(.not.rhs%initialized_) then
+        call ThrowException('new_MPSTensor_fromAssignment','Original tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+     lhs%spin_=rhs%spin_
+     lhs%DLeft_=rhs%DLeft_
+     lhs%DRight_=rhs%DRight_
+     lhs%data_=zero
+     lhs%data_=rhs%data_
+     lhs%initialized_=.true.
+
+   end subroutine new_MPSTensor_fromAssignment
+
+  function new_MPSTensor_fromMatrix(spin,LeftBond,RightBond,matrix) result(this)
+    complex(8),intent(IN) :: matrix(:,:)
+    type(MPSTensor) :: this
+    integer :: LeftBond,RightBond
+    integer :: alpha,beta,s,spin
+    integer :: leftIndex,rightIndex,leftStep,rightStep,leftDimension,rightDimension
+    character(100) :: Message
+    character(3) :: ScratchMessage
+
+    if (size(matrix,1).eq.Spin*LeftBond) then
+       leftStep=LeftBond
+       rightStep=0
+    else if (size(matrix,2).eq.Spin*RightBond) then
+       leftStep=0
+       rightStep=RightBond
+    else
+       !TODO: Awful code follows, perhaps implement a message class or something that joins chars and nums
+       write (ScratchMessage,'(I3)') spin
+       Message='s='//trim(adjustl(ScratchMessage))
+       write (ScratchMessage,'(I3)') LeftBond
+       Message=trim(adjustl(Message))//', DL:'//trim(adjustl(ScratchMessage))
+       write (ScratchMessage,'(I3)') RightBond
+       Message=trim(adjustl(Message))//', DR:'//trim(adjustl(ScratchMessage))
+       write (ScratchMessage,'(I3)') size(matrix,1)
+       Message=trim(adjustl(Message))//'; received:'//trim(adjustl(ScratchMessage))
+       write (ScratchMessage,'(I3)') size(matrix,2)
+       Message=trim(adjustl(Message))//' x '//trim(adjustl(ScratchMessage))
+       call ThrowException('new_MPSTensor_fromMatrix','Wrong dimensions='//Message, &
+            & NoErrorCode,CriticalError)
+       return
+    endif
+
+    this%spin_=spin
+    this%DLeft_=LeftBond
+    this%DRight_=RightBond
+    this%data_=zero
+
+    do s=1,Spin
+       do beta=1,RightBond
+          rightIndex=beta+(s-1)*rightStep
+          do alpha=1,LeftBond
+             leftIndex=alpha+(s-1)*leftStep
+             this%data_(alpha,beta,s)=matrix(leftIndex,rightIndex)
+          enddo
+       enddo
+    enddo
+    
+    this%initialized_=.true.
+            
+  end function new_MPSTensor_fromMatrix
+
+
 
 !######################################    delete
    integer function delete_MPSTensor (this) result(error)
@@ -225,6 +305,27 @@ module MPSTensor_Class
      error=Normal
 
    end function Print_MPSTensor
+
+
+
+   integer function Print_MPSTensor_Dimensions(this) result(error)
+     class(MPSTensor),intent(IN) :: this
+     integer i,j,k
+
+     error = Warning
+
+     if(.not.(this%initialized_)) then
+        call ThrowException('PrintMPSTensor','Tensor not initialized',NoErrorCode,error)
+        return
+     endif
+
+     print *,'Spin = ',this%spin_
+     print *,'DL = ',this%DLeft_
+     print *,'DR = ',this%DRight_
+
+     error=Normal
+
+   end function Print_MPSTensor_Dimensions
 !##################################################################   
 
 !##################################################################
@@ -420,6 +521,33 @@ module MPSTensor_Class
 
    end function Difference_btw_MPSTensors
 
+
+   real function Difference_btw_MPSTensors_WithAbsoluteValue(tensor1, tensor2) result(diff)
+     type(MPSTensor),intent(IN) :: tensor1,tensor2
+     integer :: n,alpha,beta
+     
+     diff=0.0d0
+     if(tensor1%initialized_.and.tensor2%initialized_) then
+        if(tensor1.equaldims.tensor2) then
+           do n=1,tensor1%spin_
+              do beta=1,tensor1%DRight_
+                 do alpha=1,tensor1%DLeft_
+                    diff=diff+abs(abs(tensor1%data_(alpha,beta,n))-abs(tensor2%data_(alpha,beta,n)))
+                 enddo
+              enddo 
+           enddo
+        else
+           call ThrowException('Difference_btw_MPSTensors','Tensors of different shape',NoErrorCode,CriticalError)
+        endif
+        return 
+     else
+        call ThrowException('Difference_btw_MPSTensors','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif     
+
+   end function Difference_btw_MPSTensors_WithAbsoluteValue
+
+
 !##################################################################
 
    logical function MPSTensors_are_of_equal_Shape(tensor1,tensor2) result(equals)
@@ -540,7 +668,7 @@ module MPSTensor_Class
 !##################################################################
 !##################################################################
 ! Site Canonization -- Returns the matrix that needs to be multiplied
-! to the adjacent site
+! to the adjacent site on the RIGHT
 !##################################################################
 !##################################################################
 
@@ -573,34 +701,17 @@ module MPSTensor_Class
        return
     endif
 
-do jj=1,Spin*LeftBond
-do kk=1,RightBond
-    print *,jj,kk,CollapsedTensor(jj,kk)
-enddo
-enddo
-
     if(Spin*LeftBond.gt.MAX_D) then
        call ThrowException('Left_Canonize_MPSTensor','Working dimension larger than Maximum',NoErrorCode,CriticalError)
        return
     endif
 
     kk= SingularValueDecomposition(CollapsedTensor,U,Sigma,vTransposed)
-    print *,'Output of SVD:',kk
 
     newLeftBond=LeftBond
     newRightBond=Min(Spin*LeftBond,RightBond)
 
-    print *,'U'
-    print *,U
-
-    print *,'Sigma'
-    print *,Sigma
-
-    print *,'V'
-    print *,vTransposed
-
-!    this=(Partition[u, {newLeftBond, newRightBond}] [[All, 1]])
-    call SplitSpinFromBond(U,this,FirstDimension,newLeftBond,newRightBond)
+    this=new_MPSTensor(Spin,newLeftBond,newRightBond,U)
     if (WasThereError()) then
        call ThrowException('Left_Canonize_MPSTensor','Could not split the matrix',NoErrorCode,CriticalError)
        return
@@ -717,57 +828,7 @@ enddo
   end subroutine CollapseSpinWithBond
 
 
-!#######################################################################################
-
-
-  subroutine SplitSpinFromBond(matrix,tensor,whichDimension,LeftBond,RightBond)
-    complex(8),intent(IN) :: matrix(:,:)
-    type(MPSTensor),intent(INOUT) :: tensor
-    integer :: whichDimension,LeftBond,RightBond
-    integer :: alpha,beta,s,spin
-    integer :: leftIndex,rightIndex,leftStep,rightStep,leftDimension,rightDimension
-
-    if(.not.tensor%initialized_) then
-       call ThrowException('SplitSpinFromBond','Tensor not initialized',NoErrorCode,CriticalError)
-       return
-    endif
-    
-    spin=tensor%spin_
-    if (whichDimension.eq.FirstDimension) then
-       leftStep=LeftBond
-       rightStep=0
-       leftDimension=Spin*LeftBond
-       rightDimension=RightBond
-    else if (whichDimension.eq.SecondDimension) then
-       leftStep=0
-       rightStep=RightBond
-       leftDimension=LeftBond
-       rightDimension=Spin*RightBond
-    else
-       call ThrowException('CollapseSpinWithBond','Wrong Dimension parameter',whichDimension,CriticalError)
-       return
-    endif
-    if ((size(matrix,1).lt.leftDimension).and.(size(matrix,2).lt.rightDimension)) then
-       call ThrowException('SplitSpinFromBond','Matrix to split does not have right dimensions',whichDimension,CriticalError)
-       return
-    endif
-
-    !This is the best way I found to zero out the tensor
-    tensor=new_MPSTensor(Spin,LeftBond,RightBond,zero)
-    do s=1,Spin
-       do beta=1,RightBond
-          rightIndex=beta+(s-1)*rightStep
-          do alpha=1,LeftBond
-             leftIndex=alpha+(s-1)*leftStep
-             tensor%data_(alpha,beta,s)=matrix(leftIndex,rightIndex)
-          enddo
-       enddo
-    enddo
-            
-  end subroutine SplitSpinFromBond
-
-
-
+!######################################################################################
 
    subroutine mymatmul(A,B,C,indexL,indexC,indexR,mode)
      complex(8) :: A(:,:),B(:,:),C(:,:)
@@ -877,7 +938,7 @@ enddo
         return
      endif
      !And now call with right value of LWork
-     LWork=Max(LWork,Int(Work(1)))
+     LWork=Int(Work(1))
      deallocate(Work)
      Allocate(Work(LWork))
      call ZGESDD(JOBZ, LeftDimension, RightDimension, matrix, LeftDimension, Sigma, U, LeftDimension, vTransposed, RightDimension,WORK,LWORK,RWORK,IWORK,ErrorCode )
