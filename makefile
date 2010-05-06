@@ -29,7 +29,7 @@ LINKFLAGS=
 endif
 
 BINARIES=_$(SYS)
-SOURCES =  constants.f90 error.f90 MPSTensor_Class.f90 
+SOURCES =  constants.f90 error.f90 MPSTensor_Class.f90 MatrixHelp.f90
 OBJS = $(SOURCES:.f90=.o)
 
 all: fullmake

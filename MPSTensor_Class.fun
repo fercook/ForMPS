@@ -14,6 +14,11 @@ teardown
 
 end teardown
 
+
+
+
+
+
 test type_creation_deletion
   A=new_MPSTensor(SpinT,BondL,BondR)
   assert_false(WasThereError())
@@ -25,6 +30,12 @@ test type_creation_deletion
   assert_false(WasThereError())
 end test
 
+
+
+
+
+
+
 test accesors_work
   A=new_MPSTensor(SpinT,BondL,BondR)
   assert_equal(A%spin(),SpinT)
@@ -32,6 +43,11 @@ test accesors_work
   assert_equal(A%DRight(),BondR)
   assert_false(WasThereError())
 end test
+
+
+
+
+
 
 test Comparison_Of_Dimensions
   A=new_MPSTensor(SpinT,BondL,BondR)
@@ -42,6 +58,13 @@ test Comparison_Of_Dimensions
   assert_true(A.equaldims.B)
   assert_false(WasThereError())
 end test
+
+
+
+
+
+
+
 
 test Multiplication_By_Number
   integer :: I = 2
@@ -56,6 +79,13 @@ test Multiplication_By_Number
   assert_equal_within((I*A).diff.(C8*B),0.0d0, 1.0e-8)
   assert_false(WasThereError())
 end test
+
+
+
+
+
+
+
 
 test L_product_single
   integer,parameter :: DleftT=1, DrightT=4
@@ -78,6 +108,13 @@ test L_product_single
   assert_equal_within(D.diff.C, 0.0d0, 1.0e-8)
   assert_false(WasThereError())
 end test
+
+
+
+
+
+
+
 
 
 test L_product_withMatrix
@@ -120,6 +157,12 @@ test L_product_withMatrix
   assert_false(WasThereError())
 end test
 
+
+
+
+
+
+
 test R_product_single
 !!  Mathematica test code:
 !!  With[{DL = 4, DR = 1, spin = 2}, 
@@ -147,6 +190,14 @@ test R_product_single
   assert_equal_within(D.diff.C, 0.0d0, 1.0e-8)
   assert_false(WasThereError())
 end test
+
+
+
+
+
+
+
+
 
 
 test R_product_withMatrix
@@ -189,6 +240,12 @@ test R_product_withMatrix
   assert_false(WasThereError())
 end test
 
+
+
+
+
+
+
 test Mult_by_Matrix
   integer,parameter :: DleftT=4, DrightT=3
   complex(8) :: data(DleftT,DrightT,spinT)
@@ -230,6 +287,12 @@ test Mult_by_Matrix
 end test
 
 
+
+
+
+
+
+
 test Collapse1
    integer,parameter :: DleftT=4, DrightT=3
    complex(8) :: data(DleftT,DrightT,spinT)
@@ -241,16 +304,21 @@ test Collapse1
    forall (i=1:DleftT ,j=1:DrightT, k=1:SpinT) data(i,j,k)=one*(i+(j-1)*DleftT+(k-1)*DrightT) 
    Correct=Reshape( [1., 2., 3., 4., 4., 5., 6., 7., 5., 6., 7., 8., 8., 9., 10., 11., 9., &
                    & 10., 11., 12., 12., 13., 14., 15.], [SpinT*DleftT,DrightT])
-     A=new_MPSTensor(SpinT,DleftT,DrightT,data)
-     call CollapseSpinWithBond(A,matrix,FirstDimension)
-     assert_equal_within(Difference_btw_Matrices(matrix,correct), 0.0d0, 1.0e-8)
-     B=new_MPSTensor(SpinT,DleftT,DrightT,zero)
-     call SplitSpinFromBond(matrix,B,FirstDimension,DleftT,DrightT)
-     assert_equal_within(A.diff.B, 0.0d0, 1.0e-8)
-     assert_false(WasThereError())
+   A=new_MPSTensor(SpinT,DleftT,DrightT,data)
+   call CollapseSpinWithBond(A,matrix,FirstDimension)
+   assert_equal_within(Difference_btw_Matrices(matrix,correct), 0.0d0, 1.0e-8)
+   B=new_MPSTensor(SpinT,DleftT,DrightT,matrix)
+   assert_equal_within(A.diff.B, 0.0d0, 1.0e-8)
+   assert_false(WasThereError())
 
 end test
      
+
+
+
+
+
+
 test Collapse2
    integer,parameter :: DleftT=4, DrightT=3
    complex(8) :: data(DleftT,DrightT,spinT)
@@ -265,13 +333,17 @@ test Collapse2
      A=new_MPSTensor(SpinT,DleftT,DrightT,data)
      call CollapseSpinWithBond(A,matrix,SecondDimension)
      assert_equal_within(Difference_btw_Matrices(matrix,correct), 0.0d0, 1.0e-8)
-     B=new_MPSTensor(SpinT,DleftT,DrightT,zero)
-     call SplitSpinFromBond(matrix,B,SecondDimension,DleftT,DrightT)
+     B=new_MPSTensor(SpinT,DleftT,DrightT,matrix)
      assert_equal_within(A.diff.B, 0.0d0, 1.0e-8)
      assert_false(WasThereError())
 end test
 
-test SingularVD
+
+
+
+
+
+test Singular_Value_Decomposition
    integer,parameter :: DleftT=4, DrightT=3
    complex(8) :: data(DleftT,DrightT,spinT)
    complex(8) :: matrix(SpinT*DleftT,DrightT)
@@ -282,7 +354,6 @@ test SingularVD
    complex(8) :: Correct(SpinT*DleftT,DrightT)
    integer :: i,j,k
 
-   !Initialization
    forall (i=1:DleftT ,j=1:DrightT, k=1:SpinT) data(i,j,k)=one*(i+(j-1)*DleftT+(k-1)*DrightT) 
    A=new_MPSTensor(SpinT,DleftT,DrightT,data)
    call CollapseSpinWithBond(A,matrix,FirstDimension)
@@ -293,31 +364,58 @@ test SingularVD
    do i=1,DRightT
       diagonal(i,i)=Sigma(i)
    enddo
-   assert_equal_within(Difference_btw_Matrices(Correct,matmul(Matmul(U,diagonal),V)), 0.0d0, 1.0e-10)
+   assert_equal_within(Difference_btw_Matrices(Correct,matmul(matmul(U,diagonal),V)), 0.0d0, 1.0e-10)
    assert_false(WasThereError())
 end test
+
+
+
+
+
+
+test VectorMatrixMultiplication
+   integer,parameter :: DleftT=4, DrightT=3
+   real(8) :: sigma(DrightT)
+   complex(8) :: diagonal(SpinT*DleftT,SpinT*DleftT)
+   complex(8) :: matrix(SpinT*DleftT,DrightT)
+   integer :: i,j,k
+   forall (i=1:DleftT*SpinT ,j=1:DrightT) matrix(i,j)=one*(II**i+(j-1)*DleftT*SpinT)
+   sigma=zero
+   forall (i=1:DRightT) sigma(i)=i**2
+   diagonal=zero
+   do i=1,DRightT
+      diagonal(i,i)=Sigma(i)
+   enddo
+   assert_equal_within(Difference_btw_Matrices(vecmul(sigma,matrix),matmul(diagonal,matrix)), 0.0d0, 1.0e-10)
+   assert_false(WasThereError())
+end test
+
+
+
+
+
+
 
 test LeftCanon
    integer,parameter :: DleftT=4, DrightT=3
    complex(8) :: data(DleftT,DrightT,spinT)
-   complex(8) :: matrix(DleftT,DLeftT,1)
+   complex(8) :: matrix(DrightT,DrightT,1)
    complex(8) :: Correct(DleftT,DrightT,spinT)
    integer :: i,j,k
 
    !Initialization
    forall (i=1:DleftT ,j=1:DrightT, k=1:SpinT) data(i,j,k)=one*(i+(j-1)*DleftT+(k-1)*DrightT) 
-   Correct(:,:,1)=Reshape( [-0.120802, -0.736476, 0.639716, -0.0536866, -0.304505, -0.320898, &
--0.325939, -0.200223, -0.488209, 0.0946794, 0.17894, 0.76573], [DleftT,DrightT])
-   Correct(:,:,1)=Reshape( [-0.258579, -0.424792, -0.512473, -0.130085, -0.442283, -0.00921493, &
--0.298086, 0.183901, -0.625986, 0.406363, 0.317842, -0.565636], [DleftT,DrightT])
-   matrix(:,:,1)=Reshape ( [-18.1216, -20.362, -22.6023, -24.8427, 1.61461, 0.624272, -0.366067, &
-   			 & -1.35641, 0., 0., 0., 0., 0., 0., 0., 0.], [DLeftT,DLeftT] )
+   Correct(:,:,1)=Reshape( [-0.234451, -0.271825, -0.309198, -0.346571, -0.625669, -0.440419, &
+   			   & -0.255169, -0.0699187, -0.295271, 0.429314, 0.0856099, -0.126573], [DleftT,DrightT])
+   Correct(:,:,2)=Reshape( [-0.346571, -0.383944, -0.421317, -0.45869, -0.0699187, 0.115331, &
+   			   & 0.300581, 0.485831, -0.126573, 0.354249, -0.66644, 0.345686], [DleftT,DrightT])
+   matrix(:,:,1)=Reshape ( [-12.1367, 2.9496, 0., -23.227, 0.712199, 0., -34.3173, -1.5252, 0.], [DrightT,DrightT] )
      A=new_MPSTensor(SpinT,DleftT,DrightT,data)
      B=new_MPSTensor(SpinT,DleftT,DrightT,Correct)
      C=A%LCanonize()
-     D=new_MPSTensor(SpinT,DleftT,DleftT,matrix)
-     assert_equal_within(A.diff.B, 0.0d0, 1.0e-8)
-     assert_equal_within(C.diff.D, 0.0d0, 1.0e-8)
+     D=new_MPSTensor(MatrixSpin,DrightT,DrightT,matrix)
+     assert_equal_within(C.absdiff.D, 0.0d0, 1.0e-4)
+     assert_equal_within(A.absdiff.B, 0.0d0, 1.0e-5)
      assert_false(WasThereError())
 
 end test
@@ -334,3 +432,4 @@ end test_suite
 !!  print *,'And finally'
 !  print *,shape(reshape(data,[DLeftT,spinT*DrightT]))
 !  assert_true(.true.)
+

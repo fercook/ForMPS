@@ -17,6 +17,7 @@ module ErrorHandling
   logical :: VerboseLevel = .false.
 
   logical :: ErrorFlagged = .false.
+  integer :: CurrentErrorLevel = Normal
 
 contains
   
@@ -28,22 +29,27 @@ contains
     print *,'Error from :',caller
     print *,'Says       :',message
     print *,'Sent error :',errorcode
-    if (errordegree.gt.MaxErrorAllowed) then
-       print *,'####### ABORTING ####### '
-       stop
-    else
-       print *,'Continuing...'
-       ErrorFlagged=.true.
-       print *,'####  END WARNING  #### '
-    endif
+    print *,'####  END WARNING  #### '
+    CurrentErrorLevel = errordegree
+    ErrorFlagged=.true.
+
   end subroutine ThrowException
 
   subroutine LowerFlag()
-    
     if(VerboseLevel) print *,'Lowering error flag'
-
     ErrorFlagged=.false.
   end subroutine LowerFlag
+
+  subroutine  ProcessException(caller)
+    character*(*),intent(IN) :: caller
+    if (CurrentErrorLevel.gt.MaxErrorAllowed) then
+       print *,'####### ABORTING ####### '
+       stop
+    else
+       print *,'####### CONTINUING ####### '
+       ErrorFlagged=.false.
+    endif
+  end subroutine ProcessException
 
   logical function WasThereError() result(answer)
     if(VerboseLevel) print *,'Error flagged = ',Errorflagged

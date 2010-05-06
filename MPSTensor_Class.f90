@@ -1,3 +1,6 @@
+!! Matrix Product States algorithms
+!! Author: Fernando M. Cucchietti 2010
+
 !!  This module describes an object with three legs as used by MPS algorithms.
 !!  One leg is "special", it is the physical leg of the tensor.
 !!  In notation it is nice to have the spin as the first index, but in the implementation 
@@ -7,6 +10,7 @@ module MPSTensor_Class
 
   use ErrorHandling
   use Constants
+  use Matrix_Helper
 
   implicit none
 
@@ -28,6 +32,7 @@ module MPSTensor_Class
      procedure DLeft => DLeft_MPSTensor
      procedure Spin => Spin_MPSTensor
      procedure LCanonize => Left_Canonize_MPSTensor
+     procedure isInitialized => InitializationCheck
 !     procedure RCanonize => Right_Canonize_MPSTensor !!$TODO: Right canonization
   end type MPSTensor
 
@@ -172,11 +177,10 @@ module MPSTensor_Class
    function new_MPSTensor_fromMPSTensor (tensor) result (this)
      type(MPSTensor),intent(in) :: tensor
      type(MPSTensor) this
+     integer error
 
-     if(.not.tensor%initialized_) then
-        call ThrowException('new_MPSTensor_fromMPSTensor','Original tensor not initialized',NoErrorCode,CriticalError)
-        return
-     endif
+     error=tensor%isInitialized()
+     if (WasThereError()) call ProcessException('new_MPSTensor_fromMPSTensor')
 
      this%spin_=tensor%spin_
      this%DLeft_=tensor%DLeft_
@@ -256,8 +260,6 @@ module MPSTensor_Class
             
   end function new_MPSTensor_fromMatrix
 
-
-
 !######################################    delete
    integer function delete_MPSTensor (this) result(error)
      class(MPSTensor),intent(INOUT) :: this
@@ -282,6 +284,20 @@ module MPSTensor_Class
 
    end function delete_MPSTensor
 !##################################################################
+
+
+integer function InitializationCheck(this) result(error)
+    class(MPSTensor),intent(IN) :: this
+
+    if (.not.this%initialized_) then    
+       error=CriticalError
+       call ThrowException('Internal Routine ','Uninitialized tensor',NoErrorCode,error)
+    else
+       error=Normal
+    endif
+
+  end function InitializationCheck
+
 
 !######################################     print
    integer function Print_MPSTensor(this) result(error)
@@ -667,7 +683,7 @@ module MPSTensor_Class
 
 !##################################################################
 !##################################################################
-! Site Canonization -- Returns the matrix that needs to be multiplied
+! Left Site Canonization -- Returns the matrix that needs to be multiplied
 ! to the adjacent site on the RIGHT
 !##################################################################
 !##################################################################
@@ -724,6 +740,71 @@ module MPSTensor_Class
 
   end function Left_Canonize_MPSTensor
   
+
+
+
+
+
+
+! Right Site Canonization -- Returns the matrix that needs to be multiplied
+! to the adjacent site on the LEFT
+!##################################################################
+!##################################################################
+
+  function Right_Canonize_MPSTensor(this) result(matrix)
+    class(MPSTensor),intent(INOUT) :: this
+    type(MPSTensor) :: matrix
+    complex(8), allocatable :: U(:,:),vTransposed(:,:),collapsedTensor(:,:)
+    real(8),allocatable :: Sigma(:)
+    integer :: Spin,LeftBond,RightBond
+    integer :: newLeftBond,newRightBond
+    integer :: jj,kk
+
+    if(.not.this%initialized_) then
+       call ThrowException('Right_Canonize_MPSTensor','Tensor not initialized',NoErrorCode,CriticalError)
+       return
+    endif
+
+    Spin=this%spin_
+    LeftBond=this%DLeft_
+    RightBond=this%DRight_
+
+    allocate(collapsedTensor(Spin*LeftBond,RightBond))
+    allocate(U(Spin*LeftBond,Spin*LeftBond))
+    allocate(Sigma(Min(Spin*LeftBond,RightBond)))
+    allocate(vTransposed(RightBond,RightBond))
+
+    call CollapseSpinWithBond(this,collapsedTensor,FirstDimension)
+    if (WasThereError()) then
+       call ThrowException('Left_Canonize_MPSTensor','Could not collapse the tensor',NoErrorCode,CriticalError)
+       return
+    endif
+
+    if(Spin*LeftBond.gt.MAX_D) then
+       call ThrowException('Left_Canonize_MPSTensor','Working dimension larger than Maximum',NoErrorCode,CriticalError)
+       return
+    endif
+
+    kk= SingularValueDecomposition(CollapsedTensor,U,Sigma,vTransposed)
+
+    newLeftBond=LeftBond
+    newRightBond=Min(Spin*LeftBond,RightBond)
+
+    this=new_MPSTensor(Spin,newLeftBond,newRightBond,U)
+    if (WasThereError()) then
+       call ThrowException('Left_Canonize_MPSTensor','Could not split the matrix',NoErrorCode,CriticalError)
+       return
+    endif
+
+    !matrix is Sigma*V^\dagger and reshaped to fit the product with the tensor on the right
+    matrix=new_MPSTensor(MatrixSpin,newRightBond,RightBond, & 
+         & reshape(vecmul(Sigma,conjg(vTransposed)) , [newRightBond,RightBond,MatrixSpin], &
+         & Pad= [ (zero, kk=1,newRightBond*RightBond*MatrixSpin) ]   ) )  !! Pad with zeros at the end
+
+  end function Right_Canonize_MPSTensor
+
+
+
 
 !!$ Mathematica code for canonization
 !!$
@@ -826,158 +907,6 @@ module MPSTensor_Class
     enddo
              
   end subroutine CollapseSpinWithBond
-
-
-!######################################################################################
-
-   subroutine mymatmul(A,B,C,indexL,indexC,indexR,mode)
-     complex(8) :: A(:,:),B(:,:),C(:,:)
-     integer :: indexL,indexC,indexR
-     character*1 :: mode
-     integer :: I,J,K,L
-     complex(8) TEMP
-     ! mode = 'N' is normal multiplication C = A * B + C
-     ! mode = 'A' is with A dagged, C = A^+ * B + C
-     ! mode = 'B' is with B dagged, C = A * B^+ + C
-     if (mode.eq.'N'.or.mode.eq.'n') then
-        !C = A * B + C
-        DO J = 1,indexR
-           DO L = 1,indexC
-              IF (B(L,J).NE.ZERO) THEN
-                 TEMP = B(L,J)
-                 DO I = 1,indexL
-                    C(I,J) = C(I,J) + A(I,L)*TEMP
-                 enddo
-              END IF
-           enddo
-        enddo
-     else if (mode.eq.'A'.or.mode.eq.'a') then
-        ! C = A^+ * B + C
-        DO J = 1, indexR
-           DO I = 1,indexL
-              TEMP = ZERO
-              DO L = 1,indexC
-                 TEMP = TEMP + DCONJG(A(L,I))*B(L,J)
-              enddo
-             C(I,J) = TEMP + C(I,J)
-           enddo
-        enddo
-     else if (mode.eq.'B'.or.mode.eq.'b') then
-        ! C = A * B^+ + C
-        DO J = 1,indexR
-           DO L = 1,indexC
-              IF (B(J,L).NE.ZERO) THEN
-                 TEMP = DCONJG(B(J,L))
-                 DO I = 1,indexL
-                    C(I,J) = C(I,J) + A(I,L)*TEMP
-                 enddo
-              END IF
-           enddo
-        enddo
-
-     endif
-   end subroutine mymatmul
-
-   function vecmul(vector,matrix) result(this)
-     real(8),intent(IN) :: vector(:)
-     complex(8),intent(IN) :: matrix(:,:)
-     complex(8) :: this(size(matrix,1),size(matrix,2))
-     integer :: LengthOfVector,LeftDimension,RightDimension
-     integer :: i,j
-
-     LengthOfVector=size(vector,1)
-     LeftDimension=size(matrix,1)
-     RightDimension=size(matrix,2)
-
-     this=zero
-     do i=1,min(LeftDimension,LengthOfVector)
-        this(i,:)=vector(i)*matrix(i,:)
-     enddo
-    
-   end function vecmul
-
-   !Simplified interface for LAPACK's ZGESDD routine
-   integer function SingularValueDecomposition(matrix,U,Sigma,vTransposed) result(ErrorCode)
-     complex(8),intent(IN) :: matrix(:,:)
-     complex(8),intent(OUT) :: U(:,:),vTransposed(:,:)
-     real(8),intent(OUT) :: Sigma(:)
-     integer :: LeftDimension,RightDimension
-     !Lapack ugly variables
-     integer :: Lwork,LRWork,LIWork,info
-     complex(8),allocatable :: Work(:)
-     real(8),allocatable :: RWork(:)
-     integer(8),allocatable :: IWork(:)
-     character,parameter :: Jobz='S' !Always get the minimum only, hopefully the rest of the matrix is zeroed out
-
-     LeftDimension=size(matrix,1); RightDimension=size(matrix,2)
-
-     !Checks
-     if( (size(U,1).ne.LeftDimension).or.(size(U,2).ne.LeftDimension).or. &
-          & (size(vTransposed,1).ne.RightDimension).or.(size(vTransposed,2).ne.RightDimension).or. &
-          & (size(Sigma).ne.Min(LeftDimension,RightDimension)) ) then
-        call ThrowException('SingularValueDecomposition','Dimensions of matrices do not match',ErrorCode,CriticalError)
-        return
-     endif        
-
-     !Recommended values of memory allocation from LAPACK documentation
-     LWork=(Min(LeftDimension,RightDimension)*(Min(LeftDimension,RightDimension)+2)+Max(LeftDimension,RightDimension))
-     LRWork=5*Min(LeftDimension,RightDimension)*(Min(LeftDimension,RightDimension)+1)
-     LIWork=8*Min(LeftDimension,RightDimension)
-
-     allocate(Work(LWork),RWork(LRWork),IWork(LIWork),STAT=ErrorCode)
-     If (ErrorCode.ne.Normal) then
-        call ThrowException('SingularValueDecomposition','Could not allocate memory',ErrorCode,CriticalError)
-        return
-     endif
-     !For some reason I need to call LAPACK with LWork=-1 first
-     !And find out the optimum work storage, otherwise it returns an error
-     LWork=-1
-     call ZGESDD(JOBZ, LeftDimension, RightDimension, matrix, LeftDimension, Sigma, U, LeftDimension, vTransposed, RightDimension,WORK,LWORK,RWORK,IWORK,ErrorCode )
-     If (ErrorCode.ne.Normal) then
-        call ThrowException('SingularValueDecomposition','Lapack returned error in ZGESDD',ErrorCode,CriticalError)
-        return
-     endif
-     !And now call with right value of LWork
-     LWork=Int(Work(1))
-     deallocate(Work)
-     Allocate(Work(LWork))
-     call ZGESDD(JOBZ, LeftDimension, RightDimension, matrix, LeftDimension, Sigma, U, LeftDimension, vTransposed, RightDimension,WORK,LWORK,RWORK,IWORK,ErrorCode )
-     If (ErrorCode.ne.Normal) then
-        call ThrowException('SingularValueDecomposition','Lapack returned error in ZGESDD',ErrorCode,CriticalError)
-        return
-     endif
-
-     !Clean up
-     deallocate(Work,RWork,IWork,STAT=ErrorCode)
-     If (ErrorCode.ne.Normal) then
-        call ThrowException('SingularValueDecomposition','Problems in deallocation',ErrorCode,CriticalError)
-        return
-     endif
-
-     ErrorCode=Normal
-     
-   end function SingularValueDecomposition
-     
-   real function Difference_btw_Matrices(matrix1, matrix2) result(diff)
-     complex(8) :: matrix1(:,:),matrix2(:,:)
-     integer :: n,m,alpha,beta
-
-     alpha=size(matrix1,1)
-     beta=size(matrix1,2)
-     diff=0.0d0
-     if(alpha.eq.size(matrix2,1).and.beta.eq.size(matrix2,2)) then
-        do n=1,alpha
-           do m=1,beta
-              diff=diff+(abs(matrix1(n,m)-matrix2(n,m)))**2
-           enddo
-        enddo
-     else
-        call ThrowException('Difference_btw_Matrices','Matrices of different shape',NoErrorCode,CriticalError)
-     endif
-     diff=sqrt(diff)
-     return 
-
-   end function Difference_btw_Matrices
 
 
  end module MPSTensor_Class
