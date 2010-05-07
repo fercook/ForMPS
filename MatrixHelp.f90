@@ -58,7 +58,7 @@ contains
      endif
    end subroutine mymatmul
 
-   function vecmul(vector,matrix) result(this)
+   function vecmat(vector,matrix) result(this)
      real(8),intent(IN) :: vector(:)
      complex(8),intent(IN) :: matrix(:,:)
      complex(8) :: this(size(matrix,1),size(matrix,2))
@@ -74,7 +74,25 @@ contains
         this(i,:)=vector(i)*matrix(i,:)
      enddo
     
-   end function vecmul
+   end function vecmat
+
+   function matvec(matrix,vector) result(this)
+     real(8),intent(IN) :: vector(:)
+     complex(8),intent(IN) :: matrix(:,:)
+     complex(8) :: this(size(matrix,1),size(matrix,2))
+     integer :: LengthOfVector,LeftDimension,RightDimension
+     integer :: i,j
+
+     LengthOfVector=size(vector,1)
+     LeftDimension=size(matrix,1)
+     RightDimension=size(matrix,2)
+
+     this=zero
+     do i=1,min(RightDimension,LengthOfVector)
+        this(:,i)=vector(i)*matrix(:,i)
+     enddo
+    
+   end function matvec
 
    !Simplified interface for LAPACK's ZGESDD routine
    integer function SingularValueDecomposition(matrix,U,Sigma,vTransposed) result(ErrorCode)
@@ -112,7 +130,8 @@ contains
      !For some reason I need to call LAPACK with LWork=-1 first
      !And find out the optimum work storage, otherwise it returns an error
      LWork=-1
-     call ZGESDD(JOBZ, LeftDimension, RightDimension, matrix, LeftDimension, Sigma, U, LeftDimension, vTransposed, RightDimension,WORK,LWORK,RWORK,IWORK,ErrorCode )
+     call ZGESDD(JOBZ, LeftDimension, RightDimension, matrix, LeftDimension, Sigma, U, LeftDimension, vTransposed, & 
+          & RightDimension,WORK,LWORK,RWORK,IWORK,ErrorCode )
      If (ErrorCode.ne.Normal) then
         call ThrowException('SingularValueDecomposition','Lapack returned error in ZGESDD',ErrorCode,CriticalError)
         return
@@ -121,7 +140,8 @@ contains
      LWork=Int(Work(1))
      deallocate(Work)
      Allocate(Work(LWork))
-     call ZGESDD(JOBZ, LeftDimension, RightDimension, matrix, LeftDimension, Sigma, U, LeftDimension, vTransposed, RightDimension,WORK,LWORK,RWORK,IWORK,ErrorCode )
+     call ZGESDD(JOBZ, LeftDimension, RightDimension, matrix, LeftDimension, Sigma, U, LeftDimension, vTransposed, & 
+          & RightDimension,WORK,LWORK,RWORK,IWORK,ErrorCode )
      If (ErrorCode.ne.Normal) then
         call ThrowException('SingularValueDecomposition','Lapack returned error in ZGESDD',ErrorCode,CriticalError)
         return

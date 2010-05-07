@@ -32,8 +32,8 @@ module MPSTensor_Class
      procedure DLeft => DLeft_MPSTensor
      procedure Spin => Spin_MPSTensor
      procedure LCanonize => Left_Canonize_MPSTensor
+     procedure RCanonize => Right_Canonize_MPSTensor 
      procedure isInitialized => InitializationCheck
-!     procedure RCanonize => Right_Canonize_MPSTensor !!$TODO: Right canonization
   end type MPSTensor
 
 !###############################
@@ -733,9 +733,9 @@ integer function InitializationCheck(this) result(error)
        return
     endif
 
-    !matrix is Sigma*V^\dagger and reshaped to fit the product with the tensor on the right
+    !matrix is reshaped to fit the product with the tensor on the right
     matrix=new_MPSTensor(MatrixSpin,newRightBond,RightBond, & 
-         & reshape(vecmul(Sigma,conjg(vTransposed)) , [newRightBond,RightBond,MatrixSpin], &
+         & reshape(vecmat(Sigma,vTransposed) , [newRightBond,RightBond,MatrixSpin], &
          & Pad= [ (zero, kk=1,newRightBond*RightBond*MatrixSpin) ]   ) )  !! Pad with zeros at the end
 
   end function Left_Canonize_MPSTensor
@@ -769,37 +769,36 @@ integer function InitializationCheck(this) result(error)
     LeftBond=this%DLeft_
     RightBond=this%DRight_
 
-    allocate(collapsedTensor(Spin*LeftBond,RightBond))
-    allocate(U(Spin*LeftBond,Spin*LeftBond))
-    allocate(Sigma(Min(Spin*LeftBond,RightBond)))
-    allocate(vTransposed(RightBond,RightBond))
+    allocate(collapsedTensor(LeftBond,Spin*RightBond))
+    allocate(U(LeftBond,LeftBond))
+    allocate(Sigma(Min(LeftBond,Spin*RightBond)))
+    allocate(vTransposed(Spin*RightBond,Spin*RightBond))
 
-    call CollapseSpinWithBond(this,collapsedTensor,FirstDimension)
+    call CollapseSpinWithBond(this,collapsedTensor,SecondDimension)
     if (WasThereError()) then
-       call ThrowException('Left_Canonize_MPSTensor','Could not collapse the tensor',NoErrorCode,CriticalError)
+       call ThrowException('Right_Canonize_MPSTensor','Could not collapse the tensor',NoErrorCode,CriticalError)
        return
     endif
 
-    if(Spin*LeftBond.gt.MAX_D) then
+    if(Spin*RightBond.gt.MAX_D) then
        call ThrowException('Left_Canonize_MPSTensor','Working dimension larger than Maximum',NoErrorCode,CriticalError)
        return
     endif
 
     kk= SingularValueDecomposition(CollapsedTensor,U,Sigma,vTransposed)
 
-    newLeftBond=LeftBond
-    newRightBond=Min(Spin*LeftBond,RightBond)
+    newLeftBond=Min(Spin*RightBond,LeftBond)
+    newRightBond=RightBond
 
-    this=new_MPSTensor(Spin,newLeftBond,newRightBond,U)
+    this=new_MPSTensor(Spin,newLeftBond,newRightBond,conjg(vTransposed))
     if (WasThereError()) then
-       call ThrowException('Left_Canonize_MPSTensor','Could not split the matrix',NoErrorCode,CriticalError)
+       call ThrowException('Right_Canonize_MPSTensor','Could not split the matrix',NoErrorCode,CriticalError)
        return
     endif
 
-    !matrix is Sigma*V^\dagger and reshaped to fit the product with the tensor on the right
-    matrix=new_MPSTensor(MatrixSpin,newRightBond,RightBond, & 
-         & reshape(vecmul(Sigma,conjg(vTransposed)) , [newRightBond,RightBond,MatrixSpin], &
-         & Pad= [ (zero, kk=1,newRightBond*RightBond*MatrixSpin) ]   ) )  !! Pad with zeros at the end
+    matrix=new_MPSTensor(MatrixSpin,LeftBond,newLeftBond, & 
+         & reshape(matvec(U,Sigma) , [LeftBond,newLeftBond,MatrixSpin], &
+         & Pad= [ (zero, kk=1,LeftBond*newLeftBond*MatrixSpin) ]   ) )  
 
   end function Right_Canonize_MPSTensor
 
@@ -821,6 +820,7 @@ integer function InitializationCheck(this) result(error)
 !!$    \[Chi] = Max[\[Chi]L, \[Chi]R];
 !!$    (* SVD of the new tensor, putting [chiL, spin*
 !!$    chiR] *)
+
 !!$    {u, v, t} = 
 !!$     SingularValueDecomposition[Flatten[newTensor, {{2}, {1, 3}}]];
 !!$    (* Prepare new right matrix *)
