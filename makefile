@@ -29,7 +29,7 @@ LINKFLAGS=
 endif
 
 BINARIES=_$(SYS)
-SOURCES =  constants.f90 error.f90 MPSTensor_Class.f90 MatrixHelp.f90
+SOURCES =  constants.f90 error.f90 MatrixHelp.f90 MPSTensor_Class.f90 MatrixProductState_Class.f90
 OBJS = $(SOURCES:.f90=.o)
 
 all: fullmake
@@ -58,6 +58,7 @@ clean :
 #-----------------------------------------------------------------------
 #
 testsuite: 
-	funit MPSTensor_Class > test.results
-	tail test.results
+#	funit MPSTensor_Class > MPSTensor.tests
+	funit MatrixProductState_Class > MPS.tests
+	tail -n 5 *.tests
 #

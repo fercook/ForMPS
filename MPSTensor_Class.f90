@@ -1,10 +1,13 @@
 !! Matrix Product States algorithms
 !! Author: Fernando M. Cucchietti 2010
 
-!!  This module describes an object with three legs as used by MPS algorithms.
+!!  This module contains a class of objects with three legs as used by MPS algorithms.
 !!  One leg is "special", it is the physical leg of the tensor.
 !!  In notation it is nice to have the spin as the first index, but in the implementation 
 !!  it is the third, as it makes it better for performance
+
+!!TODO: Convert the fixed dimension of the matrices in the object to allocatable, check performance
+!!TODO: Reimplement extendind the type from a Matrix class that performs some low level functions
 
 module MPSTensor_Class
 
@@ -23,17 +26,20 @@ module MPSTensor_Class
      private
      integer spin_,DLeft_,DRight_ 
      logical :: initialized_=.false.
-     complex(8) data_(MAX_D,MAX_D,MAX_spin) !!$TODO: Now uses fixed max dimensions and internal variables, change to allocatable
+     complex(8),allocatable :: data_(:,:,:) !!$TODO: Change to extend a matrix (maybe abstract) type
    contains
-     procedure delete => delete_MPSTensor
-     procedure print => print_MPSTensor
-     procedure PrintDimensions => Print_MPSTensor_Dimensions
-     procedure DRight => DRight_MPSTensor
-     procedure DLeft => DLeft_MPSTensor
-     procedure Spin => Spin_MPSTensor
-     procedure LCanonize => Left_Canonize_MPSTensor
-     procedure RCanonize => Right_Canonize_MPSTensor 
-     procedure isInitialized => InitializationCheck
+     procedure :: delete => delete_MPSTensor
+     procedure :: print => print_MPSTensor
+     procedure :: PrintDimensions => Print_MPSTensor_Dimensions
+     procedure :: DRight => DRight_MPSTensor
+     procedure :: DLeft => DLeft_MPSTensor
+     procedure :: Spin => Spin_MPSTensor
+     procedure :: LCanonize => Left_Canonize_MPSTensor
+     procedure :: RCanonize => Right_Canonize_MPSTensor 
+     procedure :: isInitialized => InitializationCheck
+     procedure :: CopyFrom => new_MPSTensor_fromAssignment
+     procedure :: Norm => Norm_Of_MPSTensor
+!     generic :: assignment(=) => CopyFrom
   end type MPSTensor
 
 !###############################
@@ -82,7 +88,7 @@ module MPSTensor_Class
      integer,intent(in) :: spin,DLeft,DRight
      type(MPSTensor) :: this
      integer :: n,alpha,beta
-     integer,save :: iseed = 101
+     real(8) :: randomtensorR(DLeft,DRight,spin),randomtensorC(DLeft,DRight,spin)
 
      if(spin.gt.MAX_spin.or.DLeft.gt.MAX_D.or.DRight.gt.MAX_D) then
         call ThrowException('new_MPSTensor_Random','spin or bond dimension larger than maximum',NoErrorCode,CriticalError)
@@ -98,15 +104,14 @@ module MPSTensor_Class
      this%DLeft_=DLeft
      this%DRight_=DRight
      !initialize data
-     this%data_=zero
-     do n=1,spin
-        do beta=1,DRight
-           do alpha=1,DLeft
-              this%data_(alpha,beta,n)=ran(iseed)+II*ran(iseed)
-           enddo
-        enddo
-     enddo
-     !Flip flag
+     if(this%initialized_) deallocate(this%data_)
+     allocate(this%data_(DLeft,DRight,spin))
+
+     Call random_number(randomtensorR)
+     call random_number(randomtensorC)
+
+     This%data_=randomtensorR+II*randomtensorC
+
      this%initialized_=.true.
 
    end function new_MPSTensor_Random
@@ -130,6 +135,9 @@ module MPSTensor_Class
      this%spin_=spin
      this%DLeft_=DLeft
      this%DRight_=DRight
+
+     if(this%initialized_) deallocate(this%data_)
+     allocate(this%data_(DLeft,DRight,spin))
      this%data_=zero
      do n=1,spin
         do beta=1,DRight
@@ -161,6 +169,9 @@ module MPSTensor_Class
      this%spin_=spin
      this%DLeft_=DLeft
      this%DRight_=DRight
+
+     if(this%initialized_) deallocate(this%data_)
+     allocate(this%data_(DLeft,DRight,spin))
      this%data_=zero
      do n=1,spin
         do beta=1,DRight
@@ -185,6 +196,8 @@ module MPSTensor_Class
      this%spin_=tensor%spin_
      this%DLeft_=tensor%DLeft_
      this%DRight_=tensor%DRight_
+     if(this%initialized_) deallocate(this%data_)
+     allocate(this%data_(this%DLeft_,this%DRight_,this%spin_))
      this%data_=zero
      this%data_=tensor%data_
      this%initialized_=.true.
@@ -192,7 +205,7 @@ module MPSTensor_Class
    end function new_MPSTensor_fromMPSTensor
 
    subroutine new_MPSTensor_fromAssignment(lhs,rhs)
-     type(MPSTensor),intent(out) :: lhs
+     TYPEORCLASS(MPSTensor),intent(out) :: lhs
      type(MPSTensor),intent(in) :: rhs
 
      if(.not.rhs%initialized_) then
@@ -203,6 +216,14 @@ module MPSTensor_Class
      lhs%spin_=rhs%spin_
      lhs%DLeft_=rhs%DLeft_
      lhs%DRight_=rhs%DRight_
+
+!    The following check should be
+!          if(lhs%initialized_) deallocate(lhs%data_)
+!    But instead I check for allocated because of a bug in GFortran,
+!    http://gcc.gnu.org/bugzilla/show_bug.cgi?id=43969
+     if(allocated(lhs%data_)) deallocate(lhs%data_)
+
+     allocate(lhs%data_(lhs%DLeft_,lhs%DRight_,lhs%spin_))
      lhs%data_=zero
      lhs%data_=rhs%data_
      lhs%initialized_=.true.
@@ -244,8 +265,9 @@ module MPSTensor_Class
     this%spin_=spin
     this%DLeft_=LeftBond
     this%DRight_=RightBond
+    if(this%initialized_) deallocate(this%data_)
+    allocate(this%data_(this%DLeft_,this%DRight_,this%spin_))
     this%data_=zero
-
     do s=1,Spin
        do beta=1,RightBond
           rightIndex=beta+(s-1)*rightStep
@@ -262,7 +284,8 @@ module MPSTensor_Class
 
 !######################################    delete
    integer function delete_MPSTensor (this) result(error)
-     class(MPSTensor),intent(INOUT) :: this
+     !!class(MPSTensor),intent(INOUT) :: this !!<<CLASS>>!!
+     TYPEORCLASS(MPSTensor),intent(INOUT) :: this   !!<<TYPE>>!!
 
      error=Warning
 
@@ -276,7 +299,7 @@ module MPSTensor_Class
      this%DLeft_=0
      this%DRight_=0
      !Erase data
-     this%data_=zero
+     deallocate(this%data_)
      !Flip flag
      this%initialized_=.false.     
 
@@ -287,7 +310,8 @@ module MPSTensor_Class
 
 
 integer function InitializationCheck(this) result(error)
-    class(MPSTensor),intent(IN) :: this
+    !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
+    TYPEORCLASS(MPSTensor),intent(IN) :: this !!<<TYPE>>!!
 
     if (.not.this%initialized_) then    
        error=CriticalError
@@ -301,7 +325,8 @@ integer function InitializationCheck(this) result(error)
 
 !######################################     print
    integer function Print_MPSTensor(this) result(error)
-     class(MPSTensor),intent(IN) :: this
+     !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
+     TYPEORCLASS(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
      integer i,j,k
 
      error = Warning
@@ -325,7 +350,8 @@ integer function InitializationCheck(this) result(error)
 
 
    integer function Print_MPSTensor_Dimensions(this) result(error)
-     class(MPSTensor),intent(IN) :: this
+     !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
+     TYPEORCLASS(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
      integer i,j,k
 
      error = Warning
@@ -348,7 +374,8 @@ integer function InitializationCheck(this) result(error)
 !###########       Accessor methods
 !##################################################################
    integer function Spin_MPSTensor(this) result(s)
-     class(MPSTensor),intent(IN) :: this
+     !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
+     TYPEORCLASS(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
  
     if(.not.(this%initialized_)) then
         call ThrowException('Spin','Tensor not initialized',NoErrorCode,Warning)
@@ -361,7 +388,8 @@ integer function InitializationCheck(this) result(error)
 !##################################################################
 
    integer function DLeft_MPSTensor(this) result(DL)
-     class(MPSTensor),intent(IN) :: this
+     !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
+     TYPEORCLASS(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
 
      if(.not.(this%initialized_)) then
         call ThrowException('DLeft','Tensor not initialized',NoErrorCode,Warning)
@@ -374,7 +402,8 @@ integer function InitializationCheck(this) result(error)
 !##################################################################
    integer function DRight_MPSTensor(this) result(DR)
 
-     class(MPSTensor),intent(IN) :: this
+     !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
+     TYPEORCLASS(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
 
      if(.not.(this%initialized_)) then
         call ThrowException('DRight','Tensor not initialized',NoErrorCode,Warning)
@@ -388,6 +417,24 @@ integer function InitializationCheck(this) result(error)
 !##################################################################
 !#######################        Products by things
 !##################################################################
+
+   real(8) function Norm_Of_MPSTensor(this)
+     TYPEORCLASS(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
+     integer :: s,alpha,beta
+
+     Norm_Of_MPSTensor=0.0d0
+     do s=1,this%spin_
+        do beta=1,this%DRight_
+           do alpha=1,this%DLeft_
+              Norm_Of_MPSTensor=Norm_Of_MPSTensor+abs(this%data_(alpha,beta,s))
+           enddo
+        enddo
+     enddo
+
+     return
+   end function Norm_Of_MPSTensor
+
+
    function Integer_times_MPSTensor(constant, tensor) result(this)
      integer,intent(IN) :: constant
      type(MPSTensor),intent(IN) :: tensor
@@ -470,7 +517,7 @@ integer function InitializationCheck(this) result(error)
 
 !##################################################################
 !###  IMPORTANT NOTE ON THE INTERFACE OF Matrix_times_MPSTensor:
-!###  One of the arguments must be a "matrix", i.e. a MPSTensor with spin=MatrixSpin=1
+!###  One of the arguments must be a "Tmatrix", i.e. a MPSTensor with spin=MatrixSpin=1
 !###  The order of the arguments is VERY important
 !###  If the first argument is a matrix, then the result is matrix.tensor
 !###  otherwise the result is tensor.matrix
@@ -496,7 +543,8 @@ integer function InitializationCheck(this) result(error)
                       & tensorA%DLeft_,tensorB%DLeft_,tensorB%DRight_,'N')
               enddo              
            else
-              call ThrowException('Matrix_times_MPSTensor','One of the arguments must be a *matrix* (MPSTensor with spin 1)',NoErrorCode,CriticalError)
+              call ThrowException('Matrix_times_MPSTensor','One of the arguments must be a *matrix* (MPSTensor with spin 1)' &
+                   & ,NoErrorCode,CriticalError)
            endif
         else
            call ThrowException('Matrix_times_MPSTensor','Dimensions of the tensors do not match',NoErrorCode,CriticalError)
@@ -689,7 +737,8 @@ integer function InitializationCheck(this) result(error)
 !##################################################################
 
   function Left_Canonize_MPSTensor(this) result(matrix)
-    class(MPSTensor),intent(INOUT) :: this
+    !!class(MPSTensor),intent(INOUT) :: this !!<<CLASS>>!!
+    TYPEORCLASS(MPSTensor),intent(INOUT) :: this  !!<<TYPE>>!!
     type(MPSTensor) :: matrix
     complex(8), allocatable :: U(:,:),vTransposed(:,:),collapsedTensor(:,:)
     real(8),allocatable :: Sigma(:)
@@ -752,7 +801,8 @@ integer function InitializationCheck(this) result(error)
 !##################################################################
 
   function Right_Canonize_MPSTensor(this) result(matrix)
-    class(MPSTensor),intent(INOUT) :: this
+    !!class(MPSTensor),intent(INOUT) :: this !!<<CLASS>>!!
+    TYPEORCLASS(MPSTensor),intent(INOUT) :: this  !!<<TYPE>>!!
     type(MPSTensor) :: matrix
     complex(8), allocatable :: U(:,:),vTransposed(:,:),collapsedTensor(:,:)
     real(8),allocatable :: Sigma(:)
@@ -865,7 +915,7 @@ integer function InitializationCheck(this) result(error)
 !#######################################################################################
 
   subroutine CollapseSpinWithBond(this,collapsed,whichDimension)
-    Type(MPSTensor),intent(IN) :: this
+    TYPEORCLASS(MPSTensor),intent(IN) :: this
     complex(8),intent(OUT) :: collapsed(:,:)
     integer,intent(IN) :: whichDimension
     integer :: s,alpha,beta,leftIndex,rightIndex,leftStep,rightStep,leftDimension,rightDimension
@@ -890,7 +940,8 @@ integer function InitializationCheck(this) result(error)
        return
     endif
     if ((size(collapsed,1).ne.leftDimension).and.(size(collapsed,2).ne.rightDimension)) then
-       call ThrowException('CollapseSpinWithBond','Matrix for collapsed tensor does not have right dimensions',whichDimension,CriticalError)
+       call ThrowException('CollapseSpinWithBond','Matrix for collapsed tensor does not have right dimensions' &
+            & ,whichDimension,CriticalError)
        return
     endif
 
