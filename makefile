@@ -11,8 +11,8 @@ LAPACK=-framework vecLib
 BLAS=
 FLAGS= -O3
 RM=rm
-FCOMP=ifort
-LINKER=ifort
+FCOMP=gfortrant
+LINKER=gfortran
 LINKFLAGS=
 DEBUGFLAG=-g
 endif
@@ -31,6 +31,7 @@ endif
 BINARIES=_$(SYS)
 SOURCES =  constants.f90 error.f90 MatrixHelp.f90 MPSTensor_Class.f90 MatrixProductState_Class.f90
 OBJS = $(SOURCES:.f90=.o)
+TESTED = MPSTensor_Class.f90 MatrixProductState_Class.f90
 
 all: fullmake
 obj: object
@@ -53,12 +54,13 @@ install:
 	cp  $(DIR)
 
 clean :
-	@ ${RM} -rf *.o *.mod $(BINARIES)
+	@ ${RM} -rf *.o *.mod $(BINARIES) *.gcov *.gcda *.gcno
 	funit --clean
 #-----------------------------------------------------------------------
 #
-testsuite: 
-#	funit MPSTensor_Class > MPSTensor.tests
-	funit MatrixProductState_Class > MPS.tests
-	tail -n 5 *.tests
+testsuite:
+	echo $(?:.f90=)
+	funit $? > $?.test 
+	gcov $?.f90
+	tail -n 5 $?.test
 #
