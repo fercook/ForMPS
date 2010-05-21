@@ -1,0 +1,37 @@
+
+Mathematica implementation:
+
+field is an Accumulator 
+	--- takes operator(n), HdiagElement, LRprod (might be identity for Canonized)
+	--- adds H(n)*operator(n)*LRprod  
+	--- need to keep one per site
+
+operators is an Accumulator 
+	--- takes operator(n), ListOfOperators, HinteractionMatrix
+	--- adds Sum_m H(n,m)*operator(n)*OpertFromList(m)
+	--- keep one per site
+
+operatorlist is a ListOfOperators
+	--- takes operator(n) and LRprod
+	--- computes operator(n)*LRprod and adds it to List
+	--- keep at most Range operators in the List
+
+
+Notes:
+
+*** field and operators can be added together.
+*** field can just go through the different sigmas, or it can lookup an operator per site table.
+*** operatorlist could keep in the list all possible operators because it doesn't know which will get used,
+     or it can lookup in the operator-interaction table to see what needs to be computed.
+     	       *** Problem with this is that the energy computer would need to know about the table
+	             when it computes the energy for Arpack.
+		     	     *** Maybe an interesting wrapper for Arpack could be written?
+*** operators can act like field (willy nilly) or it could see the operator-interaction lookup table and only
+     accumulate the ones that are listed there.
+*** operator per site and operator-interaction tables maybe should be provided by the Hamiltonian class
+    	     *** or maybe they are the interface of the Hamiltonian class
+	     *** Something like    ham%OperatorOnSite(n)
+						ham%OperatorsOnSites(n,m)
+	     *** This would require that Accumulators can tell if a particular operator is on the list of OperatorList
+	     	      *** Maybe OperatorList is an extension of Accumulators? A derivation of a base class that has a minimal interface?
+
