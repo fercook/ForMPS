@@ -31,7 +31,7 @@ Notes:
 *** operator per site and operator-interaction tables maybe should be provided by the Hamiltonian class
     	     *** or maybe they are the interface of the Hamiltonian class
 	     *** Something like    ham%OperatorOnSite(n)
-						ham%OperatorsOnSites(n,m)
+					      ham%OperatorsOnSites(n,m)
 	     *** This would require that Accumulators can tell if a particular operator is on the list of OperatorList
 	     	      *** Maybe OperatorList is an extension of Accumulators? A derivation of a base class that has a minimal interface?
 

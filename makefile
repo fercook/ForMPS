@@ -9,9 +9,9 @@ SYS = MacOSX-x86-64
 LAPACK=-framework vecLib
 #-L$MKLPATH -I$MKLINCLUDE -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lpthread
 BLAS=
-FLAGS= -O3
+FLAGS=-O3 -ffree-line-length-300 -cpp -DTYPEORCLASS="type" -fprofile-arcs -ftest-coverage
 RM=rm
-FCOMP=gfortrant
+FCOMP=gfortran
 LINKER=gfortran
 LINKFLAGS=
 DEBUGFLAG=-g
@@ -31,12 +31,13 @@ endif
 BINARIES=_$(SYS)
 SOURCES =  constants.f90 error.f90 MatrixHelp.f90 MPSTensor_Class.f90 MatrixProductState_Class.f90
 OBJS = $(SOURCES:.f90=.o)
-TESTED = MPSTensor_Class.f90 MatrixProductState_Class.f90
+TESTED = MPSTensor_Class MatrixProductState_Class
 
 all: fullmake
 obj: object
 exec: executable
-test: testsuite
+test: $(TESTED) 
+	#testsuite
 debug: debug
 
 #--------  HERE START THE USEFUL BITS
@@ -58,9 +59,11 @@ clean :
 	funit --clean
 #-----------------------------------------------------------------------
 #
-testsuite:
-	echo $(?:.f90=)
-	funit $? > $?.test 
-	gcov $?.f90
-	tail -n 5 $?.test
+testsuite: 
+	
+$(TESTED): $(OBJS)
+	echo $@
+	funit $@ > $@.test 
+	gcov $@.f90
+	tail -n 5 $@.test
 #

@@ -26,6 +26,7 @@ module MatrixProductState_Class
      procedure :: CanonizeAtSite => Canonize_MPS_At_Site
      procedure :: LCanonize => Canonize_MPS_At_Left
      procedure :: RCanonize => Canonize_MPS_At_Right
+!     procedure :: Canonize => Canonize_MPS_At_Right
      procedure :: L2Norm => Norm_of_MatrixProductState
 !     procedure :: CopyFrom => new_MPSTensor_fromAssignment
 !!$TODO
