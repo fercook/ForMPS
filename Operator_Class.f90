@@ -23,12 +23,13 @@ module Operator_Class
      procedure :: ApplyTo => ApplyToMPSTensor
   end type Operator
 
-  complex(8),parameter,dimension(MAX_spin,MAX_spin):: PauliSigmaX = Reshape([zero,one,one,zero], [MAX_spin,MAX_spin]) 
-  complex(8),parameter,dimension(MAX_spin,MAX_spin):: PauliSigmaY = Reshape([zero,II,-II,zero], [MAX_spin,MAX_spin]) 
-  complex(8),parameter,dimension(MAX_spin,MAX_spin):: PauliSigmaZ = Reshape([one,zero,zero,zero,-one], [MAX_spin,MAX_spin]) 
+  complex(8),parameter,dimension(MAX_spin,MAX_spin):: PauliSigmaXMatrix = Reshape([zero,one,one,zero], [MAX_spin,MAX_spin]) 
+  complex(8),parameter,dimension(MAX_spin,MAX_spin):: PauliSigmaYMatrix = Reshape([zero,II,-II,zero], [MAX_spin,MAX_spin]) 
+  complex(8),parameter,dimension(MAX_spin,MAX_spin):: PauliSigmaZMatrix = Reshape([one,zero,zero,zero,-one], [MAX_spin,MAX_spin]) 
+  complex(8),parameter,dimension(MAX_spin,MAX_spin):: IdentityOperatorMatrix = Reshape([one,zero,zero,zero,one], [MAX_spin,MAX_spin]) 
 
-  type(Operator),dimension(OPERATOR_BASIS_SIZE) :: PauliSigma 
-  data PauliSigma/  Operator(PauliSigmaX) ,  Operator(PauliSigmaY) ,  Operator(PauliSigmaZ) /
+  type(Operator),dimension(0:OPERATOR_BASIS_SIZE) :: PauliSigma 
+  data PauliSigma/ Operator(IdentityOperatorMatrix), Operator(PauliSigmaXMatrix) ,  Operator(PauliSigmaYMatrix) ,  Operator(PauliSigmaZMatrix) /
 
  contains
 
@@ -37,7 +38,7 @@ module Operator_Class
      type(MPSTensor),intent(IN) :: aMPSTensor
      type(MPSTensor) :: newMPSTensor
      
-     newMPSTensor = aMPSTensor%ApplyOperator(this)
+     newMPSTensor = aMPSTensor%ApplyOperator(this%data)
 
    end function ApplyToMPSTensor
 

@@ -31,7 +31,7 @@ endif
 BINARIES=_$(SYS)
 SOURCES = constants.f90 error.f90 MatrixHelp.f90 MPSTensor_Class.f90 Operator_Class.f90 MatrixProductState_Class.f90
 OBJS = $(SOURCES:.f90=.o)
-TESTED = MPSTensor_Class MatrixProductState_Class
+TESTED = MPSTensor_Class MatrixProductState_Class Operator_Class
 
 all: fullmake
 obj: object
@@ -62,7 +62,7 @@ clean :
 testsuite: 
 	
 $(TESTED): $(OBJS)
-	echo $@
+#	echo $@
 	funit $@ > $@.test 
 	gcov $@.f90
 	tail -n 5 $@.test
