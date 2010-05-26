@@ -6,7 +6,7 @@
 !!  In notation it is nice to have the spin as the first index, but in the implementation 
 !!  it is the third, as it makes it better for performance
 
-!!TODO: Convert the fixed dimension of the matrices in the object to allocatable, check performance
+!!TODO: check performance of allocatable data 
 !!TODO: Reimplement extendind the type from a Matrix class that performs some low level functions
 
 module MPSTensor_Class
@@ -17,7 +17,8 @@ module MPSTensor_Class
 
   implicit none
 
-  integer,parameter :: MAX_spin = 2, MAX_D = 100
+  integer,parameter :: MAX_spin = 2
+  integer,parameter :: MAX_D = 100
 
 !###############################
 !#####  The class main object
@@ -39,6 +40,7 @@ module MPSTensor_Class
      procedure :: isInitialized => InitializationCheck
      procedure :: CopyFrom => new_MPSTensor_fromAssignment
      procedure :: Norm => Norm_Of_MPSTensor
+     procedure :: ApplyOperator => Apply_Operator_From_Matrix
 !     generic :: assignment(=) => CopyFrom
   end type MPSTensor
 
@@ -533,14 +535,12 @@ integer function InitializationCheck(this) result(error)
            if (tensorA%spin_.eq.MatrixSpin) then
               this = new_MPSTensor(tensorB%spin_,tensorA%DLeft_,tensorB%DRight_,zero)
               do s=1,tensorB%spin_
-                 call mymatmul(tensorA%data_(:,:,MatrixSpin),tensorB%data_(:,:,s),this%data_(:,:,s), &
-                      & tensorA%DLeft_,tensorB%DLeft_,tensorB%DRight_,'N')
+                 this%data_(:,:,s)=matmul(tensorA%data_(:,:,MatrixSpin),tensorB%data_(:,:,s)) !+this%data_(:,:,s)
               enddo
            else if (tensorB%spin_.eq.MatrixSpin) then
               this = new_MPSTensor(tensorA%spin_,tensorA%DLeft_,tensorB%DRight_,zero)
               do s=1,tensorA%spin_
-                 call mymatmul(tensorA%data_(:,:,s),tensorB%data_(:,:,MatrixSpin),this%data_(:,:,s), &
-                      & tensorA%DLeft_,tensorB%DLeft_,tensorB%DRight_,'N')
+                 this%data_(:,:,s)=matmul(tensorA%data_(:,:,s),tensorB%data_(:,:,MatrixSpin)) !+this%data_(:,:,s)
               enddo              
            else
               call ThrowException('Matrix_times_MPSTensor','One of the arguments must be a *matrix* (MPSTensor with spin 1)' &
@@ -554,6 +554,32 @@ integer function InitializationCheck(this) result(error)
      endif
      return
    end function Matrix_times_MPSTensor
+
+
+
+   function Apply_Operator_From_Matrix(this,matrix) result(aTensor)
+     TYPEORCLASS(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
+     type(MPSTensor) :: aTensor
+     complex(8),intent(IN) :: matrix(:,:)
+     integer alpha,beta
+
+     if(this%initialized_) then
+        if(size(matrix,1).ne.this%spin_.or.size(matrix,2).ne.this%spin_) then
+           aTensor = new_MPSTensor(this%spin_,this%DLeft_,this%DRight_,zero)
+           do beta=1,this%DRight_
+              do alpha=1,this%DLeft_
+                 aTensor%data_(alpha,beta,:)=matmul(matrix,this%data_(alpha,beta,:))
+              enddo
+           enddo
+        else
+           call ThrowException('Apply_Operator_From_Matrix','Operator is not of the rigt size',this%spin_,CriticalError)
+        endif
+     else
+        call ThrowException('Apply_Operator_From_Matrix','Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+
+   end function Apply_Operator_From_Matrix
+
 
 !##################################################################
 !##################################################################
@@ -674,11 +700,8 @@ integer function InitializationCheck(this) result(error)
 
      !The multiplications are done by hand because I could not get ZGEMM to work properly
      do s=1,TensorA%Spin_
-        Tempmatrix%data_=0.0d0        
-        call mymatmul(L_in_matrix%data_(:,:,MatrixSpin),TensorA%data_(:,:,s),Tempmatrix%data_(:,:,MatrixSpin), &
-             & TensorB%DLeft_,TensorA%DLeft_,TensorA%DRight_,'N')
-        call mymatmul(TensorB%data_(:,:,s),Tempmatrix%data_(:,:,MatrixSpin), MatrixOut%data_(:,:,MatrixSpin), &
-             & TensorB%DRight_,TensorB%DLeft_,TensorA%DRight_,'A')
+        Tempmatrix%data_(:,:,MatrixSpin)=matmul(L_in_matrix%data_(:,:,MatrixSpin),TensorA%data_(:,:,s))
+        MatrixOut%data_(:,:,MatrixSpin)=MatrixOut%data_(:,:,MatrixSpin)+matmul(dconjg(transpose(TensorB%data_(:,:,s))),Tempmatrix%data_(:,:,MatrixSpin))
     enddo
     return 
   end function MPS_Left_Product
@@ -719,11 +742,8 @@ integer function InitializationCheck(this) result(error)
     
     !The multiplications are done by hand because I could not get ZGEMM to work properly
     do s=1,TensorA%Spin_
-       Tempmatrix%data_=0.0d0  
-       call mymatmul(TensorA%data_(:,:,s),R_in_matrix%data_(:,:,MatrixSpin),Tempmatrix%data_(:,:,MatrixSpin), &
-            & TensorA%DLeft_,TensorA%DRight_,TensorB%DRight_,'N')
-       call mymatmul(Tempmatrix%data_(:,:,MatrixSpin),TensorB%data_(:,:,s),MatrixOut%data_(:,:,MatrixSpin), &
-            & TensorA%DLeft_,TensorB%DRight_,TensorB%DLeft_,'B')
+       Tempmatrix%data_(:,:,MatrixSpin)=matmul(TensorA%data_(:,:,s),R_in_matrix%data_(:,:,MatrixSpin))
+       MatrixOut%data_(:,:,MatrixSpin)=MatrixOut%data_(:,:,MatrixSpin)+matmul(Tempmatrix%data_(:,:,MatrixSpin),transpose(dconjg(TensorB%data_(:,:,s))))
     enddo
     return 
   end function MPS_Right_Product

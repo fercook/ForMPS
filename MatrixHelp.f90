@@ -10,53 +10,53 @@ Module Matrix_Helper
 contains
 !######################################################################################
 
-   subroutine mymatmul(A,B,C,indexL,indexC,indexR,mode)
-     complex(8) :: A(:,:),B(:,:),C(:,:)
-     integer :: indexL,indexC,indexR
-     character*1 :: mode
-     integer :: I,J,K,L
-     complex(8) TEMP
-     ! mode = 'N' is normal multiplication C = A * B + C
-     ! mode = 'A' is with A dagged, C = A^+ * B + C
-     ! mode = 'B' is with B dagged, C = A * B^+ + C
-     if (mode.eq.'N'.or.mode.eq.'n') then
-        !C = A * B + C
-        DO J = 1,indexR
-           DO L = 1,indexC
-              IF (B(L,J).NE.ZERO) THEN
-                 TEMP = B(L,J)
-                 DO I = 1,indexL
-                    C(I,J) = C(I,J) + A(I,L)*TEMP
-                 enddo
-              END IF
-           enddo
-        enddo
-     else if (mode.eq.'A'.or.mode.eq.'a') then
-        ! C = A^+ * B + C
-        DO J = 1, indexR
-           DO I = 1,indexL
-              TEMP = ZERO
-              DO L = 1,indexC
-                 TEMP = TEMP + DCONJG(A(L,I))*B(L,J)
-              enddo
-             C(I,J) = TEMP + C(I,J)
-           enddo
-        enddo
-     else if (mode.eq.'B'.or.mode.eq.'b') then
-        ! C = A * B^+ + C
-        DO J = 1,indexR
-           DO L = 1,indexC
-              IF (B(J,L).NE.ZERO) THEN
-                 TEMP = DCONJG(B(J,L))
-                 DO I = 1,indexL
-                    C(I,J) = C(I,J) + A(I,L)*TEMP
-                 enddo
-              END IF
-           enddo
-        enddo
-
-     endif
-   end subroutine mymatmul
+!!$   subroutine mymatmul(A,B,C,indexL,indexC,indexR,mode)
+!!$     complex(8) :: A(:,:),B(:,:),C(:,:)
+!!$     integer :: indexL,indexC,indexR
+!!$     character*1 :: mode
+!!$     integer :: I,J,K,L
+!!$     complex(8) TEMP
+!!$     ! mode = 'N' is normal multiplication C = A * B + C
+!!$     ! mode = 'A' is with A dagged, C = A^+ * B + C
+!!$     ! mode = 'B' is with B dagged, C = A * B^+ + C
+!!$     if (mode.eq.'N'.or.mode.eq.'n') then
+!!$        !C = A * B + C
+!!$        DO J = 1,indexR
+!!$           DO L = 1,indexC
+!!$              IF (B(L,J).NE.ZERO) THEN
+!!$                 TEMP = B(L,J)
+!!$                 DO I = 1,indexL
+!!$                    C(I,J) = C(I,J) + A(I,L)*TEMP
+!!$                 enddo
+!!$              END IF
+!!$           enddo
+!!$        enddo
+!!$     else if (mode.eq.'A'.or.mode.eq.'a') then
+!!$        ! C = A^+ * B + C
+!!$        DO J = 1, indexR
+!!$           DO I = 1,indexL
+!!$              TEMP = ZERO
+!!$              DO L = 1,indexC
+!!$                 TEMP = TEMP + DCONJG(A(L,I))*B(L,J)
+!!$              enddo
+!!$             C(I,J) = TEMP + C(I,J)
+!!$           enddo
+!!$        enddo
+!!$     else if (mode.eq.'B'.or.mode.eq.'b') then
+!!$        ! C = A * B^+ + C
+!!$        DO J = 1,indexR
+!!$           DO L = 1,indexC
+!!$              IF (B(J,L).NE.ZERO) THEN
+!!$                 TEMP = DCONJG(B(J,L))
+!!$                 DO I = 1,indexL
+!!$                    C(I,J) = C(I,J) + A(I,L)*TEMP
+!!$                 enddo
+!!$              END IF
+!!$           enddo
+!!$        enddo
+!!$
+!!$     endif
+!!$   end subroutine mymatmul
 
    function vecmat(vector,matrix) result(this)
      real(8),intent(IN) :: vector(:)
