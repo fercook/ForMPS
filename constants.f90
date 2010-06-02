@@ -10,5 +10,8 @@ module Constants
   integer,parameter :: SecondDimension=2
   integer,parameter :: ThirdDimension=3
   integer,parameter :: FourthDimension=4
+
+  integer,parameter :: Right = 1
+  integer,parameter :: Left =2
   
 end module Constants

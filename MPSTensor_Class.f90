@@ -564,7 +564,7 @@ integer function InitializationCheck(this) result(error)
      integer alpha,beta
 
      if(this%initialized_) then
-        if(size(matrix,1).ne.this%spin_.or.size(matrix,2).ne.this%spin_) then
+        if(size(matrix,1).eq.this%spin_.and.size(matrix,2).eq.this%spin_) then
            aTensor = new_MPSTensor(this%spin_,this%DLeft_,this%DRight_,zero)
            do beta=1,this%DRight_
               do alpha=1,this%DLeft_
@@ -572,13 +572,16 @@ integer function InitializationCheck(this) result(error)
               enddo
            enddo
         else
-           call ThrowException('Apply_Operator_From_Matrix','Operator is not of the rigt size',this%spin_,CriticalError)
+           call ThrowException('Apply_Operator_From_Matrix','Operator is not of the rigt size',size(matrix,1)-this%spin_,CriticalError)
         endif
      else
         call ThrowException('Apply_Operator_From_Matrix','Tensor not initialized',NoErrorCode,CriticalError)
      endif
 
    end function Apply_Operator_From_Matrix
+
+
+
 
 
 !##################################################################
@@ -656,8 +659,8 @@ integer function InitializationCheck(this) result(error)
 !#######################################################################################
 !#######################################################################################
 ! This are very important functions as most of the algorithm time is spent updating the
-! matrices using this Left and Right products with tensors
-! They are also used heavily for computing expectation values, so optimization here might be key
+! matrices using this Left and Right products with tensors.
+! They are also used heavily for computing expectation values, so optimization here might be key.
 ! Convention: 
 !              L(betaR,alphaR) = \sum_i B_i^\dagger . L_in A_i
 !                              = \sum_i \sum_betaL \sum_alphaL  B^*_{i,betaR,betaL} Lin_{betaL,alphaL} A_{i,alphaL,alphaR)
@@ -705,6 +708,43 @@ integer function InitializationCheck(this) result(error)
     enddo
     return 
   end function MPS_Left_Product
+
+   function MPS_Left_ProductAlloc(TensorA,TensorB,matrixin) result(matrixout)
+     type(MPSTensor),intent(IN) :: TensorA,TensorB
+     complex(8),allocatable :: matrixout(:,:)
+     complex(8),intent(IN),optional :: matrixin(:,:)
+     complex(8),allocatable :: TempMatrix(:,:),L_in_matrix(:,:)
+     integer :: s,i,k,j,l
+     complex(8) :: TEMP
+     
+     if((.not.tensorA%initialized_).and.(.not.tensorB%initialized_)) then
+        call ThrowException('MPSLeftProduct','Tensors not initialized',NoErrorCode,CriticalError)
+        return
+     endif     
+     if (TensorA%Spin_.ne.TensorB%spin_) then
+        call ThrowException('MPSLeftProduct','Tensors have different spin',NoErrorCode,CriticalError)
+        return
+     endif
+     if (present(matrixin)) then
+        allocate(L_in_matrix(size(matrixin,1),size(matrixin,2)))
+        L_in_matrix=matrixin
+     else
+        allocate(L_in_matrix(TensorB%DLeft_,TensorA%DLeft_))
+        L_in_matrix=one
+     endif
+
+     allocate(matrixout(TensorB%DRight_,TensorA%DRight_))
+     allocate(TempMatrix(TensorB%DLeft_ ,TensorA%DRight_))
+     matrixout=zero
+     TempMatrix=zero
+
+     !The multiplications are done by hand because I could not get ZGEMM to work properly
+     do s=1,TensorA%Spin_
+        Tempmatrix=matmul(L_in_matrix,TensorA%data_(:,:,s))
+        MatrixOut=MatrixOut+matmul(dconjg(transpose(TensorB%data_(:,:,s))),Tempmatrix)
+    enddo
+    return 
+  end function MPS_Left_ProductAlloc
 
 !##################################################################
 !##################################################################
@@ -811,10 +851,6 @@ integer function InitializationCheck(this) result(error)
   
 
 
-
-
-
-
 ! Right Site Canonization -- Returns the matrix that needs to be multiplied
 ! to the adjacent site on the LEFT
 !##################################################################
@@ -871,60 +907,6 @@ integer function InitializationCheck(this) result(error)
          & Pad= [ (zero, kk=1,LeftBond*newLeftBond*MatrixSpin) ]   ) )  
 
   end function Right_Canonize_MPSTensor
-
-
-
-
-!!$ Mathematica code for canonization
-!!$
-!!$ Options[MPSCanonizeSite] = {Direction -> "Right", UseMatrix -> True};
-!!$ SetAttributes[MPSCanonizeSite, HoldAll];
-!!$ MPSCanonizeSite[tensor_, matrix_, OptionsPattern[]] := 
-!!$  Module[{sense = OptionValue[Direction], 
-!!$    usematrix = OptionValue[UseMatrix], 
-!!$    numTensors, \[Chi]L, \[Chi]R, \[Chi], u, v, t, newTensor},(* 
-!!$   Start by multiplying the tensor with the matrix from the previous site *)
-!!$   If[sense == "Right",
-!!$    If[usematrix, newTensor = tensor.matrix, newTensor = tensor];
-!!$    {\[Chi]L, \[Chi]R} = Dimensions[newTensor[[1]]];
-!!$    \[Chi] = Max[\[Chi]L, \[Chi]R];
-!!$    (* SVD of the new tensor, putting [chiL, spin*
-!!$    chiR] *)
-
-!!$    {u, v, t} = 
-!!$     SingularValueDecomposition[Flatten[newTensor, {{2}, {1, 3}}]];
-!!$    (* Prepare new right matrix *)
-!!$    
-!!$    matrix = 
-!!$     PadRight[
-!!$      u.v, {Min[\[Chi], \[Chi]L], Min[\[Chi], Length[t], \[Chi]L]}];
-!!$    (* Form the new tensor with the first row of t^
-!!$    dagger *)
-!!$    (Partition[
-!!$       ConjugateTranspose[
-!!$        t], {Min[\[Chi], Length[t], \[Chi]L], \[Chi]R}][[1, All]])
-!!$    , (* LEFT CANONIZATION *)
-!!$    If[usematrix, newTensor = matrix.# & /@ tensor, 
-!!$     newTensor = tensor];
-!!$    {\[Chi]L, \[Chi]R} = Dimensions[newTensor[[1]]];
-!!$    \[Chi] = Max[\[Chi]L, \[Chi]R];
-!!$    (* SVD of the new tensor, putting [chiL*spin, 
-!!$    chiR] *)
-!!$    {u, v, t} = 
-!!$     SingularValueDecomposition[Flatten[newTensor, {{1, 2}, {3}}]];
-!!$    (* Prepare new right matrix *)
-!!$    
-!!$    matrix = 
-!!$     PadRight[
-!!$      v.ConjugateTranspose[t], {Min[\[Chi], Length[u], \[Chi]R], 
-!!$       Min[\[Chi], \[Chi]R]}];
-!!$    (* Form the new tensor with the first column of u *)
-!!$    \
-!!$    (Partition[u, {\[Chi]L, Min[\[Chi], Length[u], \[Chi]R]}][[All, 1]])
-!!$    ]
-!!$   ];
-
-
 
 !#######################################################################################
 !#######################################################################################

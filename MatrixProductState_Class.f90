@@ -28,11 +28,12 @@ module MatrixProductState_Class
      procedure :: RCanonize => Canonize_MPS_At_Right
 !     procedure :: Canonize => Canonize_MPS_At_Right
      procedure :: L2Norm => Norm_of_MatrixProductState
-!     procedure :: CopyFrom => new_MPSTensor_fromAssignment
 !!$TODO
 !!$    ExpandBondTo
 !!$    SaveToFile
 !!$    ReadFromFile
+!!$    ReplaceTensorBy
+!!$    GetTensor
   end type MatrixProductState
 
   interface new_MatrixProductState
@@ -49,7 +50,7 @@ contains
   function new_MatrixProductState_Random_OBC(Length,spin,bond) result(this)
     type(MatrixProductState) :: this
     integer :: spin,bond
-    integer :: n
+    integer :: loopIndex
     integer :: Length
 
     if(Length.gt.MAX_LENGTH) then
@@ -63,8 +64,8 @@ contains
     this%Tensors(1) = new_MPSTensor(spin,1,bond)
     this%Tensors(Length) = new_MPSTensor(spin,bond,1)
 
-    do n=2,Length-1
-       this%Tensors(n) = new_MPSTensor(spin,bond,bond)
+    do loopIndex=2,Length-1
+       this%Tensors(loopIndex) = new_MPSTensor(spin,bond,bond)
     enddo
     this%CanonizedAtSite=-2
     this%initialized=.true.
