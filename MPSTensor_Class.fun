@@ -1,4 +1,5 @@
 test_suite MPSTensor_Class
+
   integer error
   integer :: BondL=3
   integer :: BondR=5
@@ -36,9 +37,9 @@ end test
 test accesors_work
   type(MPSTensor) :: A
   A=new_MPSTensor(SpinT,BondL,BondR)
-  assert_equal(A%spin(),SpinT)
-  assert_equal(A%DLeft(),BondL)
-  assert_equal(A%DRight(),BondR)
+  assert_equal(A%getspin(),SpinT)
+  assert_equal(A%getDLeft(),BondL)
+  assert_equal(A%getDRight(),BondR)
   assert_equal(A%delete(),Normal)
   assert_false(WasThereError())
 end test

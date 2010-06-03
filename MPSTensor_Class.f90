@@ -25,16 +25,16 @@ module MPSTensor_Class
 !###############################
   type MPSTensor
      private
-     integer spin_,DLeft_,DRight_ 
+     integer spin,DLeft,DRight
      logical :: initialized_=.false.
      complex(8),allocatable :: data_(:,:,:) !!$TODO: Change to extend a matrix (maybe abstract) type
    contains
      procedure :: delete => delete_MPSTensor
      procedure :: print => print_MPSTensor
      procedure :: PrintDimensions => Print_MPSTensor_Dimensions
-     procedure :: DRight => DRight_MPSTensor
-     procedure :: DLeft => DLeft_MPSTensor
-     procedure :: Spin => Spin_MPSTensor
+     procedure :: getDRight => DRight_MPSTensor
+     procedure :: getDLeft => DLeft_MPSTensor
+     procedure :: getSpin => Spin_MPSTensor
      procedure :: LCanonize => Left_Canonize_MPSTensor
      procedure :: RCanonize => Right_Canonize_MPSTensor 
      procedure :: isInitialized => InitializationCheck
@@ -102,9 +102,9 @@ module MPSTensor_Class
      endif
 
      !initialize internal variables
-     this%spin_=spin
-     this%DLeft_=DLeft
-     this%DRight_=DRight
+     this%spin=spin
+     this%DLeft=DLeft
+     this%DRight=DRight
      !initialize data
      if(this%initialized_) deallocate(this%data_)
      allocate(this%data_(DLeft,DRight,spin))
@@ -134,9 +134,9 @@ module MPSTensor_Class
         return
      endif
 
-     this%spin_=spin
-     this%DLeft_=DLeft
-     this%DRight_=DRight
+     this%spin=spin
+     this%DLeft=DLeft
+     this%DRight=DRight
 
      if(this%initialized_) deallocate(this%data_)
      allocate(this%data_(DLeft,DRight,spin))
@@ -168,9 +168,9 @@ module MPSTensor_Class
         return
      endif
 
-     this%spin_=spin
-     this%DLeft_=DLeft
-     this%DRight_=DRight
+     this%spin=spin
+     this%DLeft=DLeft
+     this%DRight=DRight
 
      if(this%initialized_) deallocate(this%data_)
      allocate(this%data_(DLeft,DRight,spin))
@@ -195,11 +195,11 @@ module MPSTensor_Class
      error=tensor%isInitialized()
      if (WasThereError()) call ProcessException('new_MPSTensor_fromMPSTensor')
 
-     this%spin_=tensor%spin_
-     this%DLeft_=tensor%DLeft_
-     this%DRight_=tensor%DRight_
+     this%spin=tensor%spin
+     this%DLeft=tensor%DLeft
+     this%DRight=tensor%DRight
      if(this%initialized_) deallocate(this%data_)
-     allocate(this%data_(this%DLeft_,this%DRight_,this%spin_))
+     allocate(this%data_(this%DLeft,this%DRight,this%spin))
      this%data_=zero
      this%data_=tensor%data_
      this%initialized_=.true.
@@ -215,9 +215,9 @@ module MPSTensor_Class
         return
      endif
 
-     lhs%spin_=rhs%spin_
-     lhs%DLeft_=rhs%DLeft_
-     lhs%DRight_=rhs%DRight_
+     lhs%spin=rhs%spin
+     lhs%DLeft=rhs%DLeft
+     lhs%DRight=rhs%DRight
 
 !    The following check should be
 !          if(lhs%initialized_) deallocate(lhs%data_)
@@ -225,7 +225,7 @@ module MPSTensor_Class
 !    http://gcc.gnu.org/bugzilla/show_bug.cgi?id=43969
      if(allocated(lhs%data_)) deallocate(lhs%data_)
 
-     allocate(lhs%data_(lhs%DLeft_,lhs%DRight_,lhs%spin_))
+     allocate(lhs%data_(lhs%DLeft,lhs%DRight,lhs%spin))
      lhs%data_=zero
      lhs%data_=rhs%data_
      lhs%initialized_=.true.
@@ -264,11 +264,11 @@ module MPSTensor_Class
        return
     endif
 
-    this%spin_=spin
-    this%DLeft_=LeftBond
-    this%DRight_=RightBond
+    this%spin=spin
+    this%DLeft=LeftBond
+    this%DRight=RightBond
     if(this%initialized_) deallocate(this%data_)
-    allocate(this%data_(this%DLeft_,this%DRight_,this%spin_))
+    allocate(this%data_(this%DLeft,this%DRight,this%spin))
     this%data_=zero
     do s=1,Spin
        do beta=1,RightBond
@@ -297,9 +297,9 @@ module MPSTensor_Class
      endif
      
      !Erase info
-     this%spin_=0
-     this%DLeft_=0
-     this%DRight_=0
+     this%spin=0
+     this%DLeft=0
+     this%DRight=0
      !Erase data
      deallocate(this%data_)
      !Flip flag
@@ -338,10 +338,10 @@ integer function InitializationCheck(this) result(error)
         return
      endif
 
-     do i=1,this%spin_
+     do i=1,this%spin
         print *,'State :',i
-        do j=1,this%DLeft_
-           print *,(this%data_(j,k,i),k=1,this%DRight_)
+        do j=1,this%DLeft
+           print *,(this%data_(j,k,i),k=1,this%DRight)
         enddo
      enddo
 
@@ -363,9 +363,9 @@ integer function InitializationCheck(this) result(error)
         return
      endif
 
-     print *,'Spin = ',this%spin_
-     print *,'DL = ',this%DLeft_
-     print *,'DR = ',this%DRight_
+     print *,'Spin = ',this%spin
+     print *,'DL = ',this%DLeft
+     print *,'DR = ',this%DRight
 
      error=Normal
 
@@ -375,7 +375,7 @@ integer function InitializationCheck(this) result(error)
 !##################################################################
 !###########       Accessor methods
 !##################################################################
-   integer function Spin_MPSTensor(this) result(s)
+   integer function spin_MPSTensor(this) result(s)
      !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
      TYPEORCLASS(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
  
@@ -383,10 +383,10 @@ integer function InitializationCheck(this) result(error)
         call ThrowException('Spin','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        s=this%spin_
+        s=this%spin
      endif
 
-   end function Spin_MPSTensor
+   end function spin_MPSTensor
 !##################################################################
 
    integer function DLeft_MPSTensor(this) result(DL)
@@ -397,7 +397,7 @@ integer function InitializationCheck(this) result(error)
         call ThrowException('DLeft','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        DL=this%DLeft_
+        DL=this%DLeft
      endif
 
    end function DLeft_MPSTensor
@@ -411,7 +411,7 @@ integer function InitializationCheck(this) result(error)
         call ThrowException('DRight','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        DR=this%DRight_
+        DR=this%DRight
      endif
 
    end function DRight_MPSTensor
@@ -425,9 +425,9 @@ integer function InitializationCheck(this) result(error)
      integer :: s,alpha,beta
 
      Norm_Of_MPSTensor=0.0d0
-     do s=1,this%spin_
-        do beta=1,this%DRight_
-           do alpha=1,this%DLeft_
+     do s=1,this%spin
+        do beta=1,this%DRight
+           do alpha=1,this%DLeft
               Norm_Of_MPSTensor=Norm_Of_MPSTensor+abs(this%data_(alpha,beta,s))
            enddo
         enddo
@@ -443,7 +443,7 @@ integer function InitializationCheck(this) result(error)
      type(MPSTensor) this
 
      if(tensor%initialized_) then
-        this = new_MPSTensor(tensor%spin_,tensor%DRight_,tensor%DLeft_,constant*tensor%data_)
+        this = new_MPSTensor(tensor%spin,tensor%DRight,tensor%DLeft,constant*tensor%data_)
         return 
      else
         call ThrowException('Integer_times_MPSTensor','Tensor not initialized',NoErrorCode,CriticalError)
@@ -459,7 +459,7 @@ integer function InitializationCheck(this) result(error)
      type(MPSTensor) this
 
      if(tensor%initialized_) then
-        this = new_MPSTensor(tensor%spin_,tensor%DRight_,tensor%DLeft_,constant*tensor%data_)
+        this = new_MPSTensor(tensor%spin,tensor%DRight,tensor%DLeft,constant*tensor%data_)
         return 
      else
         call ThrowException('Real_times_MPSTensor','Tensor not initialized',NoErrorCode,CriticalError)
@@ -475,7 +475,7 @@ integer function InitializationCheck(this) result(error)
      type(MPSTensor) this
 
      if(tensor%initialized_) then
-        this = new_MPSTensor(tensor%spin_,tensor%DRight_,tensor%DLeft_,constant*tensor%data_)
+        this = new_MPSTensor(tensor%spin,tensor%DRight,tensor%DLeft,constant*tensor%data_)
         return 
      else
         call ThrowException('Real8_times_MPSTensor','Tensor not initialized',NoErrorCode,CriticalError)
@@ -491,7 +491,7 @@ integer function InitializationCheck(this) result(error)
      type(MPSTensor) this
 
      if(tensor%initialized_) then
-        this = new_MPSTensor(tensor%spin_,tensor%DRight_,tensor%DLeft_,constant*tensor%data_)
+        this = new_MPSTensor(tensor%spin,tensor%DRight,tensor%DLeft,constant*tensor%data_)
         return 
      else
         call ThrowException('Complex_times_MPSTensor','Tensor not initialized',NoErrorCode,CriticalError)
@@ -507,7 +507,7 @@ integer function InitializationCheck(this) result(error)
      type(MPSTensor) this
 
      if(tensor%initialized_) then
-        this = new_MPSTensor(tensor%spin_,tensor%DRight_,tensor%DLeft_,constant*tensor%data_)
+        this = new_MPSTensor(tensor%spin,tensor%DRight,tensor%DLeft,constant*tensor%data_)
         return 
      else
         call ThrowException('Complex8_times_MPSTensor','Tensor not initialized',NoErrorCode,CriticalError)
@@ -530,16 +530,16 @@ integer function InitializationCheck(this) result(error)
      integer :: s
 
      if(tensorA%initialized_.and.tensorB%initialized_) then
-        if(tensorA%DRight_.eq.tensorB%DLeft_) then
+        if(tensorA%DRight.eq.tensorB%DLeft) then
            !The trick of using a tensor as a matrix is used here:
-           if (tensorA%spin_.eq.MatrixSpin) then
-              this = new_MPSTensor(tensorB%spin_,tensorA%DLeft_,tensorB%DRight_,zero)
-              do s=1,tensorB%spin_
+           if (tensorA%spin.eq.MatrixSpin) then
+              this = new_MPSTensor(tensorB%spin,tensorA%DLeft,tensorB%DRight,zero)
+              do s=1,tensorB%spin
                  this%data_(:,:,s)=matmul(tensorA%data_(:,:,MatrixSpin),tensorB%data_(:,:,s)) !+this%data_(:,:,s)
               enddo
-           else if (tensorB%spin_.eq.MatrixSpin) then
-              this = new_MPSTensor(tensorA%spin_,tensorA%DLeft_,tensorB%DRight_,zero)
-              do s=1,tensorA%spin_
+           else if (tensorB%spin.eq.MatrixSpin) then
+              this = new_MPSTensor(tensorA%spin,tensorA%DLeft,tensorB%DRight,zero)
+              do s=1,tensorA%spin
                  this%data_(:,:,s)=matmul(tensorA%data_(:,:,s),tensorB%data_(:,:,MatrixSpin)) !+this%data_(:,:,s)
               enddo              
            else
@@ -564,15 +564,15 @@ integer function InitializationCheck(this) result(error)
      integer alpha,beta
 
      if(this%initialized_) then
-        if(size(matrix,1).eq.this%spin_.and.size(matrix,2).eq.this%spin_) then
-           aTensor = new_MPSTensor(this%spin_,this%DLeft_,this%DRight_,zero)
-           do beta=1,this%DRight_
-              do alpha=1,this%DLeft_
+        if(size(matrix,1).eq.this%spin.and.size(matrix,2).eq.this%spin) then
+           aTensor = new_MPSTensor(this%spin,this%DLeft,this%DRight,zero)
+           do beta=1,this%DRight
+              do alpha=1,this%DLeft
                  aTensor%data_(alpha,beta,:)=matmul(matrix,this%data_(alpha,beta,:))
               enddo
            enddo
         else
-           call ThrowException('Apply_Operator_From_Matrix','Operator is not of the rigt size',size(matrix,1)-this%spin_,CriticalError)
+           call ThrowException('Apply_Operator_From_Matrix','Operator is not of the rigt size',size(matrix,1)-this%spin,CriticalError)
         endif
      else
         call ThrowException('Apply_Operator_From_Matrix','Tensor not initialized',NoErrorCode,CriticalError)
@@ -596,9 +596,9 @@ integer function InitializationCheck(this) result(error)
      diff=0.0d0
      if(tensor1%initialized_.and.tensor2%initialized_) then
         if(tensor1.equaldims.tensor2) then
-           do n=1,tensor1%spin_
-              do beta=1,tensor1%DRight_
-                 do alpha=1,tensor1%DLeft_
+           do n=1,tensor1%spin
+              do beta=1,tensor1%DRight
+                 do alpha=1,tensor1%DLeft
                     diff=diff+abs(tensor1%data_(alpha,beta,n)-tensor2%data_(alpha,beta,n))
                  enddo
               enddo
@@ -622,9 +622,9 @@ integer function InitializationCheck(this) result(error)
      diff=0.0d0
      if(tensor1%initialized_.and.tensor2%initialized_) then
         if(tensor1.equaldims.tensor2) then
-           do n=1,tensor1%spin_
-              do beta=1,tensor1%DRight_
-                 do alpha=1,tensor1%DLeft_
+           do n=1,tensor1%spin
+              do beta=1,tensor1%DRight
+                 do alpha=1,tensor1%DLeft
                     diff=diff+abs(abs(tensor1%data_(alpha,beta,n))-abs(tensor2%data_(alpha,beta,n)))
                  enddo
               enddo 
@@ -647,7 +647,7 @@ integer function InitializationCheck(this) result(error)
      type(MPSTensor),intent(IN) :: tensor1,tensor2
 
      if(tensor1%initialized_.and.tensor2%initialized_) then
-        equals=(tensor1%spin_.eq.tensor2%spin_).and.(tensor1%DLeft_.eq.tensor2%DLeft_).and.(tensor1%DRight_.eq.tensor2%DRight_)
+        equals=(tensor1%spin.eq.tensor2%spin).and.(tensor1%DLeft.eq.tensor2%DLeft).and.(tensor1%DRight.eq.tensor2%DRight)
         return 
      else
         call ThrowException('MPSTensors_are_of_equal_Shape','Tensors not initialized',NoErrorCode,CriticalError)
@@ -683,7 +683,7 @@ integer function InitializationCheck(this) result(error)
         call ThrowException('MPSLeftProduct','Tensors not initialized',NoErrorCode,CriticalError)
         return
      endif     
-     if (TensorA%Spin_.ne.TensorB%spin_) then
+     if (TensorA%spin.ne.TensorB%spin) then
         call ThrowException('MPSLeftProduct','Tensors have different spin',NoErrorCode,CriticalError)
         return
      endif
@@ -695,14 +695,14 @@ integer function InitializationCheck(this) result(error)
            return           
         endif
      else
-        L_in_matrix=new_MPSTensor(MatrixSpin,TensorB%DLeft_,TensorA%DLeft_,one)
+        L_in_matrix=new_MPSTensor(MatrixSpin,TensorB%DLeft,TensorA%DLeft,one)
      endif
 
-     matrixout=new_MPSTensor(MatrixSpin, TensorB%DRight_,TensorA%DRight_, zero)
-     TempMatrix=new_MPSTensor(MatrixSpin,TensorB%DLeft_ ,TensorA%DRight_, zero)
+     matrixout=new_MPSTensor(MatrixSpin, TensorB%DRight,TensorA%DRight, zero)
+     TempMatrix=new_MPSTensor(MatrixSpin,TensorB%DLeft ,TensorA%DRight, zero)
 
      !The multiplications are done by hand because I could not get ZGEMM to work properly
-     do s=1,TensorA%Spin_
+     do s=1,TensorA%spin
         Tempmatrix%data_(:,:,MatrixSpin)=matmul(L_in_matrix%data_(:,:,MatrixSpin),TensorA%data_(:,:,s))
         MatrixOut%data_(:,:,MatrixSpin)=MatrixOut%data_(:,:,MatrixSpin)+matmul(dconjg(transpose(TensorB%data_(:,:,s))),Tempmatrix%data_(:,:,MatrixSpin))
     enddo
@@ -721,7 +721,7 @@ integer function InitializationCheck(this) result(error)
         call ThrowException('MPSLeftProduct','Tensors not initialized',NoErrorCode,CriticalError)
         return
      endif     
-     if (TensorA%Spin_.ne.TensorB%spin_) then
+     if (TensorA%spin.ne.TensorB%spin) then
         call ThrowException('MPSLeftProduct','Tensors have different spin',NoErrorCode,CriticalError)
         return
      endif
@@ -729,17 +729,17 @@ integer function InitializationCheck(this) result(error)
         allocate(L_in_matrix(size(matrixin,1),size(matrixin,2)))
         L_in_matrix=matrixin
      else
-        allocate(L_in_matrix(TensorB%DLeft_,TensorA%DLeft_))
+        allocate(L_in_matrix(TensorB%DLeft,TensorA%DLeft))
         L_in_matrix=one
      endif
 
-     allocate(matrixout(TensorB%DRight_,TensorA%DRight_))
-     allocate(TempMatrix(TensorB%DLeft_ ,TensorA%DRight_))
+     allocate(matrixout(TensorB%DRight,TensorA%DRight))
+     allocate(TempMatrix(TensorB%DLeft ,TensorA%DRight))
      matrixout=zero
      TempMatrix=zero
 
      !The multiplications are done by hand because I could not get ZGEMM to work properly
-     do s=1,TensorA%Spin_
+     do s=1,TensorA%spin
         Tempmatrix=matmul(L_in_matrix,TensorA%data_(:,:,s))
         MatrixOut=MatrixOut+matmul(dconjg(transpose(TensorB%data_(:,:,s))),Tempmatrix)
     enddo
@@ -761,13 +761,13 @@ integer function InitializationCheck(this) result(error)
        call ThrowException('MPSRightProduct','Tensors not initialized',NoErrorCode,CriticalError)
        return
     endif
-    if (TensorA%Spin_.ne.TensorB%spin_) then
+    if (TensorA%spin.ne.TensorB%spin) then
        call ThrowException('MPSRightProduct','Tensors have different spin',NoErrorCode,CriticalError)
        return
     endif
     
-    matrixout=new_MPSTensor(MatrixSpin, TensorA%DLeft_,TensorB%DLeft_, zero)
-    TempMatrix=new_MPSTensor(MatrixSpin,TensorA%DLeft_ ,TensorB%DRight_, zero)
+    matrixout=new_MPSTensor(MatrixSpin, TensorA%DLeft,TensorB%DLeft, zero)
+    TempMatrix=new_MPSTensor(MatrixSpin,TensorA%DLeft ,TensorB%DRight, zero)
     
     if (present(matrixin)) then
        if(matrixin%initialized_) then
@@ -777,11 +777,11 @@ integer function InitializationCheck(this) result(error)
           return           
        endif
     else
-       R_in_matrix=new_MPSTensor(MatrixSpin,TensorA%DRight_,TensorB%DRight_,one)
+       R_in_matrix=new_MPSTensor(MatrixSpin,TensorA%DRight,TensorB%DRight,one)
     endif
     
     !The multiplications are done by hand because I could not get ZGEMM to work properly
-    do s=1,TensorA%Spin_
+    do s=1,TensorA%spin
        Tempmatrix%data_(:,:,MatrixSpin)=matmul(TensorA%data_(:,:,s),R_in_matrix%data_(:,:,MatrixSpin))
        MatrixOut%data_(:,:,MatrixSpin)=MatrixOut%data_(:,:,MatrixSpin)+matmul(Tempmatrix%data_(:,:,MatrixSpin),transpose(dconjg(TensorB%data_(:,:,s))))
     enddo
@@ -811,9 +811,9 @@ integer function InitializationCheck(this) result(error)
        return
     endif
 
-    Spin=this%spin_
-    LeftBond=this%DLeft_
-    RightBond=this%DRight_
+    Spin=this%spin
+    LeftBond=this%DLeft
+    RightBond=this%DRight
 
     allocate(collapsedTensor(Spin*LeftBond,RightBond))
     allocate(U(Spin*LeftBond,Spin*LeftBond))
@@ -871,9 +871,9 @@ integer function InitializationCheck(this) result(error)
        return
     endif
 
-    Spin=this%spin_
-    LeftBond=this%DLeft_
-    RightBond=this%DRight_
+    Spin=this%spin
+    LeftBond=this%DLeft
+    RightBond=this%DRight
 
     allocate(collapsedTensor(LeftBond,Spin*RightBond))
     allocate(U(LeftBond,LeftBond))
@@ -928,15 +928,15 @@ integer function InitializationCheck(this) result(error)
     endif
 
     if (whichDimension.eq.FirstDimension) then
-       leftStep=this%DLeft_
+       leftStep=this%DLeft
        rightStep=0
-       leftDimension=(this%spin_*this%DLeft_)
-       rightDimension=(this%DRight_)
+       leftDimension=(this%spin*this%DLeft)
+       rightDimension=(this%DRight)
     else if (whichDimension.eq.SecondDimension) then
        leftStep=0
-       rightStep=this%DRight_
-       leftDimension=(this%DLeft_)
-       rightDimension=(this%spin_*this%DRight_)
+       rightStep=this%DRight
+       leftDimension=(this%DLeft)
+       rightDimension=(this%spin*this%DRight)
     else
        call ThrowException('CollapseSpinWithBond','Wrong Dimension parameter',whichDimension,CriticalError)
        return
@@ -949,10 +949,10 @@ integer function InitializationCheck(this) result(error)
 
     !This always puts the spin before the bond dimension,
     !      [(s,alpha),(beta)]   or  [(alpha),(s,beta)]
-    do s=1,this%Spin_
-       do beta=1,this%DRight_
+    do s=1,this%spin
+       do beta=1,this%DRight
           rightIndex=beta+(s-1)*rightStep
-          do alpha=1,this%DLeft_
+          do alpha=1,this%DLeft
              leftIndex=alpha+(s-1)*leftStep
              collapsed(leftIndex,rightIndex)=this%data_(alpha,beta,s)
           enddo
