@@ -77,7 +77,7 @@ contains
 
 !######################################    delete
   integer function delete_MatrixProductState(this)
-    type(MatrixProductState) :: this
+    class(MatrixProductState) :: this
     integer n, status
 
     do n=1,this%Length
@@ -99,7 +99,7 @@ contains
     
 
   subroutine new_MatrixProductState_from_Assignment(lhs,rhs) 
-    TYPEORCLASS(MatrixProductState),intent(out) :: lhs
+    class(MatrixProductState),intent(out) :: lhs
     type(MatrixProductState),intent(in) :: rhs
     integer :: n
 
@@ -129,7 +129,7 @@ contains
 
 
   logical function is_full_MPS_Canonized(this)
-    TYPEORCLASS(MatrixProductState),intent(in) :: this
+    class(MatrixProductState),intent(in) :: this
 
      if(.not.this%initialized) then
         call ThrowException('is_full_MPS_Canonized','MPS not initialized',NoErrorCode,CriticalError)
@@ -145,7 +145,7 @@ contains
 
 
   real(8) function Canonize_MPS_At_Site(this,RequestedSite)
-    TYPEORCLASS(MatrixProductState),intent(inout) :: this
+    class(MatrixProductState),intent(inout) :: this
     type(MPSTensor) :: InnerMatrix
     integer,optional :: RequestedSite
     integer n,CanonizationSite
@@ -195,7 +195,7 @@ contains
   end function Canonize_MPS_At_Site
 
   real(8) function Canonize_MPS_At_Right(this)
-    TYPEORCLASS(MatrixProductState),intent(inout) :: this
+    class(MatrixProductState),intent(inout) :: this
     
     Canonize_MPS_At_Right=Canonize_MPS_At_Site(this,this%Length+1)
     return
@@ -203,7 +203,7 @@ contains
   end function Canonize_MPS_At_Right
   
   real(8) function Canonize_MPS_At_Left(this)
-    TYPEORCLASS(MatrixProductState),intent(inout) :: this
+    class(MatrixProductState),intent(inout) :: this
     
     Canonize_MPS_At_Left=Canonize_MPS_At_Site(this,0)
     return
@@ -211,7 +211,7 @@ contains
   end function Canonize_MPS_At_Left
 
   real(8) function  Norm_of_MatrixProductState(this)
-    TYPEORCLASS(MatrixProductState),intent(inout) :: this
+    class(MatrixProductState),intent(inout) :: this
     integer :: n
 
     Norm_of_MatrixProductState=zero

@@ -9,116 +9,54 @@ module Tensor_Class
   implicit none
   private
 
-  integer,parameter :: Max_Combined_Dimension = 100
+  integer,parameter :: Max_Combined_Dimension = 100000
 
-  type Tensor
+  type,private :: Tensor
   	private
   	integer :: Initialized=.false.
   contains
-  	procedure :: IsInitialized => IsTensorInitialized
+  	procedure :: IsInitialized => Is_Tensor_init
+    procedure :: delete => delete_Tensor
+  	procedure :: print => print_Tensor
+	procedure :: PrintDimensions => Print_Tensor_Dimensions
+    procedure :: getDimensions => getDimensions_Of_Tensor
+    procedure :: Norm => Norm_Of_Tensor
   end type Tensor
 
   type,public,extends(Tensor) :: Tensor1
   	private
   	complex(8),allocatable :: data(:)
-  contains
-    procedure :: delete => delete_Tensor1
-  	procedure :: print => print_Tensor1
-	procedure :: PrintDimensions => Print_Tensor1_Dimensions
-    procedure :: getDimension1 => getDimension1_Tensor1
-    procedure :: CopyFrom => new_Tensor1_fromAssignment
-    procedure :: Norm => Norm_Of_Tensor1
   end type Tensor1
 
   type,public,extends(Tensor) :: Tensor2
   	private
   	complex(8),allocatable :: data(:,:)
-  contains
-    procedure :: delete => delete_Tensor2
-  	procedure :: print => print_Tensor2
-	procedure :: PrintDimensions => Print_Tensor2_Dimensions
-    procedure :: getDimension1 => getDimension1_Tensor2
-    procedure :: getDimension2 => getDimension2_Tensor2
-    procedure :: CopyFrom => new_Tensor2_fromAssignment
-    procedure :: Norm => Norm_Of_Tensor2
   end type Tensor2
 
   type,public,extends(Tensor) :: Tensor3
   	private
   	complex(8),allocatable :: data(:,:,:)
-  contains
-  	procedure :: delete => delete_Tensor3
-  	procedure :: print => print_Tensor3
-	procedure :: PrintDimensions => Print_Tensor3_Dimensions
-    procedure :: getDimension1 => getDimension1_Tensor3
-    procedure :: getDimension2 => getDimension2_Tensor3
-    procedure :: getDimension3 => getDimension3_Tensor3
-    procedure :: CopyFrom => new_Tensor3_fromAssignment
-    procedure :: Norm => Norm_Of_Tensor3
   end type Tensor3
-
-!  type,public,extends(Tensor) :: Tensor4
-!  	private
-!  	complex(8),allocatable :: data(:,:,:,:)
-!  contains
-!  	procedure :: delete => delete_Tensor4
-!  	procedure :: print => print_Tensor4
-!	procedure :: PrintDimensions => Print_Tensor4_Dimensions
-!    procedure :: getDimension1 => getDimension1_Tensor4
-!    procedure :: CopyFrom => new_Tensor4_fromAssignment
-!    procedure :: Norm => Norm_Of_Tensor4
-!  end type Tensor4
-!
-!  type,public,extends(Tensor) :: Tensor5
-!  	private
-!  	complex(8),allocatable :: data(:,:,:,:,:)
-!  contains
-!    procedure :: delete => delete_Tensor5
-!  	procedure :: print => print_Tensor5
-!	procedure :: PrintDimensions => Print_Tensor5_Dimensions
-!    procedure :: getDimension1 => getDimension1_Tensor5
-!    procedure :: CopyFrom => new_Tensor5_fromAssignment
-!    procedure :: Norm => Norm_Of_Tensor5
-!  end type Tensor5
-
 
 !###############################
 !#####  Operators and methods
 !###############################
 
-  interface new_Tensor1
-     module procedure new_Tensor1_Random,new_Tensor1_fromTensor1,new_Tensor1_withData, &
-          & new_Tensor1_withConstant,new_Tensor1_fromArray
+  interface new_Tensor
+     module procedure new_Tensor1_Random,new_Tensor1_fromTensor1,new_Tensor1_fromData,new_Tensor1_Constant, &
+		& new_Tensor2_Random,new_Tensor2_fromTensor2,new_Tensor2_fromData,new_Tensor2_Constant, &
+		& new_Tensor3_Random,new_Tensor3_fromTensor3,new_Tensor3_fromData,new_Tensor3_Constant
   end interface
-
-  interface new_Tensor2
-     module procedure new_Tensor2_Random,new_Tensor2_fromTensor2,new_Tensor2_withData, &
-          & new_Tensor2_withConstant,new_Tensor2_fromArray
-  end interface
-
-  interface new_Tensor3
-     module procedure new_Tensor3_Random,new_Tensor3_fromTensor3,new_Tensor3_withData, &
-          & new_Tensor3_withConstant,new_Tensor3_fromArray
-  end interface
-
-!  interface new_Tensor4
-!     module procedure new_Tensor4_Random,new_Tensor4_fromTensor4,new_Tensor4_withData, &
-!          & new_Tensor4_withConstant,new_Tensor4_fromArray
-!  end interface
-!
-!  interface new_Tensor5
-!     module procedure new_Tensor5_Random,new_Tensor5_fromTensor5,new_Tensor5_withData, &
-!          & new_Tensor5_withConstant,new_Tensor5_fromArray
-!  end interface
 
   interface operator (*)
-     module procedure Integer_times_Tensor1,Integer_times_Tensor2,Integer_times_Tensor3, &
+     module procedure &
+     	  & Integer_times_Tensor1,Integer_times_Tensor2,Integer_times_Tensor3, &
           & Real_times_Tensor1,Real_times_Tensor2, Real_times_Tensor3, &
           & Complex_times_Tensor1, Complex_times_Tensor2, Complex_times_Tensor3, &
           & Real8_times_Tensor1, Real8_times_Tensor2, Real8_times_Tensor3, &
           & Real8_times_Tensor4, Real8_times_Tensor5,  &
-          & Complex8_times_Tensor1, Complex8_times_Tensor2, Complex8_times_Tensor3, &
-          & Tensor2_times_Tensor3 !&
+          & Complex8_times_Tensor1, Complex8_times_Tensor2, Complex8_times_Tensor3
+!          & Tensor2_times_Tensor3 !&
 !         & Integer_times_Tensor4,Integer_times_Tensor5, &
 !         & Real_times_Tensor4, Real_times_Tensor5, &
 !         & Complex_times_Tensor4, Complex_times_Tensor5, &
@@ -132,24 +70,19 @@ module Tensor_Class
   end interface
 
   interface operator (.diff.)
-     module procedure Difference_btw_Tensors1, Difference_btw_Tensors2, Difference_btw_Tensors3 !, &
- !         & Difference_btw_Tensors4, Difference_btw_Tensors5
+     module procedure Difference_btw_Tensors
   end interface
 
   interface operator (.absdiff.)
-     module procedure Difference_btw_Tensors1_WithAbsoluteValue, &
-      	  & Difference_btw_Tensors2_WithAbsoluteValue, &
-      	  & Difference_btw_Tensors3_WithAbsoluteValue !, &
-!      	  & Difference_btw_Tensors4_WithAbsoluteValue, &
-!      	  & Difference_btw_Tensors5_WithAbsoluteValue
+     module procedure Difference_btw_Tensors_WithAbsoluteValue
   end interface
 
   interface operator (.equaldims.)
-     module procedure  Tensors1_are_of_equal_Shape, &
-          & Tensors2_are_of_equal_Shape, &
-          & Tensors3_are_of_equal_Shape !, &
-!          & Tensors4_are_of_equal_Shape, &
-!          & Tensors5_are_of_equal_Shape
+     module procedure  Tensors_are_of_equal_Shape
+  end interface
+
+  interface operator (.equaltype.)
+     module procedure Tensors_are_of_equal_Type
   end interface
 
 !######################################################################################
@@ -170,7 +103,7 @@ module Tensor_Class
      type(Tensor3) :: this
      real(8) :: randomtensorR(dim1,dim2,dim3),randomtensorC(dim1,dim2,dim3)
 
-     if(dim1*dim2*dim3.lt.Max_Combined_Dimension**2) then
+     if(dim1*dim2*dim3.lt.Max_Combined_Dimension) then
         call ThrowException('new_Tensor3_Random','Dimensions are larger than maximum',NoErrorCode,CriticalError)
         return
      endif
@@ -203,7 +136,7 @@ module Tensor_Class
 	dim2=size(originalData,2)
 	dim3=size(originalData,3)
 
-     if(dim1*dim2*dim3.lt.Max_Combined_Dimension**2) then
+     if(dim1*dim2*dim3.lt.Max_Combined_Dimension) then
         call ThrowException('new_Tensor3_withData','Dimensions are larger than maximum',NoErrorCode,CriticalError)
         return
      endif
@@ -226,7 +159,7 @@ module Tensor_Class
      complex(8),intent(in) :: constant
      type(Tensor3) this
 
-     if(dim1*dim2*dim3.lt.Max_Combined_Dimension**2) then
+     if(dim1*dim2*dim3.lt.Max_Combined_Dimension) then
         call ThrowException('new_Tensor3_withData','Dimensions are larger than maximum',NoErrorCode,CriticalError)
         return
      endif
@@ -261,7 +194,7 @@ module Tensor_Class
    end function new_Tensor3_fromTensor3
 
    subroutine new_Tensor3_fromAssignment(lhs,rhs)
-     TYPEORCLASS(Tensor3),intent(out) :: lhs
+     class(Tensor3),intent(out) :: lhs
      type(Tensor3),intent(in) :: rhs
 
      if(.not.rhs%Initialized) then
@@ -339,7 +272,7 @@ module Tensor_Class
 !######################################    delete
    integer function delete_MPSTensor (this) result(error)
      !!class(MPSTensor),intent(INOUT) :: this !!<<CLASS>>!!
-     TYPEORCLASS(MPSTensor),intent(INOUT) :: this   !!<<TYPE>>!!
+     class(MPSTensor),intent(INOUT) :: this   !!<<TYPE>>!!
 
      error=Warning
 
@@ -365,7 +298,7 @@ module Tensor_Class
 
 integer function InitializationCheck(this) result(error)
     !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
-    TYPEORCLASS(MPSTensor),intent(IN) :: this !!<<TYPE>>!!
+    class(MPSTensor),intent(IN) :: this !!<<TYPE>>!!
 
     if (.not.this%Initialized) then
        error=CriticalError
@@ -380,7 +313,7 @@ integer function InitializationCheck(this) result(error)
 !######################################     print
    integer function Print_MPSTensor(this) result(error)
      !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
-     TYPEORCLASS(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
      integer i,j,k
 
      error = Warning
@@ -405,7 +338,7 @@ integer function InitializationCheck(this) result(error)
 
    integer function Print_MPSTensor_Dimensions(this) result(error)
      !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
-     TYPEORCLASS(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
      integer i,j,k
 
      error = Warning
@@ -429,7 +362,7 @@ integer function InitializationCheck(this) result(error)
 !##################################################################
    integer function spin_MPSTensor(this) result(s)
      !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
-     TYPEORCLASS(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
 
     if(.not.(this%Initialized)) then
         call ThrowException('Spin','Tensor not initialized',NoErrorCode,Warning)
@@ -443,7 +376,7 @@ integer function InitializationCheck(this) result(error)
 
    integer function DLeft_MPSTensor(this) result(DL)
      !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
-     TYPEORCLASS(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
 
      if(.not.(this%Initialized)) then
         call ThrowException('DLeft','Tensor not initialized',NoErrorCode,Warning)
@@ -457,7 +390,7 @@ integer function InitializationCheck(this) result(error)
    integer function DRight_MPSTensor(this) result(DR)
 
      !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
-     TYPEORCLASS(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
 
      if(.not.(this%Initialized)) then
         call ThrowException('DRight','Tensor not initialized',NoErrorCode,Warning)
@@ -473,7 +406,7 @@ integer function InitializationCheck(this) result(error)
 !##################################################################
 
    real(8) function Norm_Of_MPSTensor(this)
-     TYPEORCLASS(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
      integer :: s,alpha,beta
 
      Norm_Of_MPSTensor=0.0d0
@@ -787,7 +720,7 @@ integer function InitializationCheck(this) result(error)
 !#######################################################################################
 
   subroutine CollapseSpinWithBond(this,collapsed,whichDimension)
-    TYPEORCLASS(MPSTensor),intent(IN) :: this
+    class(MPSTensor),intent(IN) :: this
     complex(8),intent(OUT) :: collapsed(:,:)
     integer,intent(IN) :: whichDimension
     integer :: s,alpha,beta,leftIndex,rightIndex,leftStep,rightStep,leftDimension,rightDimension

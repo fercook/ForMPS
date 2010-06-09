@@ -207,7 +207,7 @@ module MPSTensor_Class
    end function new_MPSTensor_fromMPSTensor
 
    subroutine new_MPSTensor_fromAssignment(lhs,rhs)
-     TYPEORCLASS(MPSTensor),intent(out) :: lhs
+     class(MPSTensor),intent(out) :: lhs
      type(MPSTensor),intent(in) :: rhs
 
      if(.not.rhs%initialized_) then
@@ -287,7 +287,7 @@ module MPSTensor_Class
 !######################################    delete
    integer function delete_MPSTensor (this) result(error)
      !!class(MPSTensor),intent(INOUT) :: this !!<<CLASS>>!!
-     TYPEORCLASS(MPSTensor),intent(INOUT) :: this   !!<<TYPE>>!!
+     class(MPSTensor),intent(INOUT) :: this   !!<<TYPE>>!!
 
      error=Warning
 
@@ -313,7 +313,7 @@ module MPSTensor_Class
 
 integer function InitializationCheck(this) result(error)
     !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
-    TYPEORCLASS(MPSTensor),intent(IN) :: this !!<<TYPE>>!!
+    class(MPSTensor),intent(IN) :: this !!<<TYPE>>!!
 
     if (.not.this%initialized_) then    
        error=CriticalError
@@ -328,7 +328,7 @@ integer function InitializationCheck(this) result(error)
 !######################################     print
    integer function Print_MPSTensor(this) result(error)
      !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
-     TYPEORCLASS(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
      integer i,j,k
 
      error = Warning
@@ -353,7 +353,7 @@ integer function InitializationCheck(this) result(error)
 
    integer function Print_MPSTensor_Dimensions(this) result(error)
      !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
-     TYPEORCLASS(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
      integer i,j,k
 
      error = Warning
@@ -377,7 +377,7 @@ integer function InitializationCheck(this) result(error)
 !##################################################################
    integer function spin_MPSTensor(this) result(s)
      !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
-     TYPEORCLASS(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
  
     if(.not.(this%initialized_)) then
         call ThrowException('Spin','Tensor not initialized',NoErrorCode,Warning)
@@ -391,7 +391,7 @@ integer function InitializationCheck(this) result(error)
 
    integer function DLeft_MPSTensor(this) result(DL)
      !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
-     TYPEORCLASS(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
 
      if(.not.(this%initialized_)) then
         call ThrowException('DLeft','Tensor not initialized',NoErrorCode,Warning)
@@ -405,7 +405,7 @@ integer function InitializationCheck(this) result(error)
    integer function DRight_MPSTensor(this) result(DR)
 
      !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
-     TYPEORCLASS(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
 
      if(.not.(this%initialized_)) then
         call ThrowException('DRight','Tensor not initialized',NoErrorCode,Warning)
@@ -421,7 +421,7 @@ integer function InitializationCheck(this) result(error)
 !##################################################################
 
    real(8) function Norm_Of_MPSTensor(this)
-     TYPEORCLASS(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
      integer :: s,alpha,beta
 
      Norm_Of_MPSTensor=0.0d0
@@ -558,7 +558,7 @@ integer function InitializationCheck(this) result(error)
 
 
    function Apply_Operator_From_Matrix(this,matrix) result(aTensor)
-     TYPEORCLASS(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
      type(MPSTensor) :: aTensor
      complex(8),intent(IN) :: matrix(:,:)
      integer alpha,beta
@@ -798,7 +798,7 @@ integer function InitializationCheck(this) result(error)
 
   function Left_Canonize_MPSTensor(this) result(matrix)
     !!class(MPSTensor),intent(INOUT) :: this !!<<CLASS>>!!
-    TYPEORCLASS(MPSTensor),intent(INOUT) :: this  !!<<TYPE>>!!
+    class(MPSTensor),intent(INOUT) :: this  !!<<TYPE>>!!
     type(MPSTensor) :: matrix
     complex(8), allocatable :: U(:,:),vTransposed(:,:),collapsedTensor(:,:)
     real(8),allocatable :: Sigma(:)
@@ -858,7 +858,7 @@ integer function InitializationCheck(this) result(error)
 
   function Right_Canonize_MPSTensor(this) result(matrix)
     !!class(MPSTensor),intent(INOUT) :: this !!<<CLASS>>!!
-    TYPEORCLASS(MPSTensor),intent(INOUT) :: this  !!<<TYPE>>!!
+    class(MPSTensor),intent(INOUT) :: this  !!<<TYPE>>!!
     type(MPSTensor) :: matrix
     complex(8), allocatable :: U(:,:),vTransposed(:,:),collapsedTensor(:,:)
     real(8),allocatable :: Sigma(:)
@@ -917,7 +917,7 @@ integer function InitializationCheck(this) result(error)
 !#######################################################################################
 
   subroutine CollapseSpinWithBond(this,collapsed,whichDimension)
-    TYPEORCLASS(MPSTensor),intent(IN) :: this
+    class(MPSTensor),intent(IN) :: this
     complex(8),intent(OUT) :: collapsed(:,:)
     integer,intent(IN) :: whichDimension
     integer :: s,alpha,beta,leftIndex,rightIndex,leftStep,rightStep,leftDimension,rightDimension

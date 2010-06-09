@@ -9,10 +9,10 @@ SYS = MacOSX-x86-64
 LAPACK=-framework vecLib
 #-L$MKLPATH -I$MKLINCLUDE -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lpthread
 BLAS=
-FLAGS=-O3 -ffree-line-length-300 -cpp -DTYPEORCLASS="type" -fprofile-arcs -ftest-coverage
+FLAGS=$(LAPACK)
 RM=rm
-FCOMP=gfortran
-LINKER=gfortran
+FCOMP=ifort
+LINKER=ifort
 LINKFLAGS=
 DEBUGFLAG=-g
 endif
@@ -29,9 +29,12 @@ LINKFLAGS=
 endif
 
 BINARIES=_$(SYS)
-SOURCES = constants.f90 error.f90 MatrixHelp.f90 MPSTensor_Class.f90 Operator_Class.f90 MatrixProductState_Class.f90
+SOURCES = constants.f90 error.f90 MatrixHelp.f90 MPSTensor_Class.f90 
+#Operator_Class.f90 MatrixProductState_Class.f90
 OBJS = $(SOURCES:.f90=.o)
-TESTED = MPSTensor_Class MatrixProductState_Class Operator_Class
+TESTED = MPSTensor_Class 
+#MatrixProductState_Class 
+#Operator_Class
 
 all: fullmake
 obj: object

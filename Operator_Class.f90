@@ -63,7 +63,7 @@ module Operator_Class
 
 
    function ApplyToMPSTensor (this,aMPSTensor) result(newMPSTensor)
-     TYPEORCLASS(SpinOperator),intent(IN) :: this   !!<<TYPE>>!!
+     class(SpinOperator),intent(IN) :: this   !!<<TYPE>>!!
      type(MPSTensor),intent(IN) :: aMPSTensor
      type(MPSTensor) :: newMPSTensor
      
