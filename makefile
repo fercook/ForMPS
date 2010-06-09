@@ -9,10 +9,11 @@ SYS = MacOSX-x86-64
 LAPACK=-framework vecLib
 #-L$MKLPATH -I$MKLINCLUDE -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lpthread
 BLAS=
-FLAGS=-O3 -ffree-line-length-300 -cpp -DTYPEORCLASS="type" -fprofile-arcs -ftest-coverage
+FLAGS=-O3 -fpp -D TYPEORCLASS="class"
+#-ffree-line-length-300 -cpp -DTYPEORCLASS="type" -fprofile-arcs -ftest-coverage
 RM=rm
-FCOMP=gfortran
-LINKER=gfortran
+FCOMP=ifort #gfortran
+LINKER=ifort #gfortran
 LINKFLAGS=
 DEBUGFLAG=-g
 endif
