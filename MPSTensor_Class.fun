@@ -126,7 +126,6 @@ end test
 
 
 
-
 test L_product_withMatrix
 !
 !  Mathematica code: NOTICE THE TRANSPOSE TO GET THE ORDER RIGHT
@@ -270,6 +269,7 @@ end test
 
 
 
+
 test Mult_by_Matrix
   type(MPSTensor) :: A,B,C,D
   integer,parameter :: DleftT=4, DrightT=3
@@ -376,7 +376,6 @@ end test
 
 
 
-
 test Singular_Value_Decomposition
    type(MPSTensor) :: A
    integer,parameter :: DleftT=4, DrightT=3
@@ -404,6 +403,7 @@ test Singular_Value_Decomposition
    assert_equal(A%delete(),Normal)       
    assert_false(WasThereError())
 end test
+
 
 
 
@@ -451,22 +451,23 @@ test LeftCanonTensor
     & -0.255169, -0.0699187, -0.295271, 0.429314, 0.0856099, -0.126573], [DleftT,DrightT])
    Correct(:,:,2)=Reshape( [-0.346571, -0.383944, -0.421317, -0.45869, -0.0699187, 0.115331, &
     & 0.300581, 0.485831, -0.126573, 0.354249, -0.66644, 0.345686], [DleftT,DrightT])
-   matrix(:,:,1)=Reshape( [-12.1367, 2.9496, 0., -23.227, 0.712199, 0., & 
+   matrix(:,:,1)=Reshape( [-12.1367, 2.9496, 0., -23.227, 0.712199, 0., &
            & -34.3173, -1.5252, 0.], [DrightT,DrightT] )
      A=new_MPSTensor(SpinT,DleftT,DrightT,data)
      B=new_MPSTensor(SpinT,DleftT,DrightT,Correct)
-     C=A%LCanonize()
+     C=Left_Canonize_MPSTensor(A) !  C=A%LCanonize()
      D=new_MPSTensor(MatrixSpin,DrightT,DrightT,matrix)
      assert_equal_within(C.absdiff.D, 0.0d0, 1.0e-4)
      assert_equal_within(A.absdiff.B, 0.0d0, 1.0e-5)
-     assert_equal(A%delete(),Normal)       
-     assert_equal(B%delete(),Normal)       
-     assert_equal(C%delete(),Normal)       
-     assert_equal(D%delete(),Normal) 
+     assert_equal(A%delete(),Normal)
+     assert_equal(B%delete(),Normal)
+     assert_equal(C%delete(),Normal)
+     assert_equal(D%delete(),Normal)
      assert_false(WasThereError())
 
 end test
-     
+
+
 
 test RightCanonTensor
    type(MPSTensor) :: A,B,C,D
@@ -486,7 +487,7 @@ test RightCanonTensor
    			 & -1.35641, 0., 0., 0., 0., 0., 0., 0., 0.], [DleftT,DleftT] )
      A=new_MPSTensor(SpinT,DleftT,DrightT,data)
      B=new_MPSTensor(SpinT,DleftT,DrightT,Correct)
-     C=A%RCanonize()
+     C=Right_Canonize_MPSTensor(A)!C=A%RCanonize()
      D=new_MPSTensor(MatrixSpin,DleftT,DleftT,matrix)
      assert_equal_within(A.absdiff.B, 0.0d0, 1.0e-5)
      assert_equal_within(C.absdiff.D, 0.0d0, 1.0e-4)

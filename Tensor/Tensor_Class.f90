@@ -85,6 +85,11 @@ module Tensor_Class
      module procedure Tensors_are_of_equal_Type
   end interface
 
+  interface ContractIndices
+  	module procedure Tensor2_times_Tensor2,Tensor2_times_Tensor3,Tensor3_times_Tensor2, &
+  		& Tensor1_times_Tensor1, Tensor1_times_Tensor2, Tensor1_times_Tensor3
+  end interface
+
 !######################################################################################
 !######################################################################################
 !######################################################################################
@@ -98,6 +103,62 @@ module Tensor_Class
 !######################################################################################
 !#####                           Creation operators
 !######################################################################################
+   function new_Tensor1_Random (dim1) result (this)
+     integer,intent(in) :: dim1
+     type(Tensor1) :: this
+     real(8) :: randomtensorR(dim1),randomtensorC(dim1)
+
+     if(dim1.gt.Max_Combined_Dimension) then
+        call ThrowException('new_Tensor1_Random','Dimension is larger than maximum',NoErrorCode,CriticalError)
+        return
+     endif
+     if(dim1.lt.1) then
+        call ThrowException('new_Tensor1_Random','Dimension is smaller than 1',NoErrorCode,CriticalError)
+        return
+     endif
+
+     !initialize internal variables
+     !initialize data
+     if(this%Initialized) deallocate(this%data)
+     allocate(this%data(dim1))
+
+     Call random_number(randomtensorR)
+     call random_number(randomtensorC)
+
+     This%data=randomtensorR+II*randomtensorC
+
+     this%Initialized=.true.
+
+   end function new_Tensor1_Random
+
+   function new_Tensor2_Random (dim1,dim2) result (this)
+     integer,intent(in) :: dim1,dim2
+     type(Tensor2) :: this
+     real(8) :: randomtensorR(dim1,dim2),randomtensorC(dim1,dim2)
+
+     if(dim1*dim2.lt.Max_Combined_Dimension) then
+        call ThrowException('new_Tensor2_Random','Dimensions are larger than maximum',NoErrorCode,CriticalError)
+        return
+     endif
+     if(dim1.lt.1.or.dim2.lt.1) then
+        call ThrowException('new_Tensor2_Random','One dimension is smaller than 1',NoErrorCode,CriticalError)
+        return
+     endif
+
+     !initialize internal variables
+     !initialize data
+     if(this%Initialized) deallocate(this%data)
+     allocate(this%data(dim1,dim2))
+
+     Call random_number(randomtensorR)
+     call random_number(randomtensorC)
+
+     This%data=randomtensorR+II*randomtensorC
+
+     this%Initialized=.true.
+
+   end function new_Tensor2_Random
+
    function new_Tensor3_Random (dim1,dim2,dim3) result (this)
      integer,intent(in) :: dim1,dim2,dim3
      type(Tensor3) :: this
@@ -127,6 +188,55 @@ module Tensor_Class
    end function new_Tensor3_Random
 
 !##################################################################
+   function new_Tensor1_withData (originalData) result (this)
+     complex(8),intent(in) :: originalData(:)
+     integer :: dim1
+     type(Tensor1) this
+
+     dim1=size(originalData,1)
+
+     if(dim1.lt.Max_Combined_Dimension) then
+        call ThrowException('new_Tensor1_withData','Dimensions are larger than maximum',NoErrorCode,CriticalError)
+        return
+     endif
+     if(dim1.lt.1) then
+        call ThrowException('new_Tensor1_withData','One dimension is smaller than 1',NoErrorCode,CriticalError)
+        return
+     endif
+
+     if(this%Initialized) deallocate(this%data)
+     allocate(this%data(dim1))
+
+     this%data=originalData
+     this%Initialized=.true.
+
+   end function new_Tensor1_withData
+
+   function new_Tensor2_withData (originalData) result (this)
+     complex(8),intent(in) :: originalData(:,:)
+     integer :: dim1,dim2
+     type(Tensor2) this
+
+	dim1=size(originalData,1)
+	dim2=size(originalData,2)
+
+     if(dim1*dim2.lt.Max_Combined_Dimension) then
+        call ThrowException('new_Tensor2_withData','Dimensions are larger than maximum',NoErrorCode,CriticalError)
+        return
+     endif
+     if(dim1.lt.1.or.dim2.lt.1) then
+        call ThrowException('new_Tensor3_withData','One dimension is smaller than 1',NoErrorCode,CriticalError)
+        return
+     endif
+
+     if(this%Initialized) deallocate(this%data)
+     allocate(this%data(dim1,dim2))
+
+     this%data=originalData
+     this%Initialized=.true.
+
+   end function new_Tensor2_withData
+
    function new_Tensor3_withData (originalData) result (this)
      complex(8),intent(in) :: originalData(:,:,:)
      integer :: dim1,dim2,dim3
@@ -154,6 +264,49 @@ module Tensor_Class
    end function new_Tensor3_withData
 
 !##################################################################
+   function new_Tensor1_withConstant (dim1,constant) result (this)
+     integer,intent(in) :: dim1
+     complex(8),intent(in) :: constant
+     type(Tensor3) this
+
+     if(dim1.lt.Max_Combined_Dimension) then
+        call ThrowException('new_Tensor1_withData','Dimensions are larger than maximum',NoErrorCode,CriticalError)
+        return
+     endif
+     if(dim1.lt.1) then
+        call ThrowException('new_Tensor1_withData','One dimension is smaller than 1',NoErrorCode,CriticalError)
+        return
+     endif
+
+     if(this%Initialized) deallocate(this%data)
+     allocate(this%data(dim1))
+
+     this%data=constant
+     this%Initialized=.true.
+
+   end function new_Tensor1_withConstant
+
+   function new_Tensor2_withConstant (dim1,dim2,constant) result (this)
+     integer,intent(in) :: dim1,dim2
+     complex(8),intent(in) :: constant
+     type(Tensor3) this
+
+     if(dim1*dim2.lt.Max_Combined_Dimension) then
+        call ThrowException('new_Tensor2_withData','Dimensions are larger than maximum',NoErrorCode,CriticalError)
+        return
+     endif
+     if(dim1.lt.1.or.dim2.lt.1) then
+        call ThrowException('new_Tensor2_withData','One dimension is smaller than 1',NoErrorCode,CriticalError)
+        return
+     endif
+
+     if(this%Initialized) deallocate(this%data)
+     allocate(this%data(dim1,dim2))
+
+     this%data=constant
+     this%Initialized=.true.
+
+   end function new_Tensor3_withConstant
    function new_Tensor3_withConstant (dim1,dim2,dim3,constant) result (this)
      integer,intent(in) :: dim1,dim2,dim3
      complex(8),intent(in) :: constant
@@ -176,8 +329,41 @@ module Tensor_Class
 
    end function new_Tensor3_withConstant
 
+
 !##################################################################
-   function new_MPSTensor3_fromMPSTensor3 (tensor) result (this)
+   function new_Tensor1_fromTensor1 (tensor) result (this)
+     type(Tensor1),intent(in) :: tensor
+     type(Tensor1) this
+     integer error
+
+     error=tensor%isInitialized()
+     if (WasThereError()) call ProcessException('new_Tensor1_fromTensor1')
+
+     if(this%Initialized) deallocate(this%data)
+     allocate(this%data(size(tensor%data,1)))
+
+     this%data=tensor%data
+     this%Initialized=.true.
+
+   end function new_Tensor1_fromTensor1
+
+   function new_Tensor2_fromTensor2 (tensor) result (this)
+     type(Tensor3),intent(in) :: tensor
+     type(Tensor3) this
+     integer error
+
+     error=tensor%isInitialized()
+     if (WasThereError()) call ProcessException('new_Tensor2_fromTensor2')
+
+     if(this%Initialized) deallocate(this%data)
+     allocate(this%data(size(tensor%data,1)))
+
+     this%data=tensor%data
+     this%Initialized=.true.
+
+   end function new_Tensor2_fromTensor2
+
+   function new_Tensor3_fromTensor3 (tensor) result (this)
      type(Tensor3),intent(in) :: tensor
      type(Tensor3) this
      integer error
@@ -193,45 +379,43 @@ module Tensor_Class
 
    end function new_Tensor3_fromTensor3
 
+   subroutine new_Tensor1_fromAssignment(lhs,rhs)
+     class(Tensor1),intent(out) :: lhs
+     type(Tensor1),intent(in) :: rhs
+
+	 lhs=new_Tensor1_fromTensor1(rhs)
+   end subroutine new_Tensor1_fromAssignment
+
+   subroutine new_Tensor2_fromAssignment(lhs,rhs)
+     class(Tensor2),intent(out) :: lhs
+     type(Tensor2),intent(in) :: rhs
+
+	 lhs=new_Tensor2_fromTensor2(rhs)
+   end subroutine new_Tensor2_fromAssignment
+
    subroutine new_Tensor3_fromAssignment(lhs,rhs)
      class(Tensor3),intent(out) :: lhs
      type(Tensor3),intent(in) :: rhs
 
-     if(.not.rhs%Initialized) then
-        call ThrowException('new_Tensor3_fromAssignment','Original tensor not initialized',NoErrorCode,CriticalError)
-        return
-     endif
-
-!    The following check should be
-!          if(lhs%Initialized) deallocate(lhs%data)
-!    But instead I check for allocated because of a bug in GFortran,
-!    http://gcc.gnu.org/bugzilla/show_bug.cgi?id=43969
-     if(allocated(lhs%data)) deallocate(lhs%data)
-
-     allocate(lhs%data(size(rhs%data,1),size(rhs%data,1),size(rhs%data,1)))
-
-     lhs%data=rhs%data
-     lhs%Initialized=.true.
-
+	 lhs=new_Tensor3_fromTensor3(rhs)
    end subroutine new_Tensor3_fromAssignment
 
 
 
 
-
-  function new_Tensor3_fromArray(dim1,dim2,dim3,matrix) result(this)
+  function new_Tensor3_fromTensor2(dim1,dim2,dim3,matrix) result(this)
     type(Tensor3) :: this
-    complex(8),intent(IN) :: matrix(:,:)
+    type(Tensor2),intent(IN) :: matrix
     integer,intent(IN) :: dim1,dim2,dim3
-    integer :: alpha,beta,s,spin
+    integer :: alpha,beta,s
     integer :: leftIndex,rightIndex,leftStep,rightStep,leftDimension,rightDimension
     character(100) :: Message
     character(3) :: ScratchMessage
 
-    if (size(matrix,1).eq.dim1*dim2) then
+    if (size(matrix%data,1).eq.dim1*dim2) then
        leftStep=dim2
        rightStep=0
-    else if (size(matrix,2).eq.dim1*dim3) then
+    else if (size(matrix%data,2).eq.dim1*dim3) then
        leftStep=0
        rightStep=dim3
     else
@@ -246,7 +430,7 @@ module Tensor_Class
        Message=trim(adjustl(Message))//'; received:'//trim(adjustl(ScratchMessage))
        write (ScratchMessage,'(I3)') size(matrix,2)
        Message=trim(adjustl(Message))//' x '//trim(adjustl(ScratchMessage))
-       call ThrowException('new_MPSTensor_fromMatrix','Wrong dimensions='//Message, &
+       call ThrowException('new_Tensor3_fromTensor2','Wrong dimensions='//Message, &
             & NoErrorCode,CriticalError)
        return
     endif

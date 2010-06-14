@@ -38,10 +38,8 @@ module MPSTensor_Class
      procedure :: LCanonize => Left_Canonize_MPSTensor
      procedure :: RCanonize => Right_Canonize_MPSTensor 
      procedure :: isInitialized => InitializationCheck
-     procedure :: CopyFrom => new_MPSTensor_fromAssignment
      procedure :: Norm => Norm_Of_MPSTensor
      procedure :: ApplyOperator => Apply_Operator_From_Matrix
-!     generic :: assignment(=) => CopyFrom
   end type MPSTensor
 
 !###############################
