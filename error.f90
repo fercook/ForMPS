@@ -5,6 +5,9 @@
 !    if aborting the program is necessary.
 
 module ErrorHandling
+
+  implicit none
+  public
   
   integer :: MaxErrorAllowed=0
 
