@@ -58,7 +58,7 @@ install:
 	cp  $(DIR)
 
 clean :
-	@ ${RM} -rf *.o *.mod $(BINARIES) *.gcov *.gcda *.gcno
+	@ ${RM} -rf *.o *.mod $(BINARIES) *.gcov *.gcda *.gcno profiles/*
 	funit --clean
 #-----------------------------------------------------------------------
 #

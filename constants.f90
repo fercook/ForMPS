@@ -11,18 +11,45 @@ module Constants
   integer,parameter :: ThirdDimension=3
   integer,parameter :: FourthDimension=4
 
-  integer,parameter :: First  = 1
-  integer,parameter :: Second = 2
-  integer,parameter :: Third = 3
-  integer,parameter :: FirstAndSecond = 12
-  integer,parameter :: FirstAndThird = 13
-  integer,parameter :: SecondAndFirst = 21
-  integer,parameter :: SecondAndThird = 23
-  integer,parameter :: ThirdAndSecond = 32
-  integer,parameter :: ThirdAndFirst = 31
+  integer,parameter,dimension(1) :: First  = [1]
+  integer,parameter,dimension(1) :: Second = [2]
+  integer,parameter,dimension(1) :: Third = [3]
 
+  integer,parameter,dimension(2) :: FirstAndSecond = [1,2]
+  integer,parameter,dimension(2) :: FirstAndThird = [1,3]
+  integer,parameter,dimension(2) :: SecondAndFirst = [2,1]
+  integer,parameter,dimension(2) :: SecondAndThird = [2,3]
+  integer,parameter,dimension(2) :: ThirdAndSecond = [3,2]
+  integer,parameter,dimension(2) :: ThirdAndFirst = [3,1]
+
+  integer,parameter,dimension(2) :: FirstAndFourth = [1,4]
+  integer,parameter,dimension(2) :: SecondAndFourth = [2,4]
+  integer,parameter,dimension(2) :: ThirdAndFourth = [3,4]
+  integer,parameter,dimension(2) :: FourthAndFirst = [4,1]
+  integer,parameter,dimension(2) :: FourthAndSecond = [4,2]
+  integer,parameter,dimension(2) :: FourthAndThird = [4,3]
 
   integer,parameter :: Right = 1
   integer,parameter :: Left =2
   
+  interface operator (.equalvector.)
+     module procedure AreIntVectorsEqual
+  end interface
+
+  contains
+
+  logical function AreIntVectorsEqual(vector1,vector2) result(AreEqual)
+     integer,intent(IN) :: vector1(:),vector2(:)
+     integer n
+
+     if(size(vector1).eq.size(vector2)) then
+        AreEqual=.true.
+        do n=1,size(vector1)
+           AreEqual=AreEqual.and.(vector1(n).eq.vector2(n))
+        enddo
+     else
+        AreEqual=.false.
+     endif
+   end function
+
 end module Constants
