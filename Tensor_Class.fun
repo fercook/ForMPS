@@ -190,6 +190,82 @@ test Singular_Value_Decomposition
 
 end test
 
+test Right_Compactification
 
+  type(Tensor3) :: T_Tensor
+  type(Tensor2) :: T_Compacted,T_Matrix,T_Correct
+  integer,parameter :: DleftT=4, DrightT=3,spinT=2
+  complex(8) :: data(DleftT,DrightT,spinT)
+  complex(8) :: matrix(DrightT,DrightT)
+  complex(8) :: CorrectResult(DleftT,DleftT)
+  integer n,i,j,k,s
+
+  do i=1,DleftT
+     do j=1,DrightT
+        do s=1,spinT
+           data(i,j,s)=one*(i+(j-1)*DleftT+(s-1)*DrightT)
+        enddo
+     enddo
+  enddo
+  do i=1,DrightT
+     do j=1,DrightT
+        matrix(i,j)=(II**i+(j-1)*DrightT)
+     enddo
+  enddo
+
+  CorrectResult=one*reshape([3072 - 312*II, 3528 - 312*II, 3984 - 312*II, 4440 - 312*II, 3384 - &
+       & 360*II, 3888 - 360*II, 4392 - 360*II, 4896 - 360*II, 3696 - &
+       & 408*II, 4248 - 408*II, 4800 - 408*II, 5352 - 408*II, 4008 - &
+       & 456*II, 4608 - 456*II, 5208 - 456*II, 5808 - 456*II], [DleftT,DleftT] )
+  T_Tensor=new_Tensor(data)
+  T_Matrix=new_Tensor(matrix)
+  T_Correct=new_Tensor(CorrectResult)
+  T_Compacted=CompactRight(T_Matrix,T_Tensor,T_Tensor,THIRD)
+  assert_equal_within(T_Compacted.absdiff.T_Correct, 0.0d0, 1.0e-8)
+
+end test
+
+test Left_Compactification
+!
+!  Mathematica code: NOTICE THE TRANSPOSE TO GET THE ORDER RIGHT
+! With[{DL = 3, DR = 4, spin = 2},
+!   At = Table[
+!     DR*(s - 1) + (j - 1)*DL + i, {s, 1, 2}, {i, 1, DL}, {j, 1, DR}];
+!   mat = Table[I^i + (j - 1)*DL, {i, 1, DL}, {j, 1, DL}]];
+!  Flatten[Transpose[LProduct[At, At, mat]]]
+!
+  type(Tensor3) :: T_Tensor
+  type(Tensor2) :: T_Compacted,T_Matrix,T_Correct
+  integer,parameter :: DleftT=3, DrightT=4,spinT=2
+  complex(8) :: matrix(DleftT,DleftT)
+  complex(8) :: CorrectResult(DrightT,DrightT)
+  complex(8) :: data(DleftT,DrightT,spinT)
+  integer n,i,j,k,s
+
+   do i=1,DleftT
+     do j=1,DrightT
+        do s=1,spinT
+           data(i,j,s)=one*(i+(j-1)*DleftT+(s-1)*DrightT)
+        enddo
+     enddo
+  enddo
+  do i=1,DleftT
+     do j=1,DleftT
+        matrix(i,j)=(II**i+(j-1)*DleftT)
+     enddo
+  enddo
+
+  CorrectResult=one*reshape([1104 - 48*II, 1788 - 48*II, 2472 - 48*II, 3156 - 48*II, 1680 - &
+       &  84*II, 2796 - 84*II, 3912 - 84*II, 5028 - 84*II, 2256 - 120*II, 3804 - &
+       &  120*II, 5352 - 120*II, 6900 - 120*II, 2832 - 156*II, 4812 - &
+       &  156*II, 6792 - 156*II, 8772 - 156*II], [DrightT,DrightT] )
+
+  T_Tensor=new_Tensor(data)
+  T_Matrix=new_Tensor(matrix)
+  T_Correct=new_Tensor(CorrectResult)
+  T_Compacted=CompactLeft(T_Matrix,T_Tensor,T_Tensor,THIRD)
+  assert_equal_within(T_Compacted.absdiff.T_Correct, 0.0d0, 1.0e-8)
+
+end test
 
 end test_suite

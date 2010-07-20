@@ -40,7 +40,9 @@ module Tensor_Class
   contains
     procedure :: SVD => SingularValueDecomposition
     procedure :: SplitIndex => SplitIndexOfTensor2
-!    procedure :: dagger => ConjugateTranspose
+    procedure :: dagger => ConjugateTranspose2
+    procedure :: CompactFromLeft => Mirror_Compact_Left_With_Tensor3
+    procedure :: CompactFromRight => Mirror_Compact_Right_With_Tensor3
   end type Tensor2
 
   type,public,extends(Tensor) :: Tensor3
@@ -114,6 +116,14 @@ module Tensor_Class
 
   interface ConjugateTranspose
     module procedure ConjugateTranspose2,ConjugateTranspose3
+  end interface
+
+  interface CompactLeft
+    module procedure Compact_Tensor3_From_Left_With_Tensor2,Mirror_Compact_Left_With_Tensor3
+  end interface
+
+  interface CompactRight
+    module procedure Compact_Tensor3_From_Right_With_Tensor2,Mirror_Compact_Right_With_Tensor3
   end interface
 
 !######################################################################################
@@ -804,6 +814,128 @@ integer function InitializationCheck(this) result(error)
       endif
       return
    end function Tensor1_dotProduct_Tensor1
+
+
+   function Mirror_Compact_Left_With_Tensor3(this,aTensor,IndexToCompact) result(theResult)
+       class(Tensor2),intent(IN) :: this
+       integer :: IndexToCompact(1)
+       type(Tensor3),intent(IN) :: aTensor
+       type(Tensor2) :: theResult
+
+       theResult=CompactLeft(this,aTensor,aTensor,IndexToCompact)
+
+   end function Mirror_Compact_Left_With_Tensor3
+
+   function Compact_Tensor3_From_Left_With_Tensor2(LeftTensor,upTensor,downTensor,IndexToCompact) result(theResult)
+      type(Tensor3),intent(IN) :: upTensor,downTensor
+      integer :: IndexToCompact(1)
+      type(Tensor2),intent(IN) :: LeftTensor
+      type(Tensor2) :: theResult
+      complex(8),allocatable :: aMatrix(:,:)
+      integer :: upDims(3), downDims(3), leftDims(2), n
+
+      if(.not.(upTensor%Initialized .and. downTensor%Initialized .and. leftTensor%Initialized)) then
+        call ThrowException('Compact_From_Left','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+      endif
+
+      upDims=shape(upTensor%data)
+      downDims=shape(downTensor%data)
+      leftDims=shape(leftTensor%data)
+
+      if ( upDims(IndexToCompact(1)).ne.downDims(IndexToCompact(1)) ) then
+        call ThrowException('Compact_From_Left','Index to Compact does not have equal dimensions',IndexToCompact(1),CriticalError)
+        return
+      endif
+
+      If(IndexToCompact.equalvector.FIRST) then
+          allocate ( aMatrix(upDims(3),downDims(3)) )
+          aMatrix=ZERO
+          do n=1,upDims(IndexToCompact(1))
+            aMatrix=aMatrix+ matmul( dconjg(Transpose(downTensor%data(n,:,:))) ,matmul( LeftTensor%data, upTensor%data(n,:,:) ) )
+          enddo
+      else if (IndexToCompact.equalvector.SECOND) then
+          allocate ( aMatrix(upDims(3),downDims(3)) )
+          aMatrix=ZERO
+          do n=1,upDims(IndexToCompact(1))
+            aMatrix=aMatrix+ matmul( dconjg(Transpose(downTensor%data(:,n,:))) ,matmul( LeftTensor%data, upTensor%data(:,n,:) ) )
+          enddo
+      else if (IndexToCompact.equalvector.THIRD) then
+          allocate ( aMatrix(upDims(2),downDims(2)) )
+          aMatrix=ZERO
+          do n=1,upDims(IndexToCompact(1))
+            aMatrix=aMatrix+ matmul( dconjg(Transpose(downTensor%data(:,:,n))) ,matmul( LeftTensor%data, upTensor%data(:,:,n) ) )
+          enddo
+      else
+        call ThrowException('Compact_From_Left','Index to Compact is not 1,2, or 3',IndexToCompact(1),CriticalError)
+        return
+      endif
+
+      theResult=new_Tensor(aMatrix)
+
+   end function Compact_Tensor3_From_Left_With_Tensor2
+
+
+   function Mirror_Compact_Right_With_Tensor3(this,aTensor,IndexToCompact) result(theResult)
+       class(Tensor2),intent(IN) :: this
+       integer :: IndexToCompact(1)
+       type(Tensor3),intent(IN) :: aTensor
+       type(Tensor2) :: theResult
+
+       theResult=CompactRight(this,aTensor,aTensor,IndexToCompact)
+
+   end function Mirror_Compact_Right_With_Tensor3
+
+   function Compact_Tensor3_From_Right_With_Tensor2(RightTensor,upTensor,downTensor,IndexToCompact) result(theResult)
+      type(Tensor3),intent(IN) :: upTensor,downTensor
+      integer :: IndexToCompact(1)
+      type(Tensor2),intent(IN) :: RightTensor
+      type(Tensor2) :: theResult
+      complex(8),allocatable :: aMatrix(:,:)
+      integer :: upDims(3), downDims(3), rightDims(2), n
+
+      if(.not.(upTensor%Initialized .and. downTensor%Initialized .and. rightTensor%Initialized)) then
+        call ThrowException('Compact_From_Right','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+      endif
+
+      upDims=shape(upTensor%data)
+      downDims=shape(downTensor%data)
+      rightDims=shape(rightTensor%data)
+
+      if ( upDims(IndexToCompact(1)).ne.downDims(IndexToCompact(1)) ) then
+        call ThrowException('Compact_From_Right','Index to Compact does not have equal dimensions',IndexToCompact(1),CriticalError)
+        return
+      endif
+
+      If(IndexToCompact.equalvector.FIRST) then
+          allocate ( aMatrix(upDims(2),downDims(2)) )
+          aMatrix=ZERO
+          do n=1,upDims(IndexToCompact(1))
+            aMatrix=aMatrix+ matmul( matmul( upTensor%data(n,:,:), RightTensor%data ) , dconjg(Transpose(downTensor%data(n,:,:))) )
+          enddo
+      else if (IndexToCompact.equalvector.SECOND) then
+          allocate ( aMatrix(upDims(1),downDims(1)) )
+          aMatrix=ZERO
+          do n=1,upDims(IndexToCompact(1))
+            aMatrix=aMatrix+ matmul( matmul( upTensor%data(:,n,:), RightTensor%data ) , dconjg(Transpose(downTensor%data(:,n,:))) )
+          enddo
+      else if (IndexToCompact.equalvector.THIRD) then
+          allocate ( aMatrix(upDims(1),downDims(1)) )
+          aMatrix=ZERO
+          do n=1,upDims(IndexToCompact(1))
+            aMatrix=aMatrix+ matmul( matmul( upTensor%data(:,:,n), RightTensor%data ) , dconjg(Transpose(downTensor%data(:,:,n))) )
+          enddo
+      else
+        call ThrowException('Compact_From_Right','Index to Compact is not 1,2, or 3',IndexToCompact(1),CriticalError)
+        return
+      endif
+
+      theResult=new_Tensor(aMatrix)
+
+   end function Compact_Tensor3_From_Right_With_Tensor2
+
+
 
 !!##################################################################
 !!##################################################################
