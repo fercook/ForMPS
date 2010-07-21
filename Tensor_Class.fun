@@ -305,6 +305,14 @@ test Left_Compactification
 end test
 
 test Compact_From_Below_T3_T4
+!Mathematica Code:
+!
+!T3 = Table[a*100 + b*10 + 1.0 c, {a, 1, 2}, {b, 1, 3}, {c, 1, 4}];
+!T4 = Table[a*1000 + b*100 + c 10.0 + d I, {a, 1, 2}, {b, 1, 2}, {c, 1, 2}, {d,1, 2}];
+!math = Round[
+!   Flatten[Transpose[T3, {3, 1, 2}].Transpose[
+!      T4, {2, 3, 1, 4}], {{5}, {1, 3}, {2, 4}}]];
+!Flatten[Transpose[math, {3, 2, 1}]]
   type(Tensor3) :: aT3,correct,result
   type(Tensor4) :: aT4
   complex(8) :: origArray(2,3,4), origTensor(2,2,2,2), correctArray(2,6,8)
@@ -339,5 +347,46 @@ test Compact_From_Below_T3_T4
     assert_equal_within(result.absdiff.correct, 0.0d0, 1.0e-8)
 
 end test
+
+
+test Tensor4_doubletimes_Tensor4_test
+!Mathematica Code:
+!T4A = Table[a*1000 + b*100 + c 10.0 + d I, {a, 1, 2}, {b, 1, 3}, {c, 1, 3}, {d,1, 2}];
+!T4B = Table[a*1000 + b*100 + c 10.0 + d I, {a, 1, 3}, {b, 1, 2}, {c, 1, 2}, {d,1, 3}];
+!Round[Flatten[
+!  Transpose[
+!   Flatten[T4A, {{1}, {2}, {3, 4}}].Flatten[
+!     T4B, {{1, 2}, {3}, {4}}], {4, 3, 2, 1}]]]
+
+   type(Tensor4) ::TensorA,tensorB,result,correct
+   complex(8) :: arrayA(2,3,3,2),arrayB(3,2,2,3),correctArray(2,3,2,3)
+   integer :: i,j,k,l
+
+   forall (i=1:2, j=1:3, k=1:3, l=1:2) arrayA(i,j,k,l)=1000*i+100*j+10*k+ii*l
+   forall (i=1:3, j=1:2, k=1:2, l=1:3) arrayB(i,j,k,l)=1000*i+100*j+10*k+ii*l
+
+   tensorA=new_Tensor(arrayA)
+   tensorB=new_Tensor(arrayB)
+
+   correctArray=ONE*reshape( [ &
+     & 14555191+26310 *II,27515191+32310 *II,15851191+26910 *II,28811191+32910 *II, &
+     & 17147191+27510 *II,30107191+33510 *II,14622391+26400 *II,27642391+32400 *II, &
+     & 15924391+27000 *II,28944391+33000 *II,17226391+27600 *II,30246391+33600 *II, &
+     & 14555182+33030 *II,27515182+45030 *II,15851182+34230 *II,28811182+46230 *II, &
+     & 17147182+35430 *II,30107182+47430 *II,14622382+33120 *II,27642382+45120 *II, &
+     & 15924382+34320 *II,28944382+46320 *II,17226382+35520 *II,30246382+47520 *II, &
+     & 14555173+39750 *II,27515173+57750 *II,15851173+41550 *II,28811173+59550 *II, &
+     & 17147173+43350 *II,30107173+61350 *II,14622373+39840 *II,27642373+57840 *II, &
+     & 15924373+41640 *II,28944373+59640 *II,17226373+43440 *II,30246373+61440 *II &
+     & ],[2,3,2,3] )
+
+   correct=new_Tensor(correctArray)
+
+   result=tensorA.xx.tensorB
+
+   assert_equal_within(result.absdiff.correct, 0.0d0, 1.0e-8)
+
+end test
+
 
 end test_suite

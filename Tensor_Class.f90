@@ -83,7 +83,19 @@ module Tensor_Class
      module procedure &
      	  & number_times_Tensor1,number_times_Tensor2,number_times_Tensor3,number_times_Tensor4, &
      	  & Tensor2_matmul_Tensor2, Tensor2_matmul_Tensor1, Tensor1_matmul_Tensor2, &
-     	  & Tensor1_dotProduct_Tensor1
+     	  & Tensor1_dotProduct_Tensor1, &
+     	  & Tensor3_matmul_Tensor3
+  end interface
+
+  interface operator (.x.)
+     module procedure &
+          & Tensor2_matmul_Tensor2, Tensor2_matmul_Tensor1, Tensor1_matmul_Tensor2, &
+          & Tensor1_dotProduct_Tensor1, Tensor3_matmul_Tensor3
+  end interface
+
+  interface operator (.xx.)
+     module procedure &
+     &   Tensor4_doubletimes_Tensor4
   end interface
 
   interface operator (+)
@@ -1082,6 +1094,101 @@ integer function InitializationCheck(this) result(error)
       return
    end function Tensor1_dotProduct_Tensor1
 
+    function Tensor3_matmul_Tensor3(tensorA,tensorB) result(this)
+        class(Tensor3),intent(IN) :: tensorA,tensorB
+        type(tensor4) :: this
+        integer :: sumIndex,left1,left2,right1,right2
+        integer :: dims_Of_A(3),dims_Of_B(3),new_Dims(4)
+        complex(8) :: ctemp
+        complex(8),allocatable :: anArray(:,:,:,:)
+
+        if(TensorA%Initialized.and.TensorB%Initialized) then
+            dims_Of_A=shape(tensorA%data)
+            dims_Of_B=shape(tensorB%data)
+            if(dims_Of_A(3).ne.dims_Of_B(1)) then
+                call ThrowException('Tensor3_times_Tensor3','Tensor indexes have different size',NoErrorCode,CriticalError)
+                return
+            endif
+            new_dims(1:2)=dims_Of_A(1:2)
+            new_dims(3:4)=dims_Of_B(2:3)
+            allocate(anArray(new_dims(1),new_dims(2),new_dims(3),new_dims(4)))
+           !Structure inspired by BLAS3
+            do right2=1,new_dims(4)
+              do right1=1,new_dims(3)
+                do sumIndex=1,dims_Of_A(3)
+                  if(tensorB%data(sumIndex,right1,right2).ne.ZERO) then
+                      ctemp=tensorB%data(sumIndex,right1,right2)
+                      do left2=1,new_dims(2)
+                        do left1=1,new_dims(1)
+                            anArray(left1,left2,right1,right2)=anArray(left1,left2,right1,right2)+tensorA%data(left1,left2,sumIndex)*ctemp
+                        enddo
+                      enddo
+                  endif
+                enddo
+              enddo
+            enddo
+
+            this=new_Tensor(anArray)
+            deallocate(anArray)
+
+          else
+            call ThrowException('Tensor3_times_Tensor3','Tensor not initialized',NoErrorCode,CriticalError)
+          endif
+
+          return
+
+       end function Tensor3_matmul_Tensor3
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+    function Tensor4_doubletimes_Tensor4 ( tensorA,tensorB) result(this)
+        class(Tensor4),intent(IN) :: tensorA,tensorB
+        type(tensor4) :: this
+        integer :: sumIndex1,sumIndex2,left1,left2,right1,right2
+        integer :: dims_Of_A(4),dims_Of_B(4),new_Dims(4)
+        complex(8) :: ctemp
+        complex(8),allocatable :: anArray(:,:,:,:)
+
+        if(TensorA%Initialized.and.TensorB%Initialized) then
+            dims_Of_A=shape(tensorA%data)
+            dims_Of_B=shape(tensorB%data)
+            if(dims_Of_A(3).ne.dims_Of_B(1).or.dims_Of_A(4).ne.dims_Of_B(2)) then
+                call ThrowException('Tensor4_Doubletimes_Tensor4','Tensor indexes have different size',NoErrorCode,CriticalError)
+                return
+            endif
+            new_dims(1:2)=dims_Of_A(1:2)
+            new_dims(3:4)=dims_Of_B(3:4)
+            allocate(anArray(new_dims(1),new_dims(2),new_dims(3),new_dims(4)))
+            anArray=ZERO !Crucial to initialize to zero
+            !Structure inspired by BLAS3
+            do right2=1,new_dims(4)
+              do right1=1,new_dims(3)
+                do sumIndex2=1,dims_Of_A(4)
+                  do sumIndex1=1,dims_Of_A(3)
+                    if(tensorB%data(sumIndex1,sumIndex2,right1,right2).ne.ZERO) then
+                      ctemp=tensorB%data(sumIndex1,sumIndex2,right1,right2)
+                      do left2=1,new_dims(2)
+                        do left1=1,new_dims(1)
+                            anArray(left1,left2,right1,right2)=anArray(left1,left2,right1,right2)+tensorA%data(left1,left2,sumIndex1,sumIndex2)*ctemp
+                        enddo
+                      enddo
+                    endif
+                  enddo
+                enddo
+              enddo
+            enddo
+
+            this=new_Tensor(anArray)
+            deallocate(anArray)
+
+        else
+            call ThrowException('Tensor4_doubletimes_Tensor4','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+        return
+
+    end function Tensor4_doubletimes_Tensor4
+
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
    function Mirror_Compact_Left_With_Tensor3(this,aTensor,IndexToCompact) result(theResult)
@@ -1474,7 +1581,48 @@ integer function InitializationCheck(this) result(error)
 		call ThrowException('Tensors_are_of_equal_Shape','Tensor not of same type',NoErrorCode,CriticalError)
         return
 	endif
-    equals=.true.  !!TODO
+	select type (Typed_A => tensorA)
+      class is (Tensor1)
+         select type (Typed_B => tensorB)
+             class is (Tensor1)
+                equals=sum(abs(shape(typed_A%data)-shape(typed_B%data))).eq.ZERO
+             class default
+                call ThrowException('Tensors_are_equal','Unknown error',NoErrorCode,CriticalError)
+                return
+         end select
+      class is (Tensor2)
+         select type (Typed_B => tensorB)
+             class is (Tensor2)
+                equals=sum(abs(shape(typed_A%data)-shape(typed_B%data))).eq.ZERO
+             class default
+                call ThrowException('Tensors_are_equal','Unknown error',NoErrorCode,CriticalError)
+                return
+         end select
+      class is (Tensor3)
+         select type (Typed_B => tensorB)
+             class is (Tensor3)
+                equals=sum(abs(shape(typed_A%data)-shape(typed_B%data))).eq.ZERO
+             class default
+                call ThrowException('Tensors_are_equal','Unknown error',NoErrorCode,CriticalError)
+                return
+         end select
+      class is (Tensor4)
+         select type (Typed_B => tensorB)
+             class is (Tensor4)
+                equals=sum(abs(shape(typed_A%data)-shape(typed_B%data))).eq.ZERO
+             class default
+                call ThrowException('Tensors_are_equal','Unknown error',NoErrorCode,CriticalError)
+                return
+         end select
+      class is (Tensor5)
+         select type (Typed_B => tensorB)
+             class is (Tensor5)
+                equals=sum(abs(shape(typed_A%data)-shape(typed_B%data))).eq.ZERO
+             class default
+                call ThrowException('Tensors_are_equal','Unknown error',NoErrorCode,CriticalError)
+                return
+         end select
+      end select
 
    end function Tensors_are_of_equal_Shape
 
@@ -1973,8 +2121,6 @@ end function TensorTranspose5
      if(present(ErrorCode)) ErrorCode=Normal
 
    end subroutine SingularValueDecomposition
-
-
 
 
 end module Tensor_Class
