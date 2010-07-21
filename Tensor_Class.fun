@@ -39,24 +39,24 @@ test assignments_of_tensor
 
 end test
 
-test tensor3_joinIndices_first
+test tensor3_joinindices_first
   type(tensor3) :: aMPS
   type(tensor2) :: aMatrix,correct
   complex(8) :: data(2,3,4),matrix(6,4)
   integer error,i,j,k
 
-  !Initialization
+  !initialization
   forall (i=1:2 ,j=1:3, k=1:4) data(i,j,k)=ONE*(i+(j-1)*3+(k-1)*4)
   aMPS=new_Tensor(data)
 
   matrix=one*Reshape( data, [2*3,4])
   correct=new_Tensor(matrix)
 
-  aMatrix=aMPS%JoinIndices(FIRSTANDSECOND,THIRD)
+  aMatrix=aMPS%Joinindices(FiRSTANDSECOND,THiRD)
   assert_equal_within(amatrix.absdiff.correct, 0.0d0, 1.0e-8)
 
   correct=new_Tensor(transpose(matrix)) !This will be 4,2*3
-  aMatrix=JoinIndicesOf(aMPS,THIRD,FIRSTANDSECOND)
+  aMatrix=JoinindicesOf(aMPS,THiRD,FiRSTANDSECOND)
   assert_equal_within(amatrix.absdiff.correct, 0.0d0, 1.0e-8)
 
    assert_equal(aMPS%delete(),Normal)
@@ -65,26 +65,26 @@ test tensor3_joinIndices_first
    assert_false(WasThereError())
 end test
 
-test tensor4_joinIndices
+test tensor4_joinindices
   type(tensor4) :: aTensor
   type(tensor2) :: aMatrix,correct
   complex(8) :: data(2,3,4,5),matrix(6,20)
   integer error,i,j,k,l
 
-  !Initialization
+  !initialization
   forall (i=1:2 ,j=1:3, k=1:4, l=1:5) data(i,j,k,l)=ONE*(i+(j-1)*2+(k-1)*3*2+(l-1)*2*3*4)
   aTensor=new_Tensor(data)
 
   matrix=one*Reshape( data, [2*3,4*5])
   correct=new_Tensor(matrix)
 
-  aMatrix=aTensor%JoinIndices(FIRSTANDSECOND,THIRDANDFOURTH)
+  aMatrix=aTensor%Joinindices(FiRSTANDSECOND,THiRDANDFOURTH)
   assert_equal_within(amatrix.absdiff.correct, 0.0d0, 1.0e-8)
 
   error=correct%Delete()
   correct=new_Tensor(transpose(matrix))
 
-  aMatrix=aTensor%JoinIndices(THIRDANDFOURTH,FIRSTANDSECOND)
+  aMatrix=aTensor%Joinindices(THiRDANDFOURTH,FiRSTANDSECOND)
   print *,'returning'
   assert_equal_within(amatrix.absdiff.correct, 0.0d0, 1.0e-8)
 
@@ -92,24 +92,24 @@ end test
 
 
 
-test tensor2_SplitIndex
+test tensor2_Splitindex
   type(tensor3) :: aMPS,correct
   type(tensor2) :: aMatrix
   complex(8) :: matrixdata(6,4)
   integer error,i,j,k
 
-  !Initialization
+  !initialization
   forall (i=1:6 ,j=1:4) matrixdata(i,j)=ONE*(i+(j-1)*6)
   aMatrix=new_Tensor(matrixdata)
 
   correct=new_Tensor(one*Reshape( matrixdata, [2,3,4]))
 
-  aMPS=SplitIndexOf(aMatrix,FIRST,2)
+  aMPS=SplitindexOf(aMatrix,FiRST,2)
   assert_equal_within(aMPS.absdiff.correct, 0.0d0, 1.0e-8)
 
   correct=new_Tensor(one*Reshape( matrixdata, [6,2,2]))
 
-  aMPS=SplitIndexOf(aMatrix,SECOND,2)
+  aMPS=SplitindexOf(aMatrix,SECOND,2)
   assert_equal_within(aMPS.absdiff.correct, 0.0d0, 1.0e-8)
 
   assert_false(WasThereError())
@@ -146,6 +146,42 @@ test transpose_of_tensor
     allocate(correct( d1,d3,d2 ))
     forall (i=1:d1, j=1:d2, k=1:d3) correct(i,k,j)=one*(i*100+j*10+II*k)
     CorrectTensor=new_Tensor(dconjg(correct))
+    assert_equal_within(bTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(correct)
+
+end test
+
+test transpose_of_tensor4
+    integer,parameter :: d1=2,d2=3,d3=4,d4=5
+    type(Tensor4) :: aTensor,bTensor,CorrectTensor
+    complex(8) :: data(d1,d2,d3,d4)
+    complex(8),allocatable :: correct(:,:,:,:)
+    integer :: i,j,k,l,neworder(4)
+
+    forall (i=1:d1, j=1:d2, k=1:d3, l=1:d4) data(i,j,k,l)=one*(i*1000+j*100+10*II*k+l)
+    aTensor=new_Tensor(data)
+
+    neworder=[1,2,3,4]
+    bTensor=TensorTranspose(aTensor,neworder)
+    allocate(correct(d1,d2,d3,d4))
+    forall (i=1:d1, j=1:d2, k=1:d3, l=1:d4) correct(i,j,k,l)=one*(i*1000+j*100+10*II*k+l)
+    CorrectTensor=new_Tensor(correct)
+    assert_equal_within(bTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(correct)
+
+    neworder=[4,1,2,3]
+    bTensor=TensorTranspose(aTensor,neworder)
+    allocate(correct(d2,d3,d4,d1))
+    forall (i=1:d1, j=1:d2, k=1:d3, l=1:d4) correct(j,k,l,i)=one*(i*1000+j*100+10*II*k+l)
+    CorrectTensor=new_Tensor(correct)
+    assert_equal_within(bTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(correct)
+
+    neworder=[3,2,4,1]
+    bTensor=TensorTranspose(aTensor,neworder)
+    allocate(correct(d4,d2,d1,d3))
+    forall (i=1:d1, j=1:d2, k=1:d3, l=1:d4) correct(l,j,i,k)=one*(i*1000+j*100+10*II*k+l)
+    CorrectTensor=new_Tensor(correct)
     assert_equal_within(bTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
     deallocate(correct)
 
@@ -209,29 +245,29 @@ test Right_Compactification
   enddo
   do i=1,DrightT
      do j=1,DrightT
-        matrix(i,j)=(II**i+(j-1)*DrightT)
+        matrix(i,j)=(ii**i+(j-1)*DrightT)
      enddo
   enddo
 
-  CorrectResult=one*reshape([3072 - 312*II, 3528 - 312*II, 3984 - 312*II, 4440 - 312*II, 3384 - &
-       & 360*II, 3888 - 360*II, 4392 - 360*II, 4896 - 360*II, 3696 - &
-       & 408*II, 4248 - 408*II, 4800 - 408*II, 5352 - 408*II, 4008 - &
-       & 456*II, 4608 - 456*II, 5208 - 456*II, 5808 - 456*II], [DleftT,DleftT] )
+  CorrectResult=one*reshape([3072 - 312*ii, 3528 - 312*ii, 3984 - 312*ii, 4440 - 312*ii, 3384 - &
+       & 360*ii, 3888 - 360*ii, 4392 - 360*ii, 4896 - 360*ii, 3696 - &
+       & 408*ii, 4248 - 408*ii, 4800 - 408*ii, 5352 - 408*ii, 4008 - &
+       & 456*ii, 4608 - 456*ii, 5208 - 456*ii, 5808 - 456*ii], [DleftT,DleftT] )
   T_Tensor=new_Tensor(data)
   T_Matrix=new_Tensor(matrix)
   T_Correct=new_Tensor(CorrectResult)
-  T_Compacted=CompactRight(T_Matrix,T_Tensor,T_Tensor,THIRD)
+  T_Compacted=CompactRight(T_Matrix,T_Tensor,T_Tensor,THiRD)
   assert_equal_within(T_Compacted.absdiff.T_Correct, 0.0d0, 1.0e-8)
 
 end test
 
 test Left_Compactification
 !
-!  Mathematica code: NOTICE THE TRANSPOSE TO GET THE ORDER RIGHT
+!  Mathematica code: NOTiCE THE TRANSPOSE TO GET THE ORDER RiGHT
 ! With[{DL = 3, DR = 4, spin = 2},
 !   At = Table[
 !     DR*(s - 1) + (j - 1)*DL + i, {s, 1, 2}, {i, 1, DL}, {j, 1, DR}];
-!   mat = Table[I^i + (j - 1)*DL, {i, 1, DL}, {j, 1, DL}]];
+!   mat = Table[i^i + (j - 1)*DL, {i, 1, DL}, {j, 1, DL}]];
 !  Flatten[Transpose[LProduct[At, At, mat]]]
 !
   type(Tensor3) :: T_Tensor
@@ -251,20 +287,58 @@ test Left_Compactification
   enddo
   do i=1,DleftT
      do j=1,DleftT
-        matrix(i,j)=(II**i+(j-1)*DleftT)
+        matrix(i,j)=(ii**i+(j-1)*DleftT)
      enddo
   enddo
 
-  CorrectResult=one*reshape([1104 - 48*II, 1788 - 48*II, 2472 - 48*II, 3156 - 48*II, 1680 - &
-       &  84*II, 2796 - 84*II, 3912 - 84*II, 5028 - 84*II, 2256 - 120*II, 3804 - &
-       &  120*II, 5352 - 120*II, 6900 - 120*II, 2832 - 156*II, 4812 - &
-       &  156*II, 6792 - 156*II, 8772 - 156*II], [DrightT,DrightT] )
+  CorrectResult=one*reshape([1104 - 48*ii, 1788 - 48*ii, 2472 - 48*ii, 3156 - 48*ii, 1680 - &
+       &  84*ii, 2796 - 84*ii, 3912 - 84*ii, 5028 - 84*ii, 2256 - 120*ii, 3804 - &
+       &  120*ii, 5352 - 120*ii, 6900 - 120*ii, 2832 - 156*ii, 4812 - &
+       &  156*ii, 6792 - 156*ii, 8772 - 156*ii], [DrightT,DrightT] )
 
   T_Tensor=new_Tensor(data)
   T_Matrix=new_Tensor(matrix)
   T_Correct=new_Tensor(CorrectResult)
-  T_Compacted=CompactLeft(T_Matrix,T_Tensor,T_Tensor,THIRD)
+  T_Compacted=CompactLeft(T_Matrix,T_Tensor,T_Tensor,THiRD)
   assert_equal_within(T_Compacted.absdiff.T_Correct, 0.0d0, 1.0e-8)
+
+end test
+
+test Compact_From_Below_T3_T4
+  type(Tensor3) :: aT3,correct,result
+  type(Tensor4) :: aT4
+  complex(8) :: origArray(2,3,4), origTensor(2,2,2,2), correctArray(6,8,2)
+  integer :: i,j,k,l
+
+  forall (i=1:2, j=1:3, k=1:4) origArray(i,j,k)=100*i+10*j+k
+  forall (i=1:2, j=1:2, k=1:2, l=1:2) origTensor(i,j,k,l)=1000*i+100*j+10*k+ii*l
+
+  correctArray= ONE*reshape(&
+   & [ 359530+322 *II,359530+644 *II,681530+322 *II,681530+644 *II,381830+342 *II,381830+684 *II, &
+   &   723830+342 *II,723830+684 *II,404130+362 *II,404130+724 *II,766130+362 *II,766130+724 *II, &
+   &   391730+322 *II,391730+644 *II,713730+322 *II,713730+644 *II,416030+342 *II,416030+684 *II, &
+   &   758030+342 *II,758030+684 *II,440330+362 *II,440330+724 *II,802330+362 *II,802330+724 *II, &
+   &   361760+324 *II,361760+648 *II,685760+324 *II,685760+648 *II,384060+344 *II,384060+688 *II, &
+   &   728060+344 *II,728060+688 *II,406360+364 *II,406360+728 *II,770360+364 *II,770360+728 *II, &
+   &   394160+324 *II,394160+648 *II,718160+324 *II,718160+648 *II,418460+344 *II,418460+688 *II, &
+   &   762460+344 *II,762460+688 *II,442760+364 *II,442760+728 *II,806760+364 *II,806760+728 *II, &
+   &   363990+326 *II,363990+652 *II,689990+326 *II,689990+652 *II,386290+346 *II,386290+692 *II, &
+   &   732290+346 *II,732290+692 *II,408590+366 *II,408590+732 *II,774590+366 *II,774590+732 *II, &
+   &   396590+326 *II,396590+652 *II,722590+326 *II,722590+652 *II,420890+346 *II,420890+692 *II, &
+   &   766890+346 *II,766890+692 *II,445190+366 *II,445190+732 *II,811190+366 *II,811190+732 *II, &
+   &   366220+328 *II,366220+656 *II,694220+328 *II,694220+656 *II,388520+348 *II,388520+696 *II, &
+   &   736520+348 *II,736520+696 *II,410820+368 *II,410820+736 *II,778820+368 *II,778820+736 *II, &
+   &   399020+328 *II,399020+656 *II,727020+328 *II,727020+656 *II,423320+348 *II,423320+696 *II, &
+   &   771320+348 *II,771320+696 *II,447620+368 *II,447620+736 *II,815620+368 *II,815620+736 *II], [6,8,2] )
+
+    aT3=new_Tensor(origArray)
+    aT4=new_Tensor(origTensor)
+    correct=new_Tensor(correctArray)
+    result=Compact_From_Below_With_Tensor4(aT3,FiRST,aT4,THiRD,FOURTH)
+    call result%Print()
+    call correct%Print()
+
+    assert_equal_within(result.absdiff.correct, 0.0d0, 1.0e-8)
 
 end test
 

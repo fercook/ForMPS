@@ -50,6 +50,7 @@ module Tensor_Class
   	complex(8),allocatable :: data(:,:,:)
   contains
     procedure :: JoinIndices => JoinIndicesOfTensor3
+    procedure :: CompactFromBelow => Compact_From_Below_With_Tensor4
   end type Tensor3
 
   type,public,extends(Tensor) :: Tensor4
@@ -58,6 +59,13 @@ module Tensor_Class
   contains
     procedure :: JoinIndices => JoinIndicesOfTensor4
   end type Tensor4
+
+  type,public,extends(Tensor) :: Tensor5
+    private
+    complex(8),allocatable :: data(:,:,:,:,:)
+ ! contains
+ !   procedure :: JoinIndices => JoinIndicesOfTensor5
+  end type Tensor5
 
 !###############################
 !#####  Operators and methods
@@ -77,9 +85,13 @@ module Tensor_Class
      	  & Tensor1_dotProduct_Tensor1
   end interface
 
+  interface AddAndCollapse
+    module procedure AddAndCollapse_Tensor3_Tensor4
+  end interface
+
   interface assignment (=)
-     module procedure new_Tensor1_fromAssignment,  &
-          & new_Tensor2_fromAssignment, new_Tensor3_fromAssignment, new_Tensor4_fromAssignment
+     module procedure new_Tensor1_fromAssignment, new_Tensor2_fromAssignment, &
+          & new_Tensor3_fromAssignment, new_Tensor4_fromAssignment
   end interface
 
   interface operator (.diff.)
@@ -111,7 +123,7 @@ module Tensor_Class
   end interface
 
   interface TensorTranspose
-    module procedure TensorTranspose2,TensorTranspose3 !,TensorTranspose4
+    module procedure TensorTranspose2,TensorTranspose3,TensorTranspose4
   end interface
 
   interface ConjugateTranspose
@@ -124,6 +136,10 @@ module Tensor_Class
 
   interface CompactRight
     module procedure Compact_Tensor3_From_Right_With_Tensor2,Mirror_Compact_Right_With_Tensor3
+  end interface
+
+  interface CompactBelow
+    module procedure Compact_From_Below_With_Tensor4
   end interface
 
 !######################################################################################
@@ -406,7 +422,6 @@ module Tensor_Class
 
    end function new_Tensor3_withConstant
 
-
    function new_Tensor4_withConstant (dim1,dim2,dim3,dim4,constant) result (this)
      integer,intent(in) :: dim1,dim2,dim3,dim4
      complex(8),intent(in) :: constant
@@ -427,7 +442,6 @@ module Tensor_Class
      this%Initialized=.true.
 
    end function new_Tensor4_withConstant
-
 
 !##################################################################
    function new_Tensor1_fromTensor1 (tensor) result (this)
@@ -935,7 +949,123 @@ integer function InitializationCheck(this) result(error)
 
    end function Compact_Tensor3_From_Right_With_Tensor2
 
+   function Compact_From_Below_With_Tensor4(this,bound_index_of_3,aTensor4,bound_index_of_4,free_index_of_4) result(theResult)
+     class(Tensor3),intent(IN) :: this
+     type(Tensor4),intent(IN) :: aTensor4
+     integer,intent(IN) :: bound_index_of_3(1),bound_index_of_4(1),free_index_of_4(1)
+     type(Tensor3) :: theResult
+     type(Tensor3) :: thisTransposed
+     type(Tensor4) :: Tensor4Transposed
+     integer :: permutation_Of_3(3),permutation_Of_4(4)
+     integer :: dims_Of_4(4),dims_Of_3(3)
+     integer :: leftDim,rightDim,downDim
+     integer :: index,n
+     integer :: freeDims3(2),freeDims4(2)
 
+     if(.not.(this%Initialized)) then
+        call ThrowException('Compact_From_Below_4','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+    dims_Of_3=shape(this%data)
+    dims_Of_4=shape(aTensor4%data)
+
+     if(dims_Of_3(bound_index_of_3(1)).ne.dims_Of_4(bound_index_of_4(1))) then
+        call ThrowException('Compact_From_Below_4','Contracted index is not equal on tensors', &
+           & dims_Of_3(bound_index_of_3(1))-dims_Of_4(bound_index_of_4(1)),CriticalError)
+        return
+     endif
+
+    !Skip the bound indices to find the left and right dimensions
+    index=1
+    do n=1,3
+      if (n.ne.bound_index_of_3(1)) then
+         freeDims3(index)=n
+         index=index+1
+      endif
+    enddo
+    index=1
+    do n=1,4
+      if (n.ne.bound_index_of_4(1).and.n.ne.free_index_of_4(1)) then
+         freeDims4(index)=n
+         index=index+1
+      endif
+    enddo
+
+    !Prepare permutation vectors for transposition
+    permutation_Of_3(bound_index_of_3(1))=1
+    permutation_Of_3(freeDims3(1))=2
+    permutation_Of_3(freeDims3(2))=3
+    permutation_Of_4(bound_index_of_4(1))=1
+    permutation_Of_4(freeDims4(1))=2
+    permutation_Of_4(freeDims4(2))=3
+    permutation_Of_4(free_index_of_4(1))=4
+
+    !Transpose
+    thisTransposed=TensorTranspose(this,permutation_Of_3)
+    Tensor4Transposed=TensorTranspose(aTensor4,permutation_Of_4)
+
+    !Prepare permutation for the final result
+    permutation_Of_3(1)=freeDims3(1)
+    permutation_Of_3(2)=freeDims3(2)
+    permutation_Of_3(3)=bound_index_of_3(1)
+
+    theResult=TensorTranspose(AddAndCollapse(thisTransposed,Tensor4Transposed),permutation_Of_3)
+
+   end function Compact_From_Below_With_Tensor4
+
+
+   function AddAndCollapse_Tensor3_Tensor4(aTensor3,aTensor4) result(this)
+    class(tensor3),intent(IN) :: aTensor3
+    class(tensor4),intent(IN) :: aTensor4
+    type(Tensor3) :: this
+    integer :: dims_Of_4(4),dims_Of_3(3),new_dims(3)
+    integer :: sumIndex,a,b,alpha,beta,freeIndex,leftIndex,rightIndex
+    complex(8) :: ctemp
+    complex(8),allocatable :: anArray(:,:,:)
+
+    if(.not.(aTensor3%Initialized).or..not.(aTensor4%Initialized)) then
+        call ThrowException('AddAndCollapse34','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+    endif
+
+    dims_Of_3=shape(aTensor3%data)
+    dims_Of_4=shape(aTensor4%data)
+
+    if(dims_Of_3(1).ne.dims_Of_4(1)) then
+        call ThrowException('AddAndCollapse34','Contracted index is not equal on tensors', &
+           & dims_Of_3(1)-dims_Of_4(1),CriticalError)
+        return
+    endif
+
+    new_dims(1)=dims_Of_3(2)*dims_Of_4(2)
+    new_dims(2)=dims_Of_3(3)*dims_Of_4(3)
+    new_dims(3)=dims_Of_4(4)
+    allocate(anArray(new_dims(1),new_dims(2),new_dims(3)))
+    anArray=ZERO
+
+    !Structure of loop inspired from BLAS level 3
+    do freeIndex=1,dims_Of_4(4)
+      do beta=1,dims_Of_4(3)
+        do alpha=1,dims_Of_4(2)
+          do b=1,dims_Of_3(3)
+            rightIndex=beta+(b-1)*dims_Of_4(3)
+            do a=1,dims_Of_3(2)
+              leftIndex=alpha+(a-1)*dims_Of_4(2)
+              ctemp=ZERO
+              do sumIndex=1,dims_Of_3(1)
+                 ctemp=ctemp+aTensor3%data(sumIndex,a,b)*aTensor4%data(sumIndex,alpha,beta,freeIndex)
+              enddo
+              anArray(leftIndex,rightIndex,freeIndex)=ctemp+anArray(leftIndex,rightIndex,freeIndex)
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+
+    this=new_Tensor(anArray)
+
+    end function AddAndCollapse_Tensor3_Tensor4
 
 !!##################################################################
 !!##################################################################
@@ -1369,6 +1499,9 @@ function TensorTranspose2(this) result(thisdagger)
    return
 end function TensorTranspose2
 
+! HELP :: each permutation index says to where the dimension is moved
+! example :: (3,1,2) means that the first dimension is now the third, the second the first,
+!            and the last the second.
 function TensorTranspose3(this,permutation) result(thisdagger)
    class(Tensor3),intent(IN) :: this
    type(Tensor3) :: thisdagger
@@ -1390,6 +1523,28 @@ function TensorTranspose3(this,permutation) result(thisdagger)
    endif
    return
 end function TensorTranspose3
+
+function TensorTranspose4(this,permutation) result(thisTransposed)
+   class(Tensor4),intent(IN) :: this
+   type(Tensor4) :: thisTransposed
+   integer,intent(IN) :: permutation(4)
+   integer :: dims(4),newdims(4),n
+
+   if(this%Initialized) then
+        if(24.eq.permutation(1)*permutation(2)*permutation(3)*permutation(4).and.10.eq.sum(permutation)) then
+            dims=shape(this%data)
+            do n=1,size(dims)
+                newdims(permutation(n))=dims(n)
+            enddo
+            thisTransposed=new_Tensor4_fromData(reshape(this%data,newdims,ORDER=permutation))
+        else
+            call ThrowException('TensorTranspose4','Order must be permutation of 1,2,3,4',NoErrorCode,CriticalError)
+        endif
+   else
+       call ThrowException('TensorTranspose4','Tensor not initialized',NoErrorCode,CriticalError)
+   endif
+   return
+end function TensorTranspose4
 
   subroutine SingularValueDecomposition(this,U,Sigma,vTransposed,ErrorCode)
      class(Tensor2),intent(IN) :: this

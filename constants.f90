@@ -14,6 +14,8 @@ module Constants
   integer,parameter,dimension(1) :: First  = [1]
   integer,parameter,dimension(1) :: Second = [2]
   integer,parameter,dimension(1) :: Third = [3]
+  integer,parameter,dimension(1) :: Fourth = [4]
+  integer,parameter,dimension(1) :: Fifth = [5]
 
   integer,parameter,dimension(2) :: FirstAndSecond = [1,2]
   integer,parameter,dimension(2) :: FirstAndThird = [1,3]
