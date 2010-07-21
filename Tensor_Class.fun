@@ -307,7 +307,7 @@ end test
 test Compact_From_Below_T3_T4
   type(Tensor3) :: aT3,correct,result
   type(Tensor4) :: aT4
-  complex(8) :: origArray(2,3,4), origTensor(2,2,2,2), correctArray(6,8,2)
+  complex(8) :: origArray(2,3,4), origTensor(2,2,2,2), correctArray(2,6,8)
   integer :: i,j,k,l
 
   forall (i=1:2, j=1:3, k=1:4) origArray(i,j,k)=100*i+10*j+k
@@ -329,14 +329,12 @@ test Compact_From_Below_T3_T4
    &   366220+328 *II,366220+656 *II,694220+328 *II,694220+656 *II,388520+348 *II,388520+696 *II, &
    &   736520+348 *II,736520+696 *II,410820+368 *II,410820+736 *II,778820+368 *II,778820+736 *II, &
    &   399020+328 *II,399020+656 *II,727020+328 *II,727020+656 *II,423320+348 *II,423320+696 *II, &
-   &   771320+348 *II,771320+696 *II,447620+368 *II,447620+736 *II,815620+368 *II,815620+736 *II], [6,8,2] )
+   &   771320+348 *II,771320+696 *II,447620+368 *II,447620+736 *II,815620+368 *II,815620+736 *II], [2,6,8] )
 
     aT3=new_Tensor(origArray)
     aT4=new_Tensor(origTensor)
     correct=new_Tensor(correctArray)
-    result=Compact_From_Below_With_Tensor4(aT3,FiRST,aT4,THiRD,FOURTH)
-    call result%Print()
-    call correct%Print()
+    result=Compact_From_Below_With_Tensor4(aT3,FIRST,aT4,THIRD,FOURTH)
 
     assert_equal_within(result.absdiff.correct, 0.0d0, 1.0e-8)
 
