@@ -85,7 +85,7 @@ test tensor4_joinindices
   correct=new_Tensor(transpose(matrix))
 
   aMatrix=aTensor%Joinindices(THiRDANDFOURTH,FiRSTANDSECOND)
-  print *,'returning'
+
   assert_equal_within(amatrix.absdiff.correct, 0.0d0, 1.0e-8)
 
 end test
@@ -388,5 +388,46 @@ test Tensor4_doubletimes_Tensor4_test
 
 end test
 
+test Matrices_times_tensor3s
+
+  type(Tensor3) :: T_result,T_Tensor,T_Correct
+  type(Tensor2) :: T_Matrix
+  integer,parameter :: left=2,center=3,right=4
+  complex(8) :: matrixL(center,left),matrixR(right,left)
+  complex(8) :: CorrectL(center,center,right),correctR(left,center,left)
+  complex(8) :: tensorarray(left,center,right)
+  integer n,i,j,k,s
+
+  forall (i=1:left, j=1:center, k=1:right) tensorarray(i,j,k)=1000*i+100*j*II+10*k
+  forall (i=1:center, j=1:left) matrixL(i,j)=127*i+13*j*II
+  forall (i=1:right, j=1:left) matrixR(i,j)=41*i+7*j*II
+  do k=1,right
+    do j=1,center
+        do i=1,center
+            correctL(i,j,k)=sum( matrixL(i,:)*tensorarray(:,j,k) )!dot_product(dconjg(matrixL(i,:)),tensorarray(:,j,k))
+        enddo
+    enddo
+  enddo
+  T_Tensor=new_Tensor(tensorarray)
+  T_matrix=new_Tensor(matrixL)
+  T_result=T_matrix*T_Tensor
+  T_correct=new_Tensor(correctL)
+
+  assert_equal_within(T_result.absdiff.T_correct, 0.0d0, 1.0e-8)
+
+  do k=1,left
+    do j=1,center
+        do i=1,left
+            correctR(i,j,k)=sum( tensorarray(i,j,:) * matrixR(:,k) )
+        enddo
+    enddo
+  enddo
+  T_matrix=new_Tensor(matrixR)
+  T_result=T_Tensor*T_matrix
+  T_correct=new_Tensor(correctR)
+
+  assert_equal_within(T_result.absdiff.T_correct, 0.0d0, 1.0e-8)
+
+end test
 
 end test_suite
