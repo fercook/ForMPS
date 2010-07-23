@@ -32,7 +32,8 @@ module MPSTensor_Class
 
   private
 
-  public :: new_MPSTensor,LeftCanonize
+  public :: new_MPSTensor,LeftCanonize,RightCanonize
+  public :: MPSTensor_times_matrix, matrix_times_MPSTensor !operator(.times.)
 
 !###############################
 !#####  The class main object
@@ -63,8 +64,20 @@ module MPSTensor_Class
      module procedure new_MPSTensor_fromAssignment
   end interface
 
+  interface operator (.times.)
+     module procedure MPSTensor_times_matrix, matrix_times_MPSTensor
+  end interface
+
   interface LeftCanonize
     module procedure Left_Canonize_MPSTensor
+  end interface
+
+  interface RightCanonize
+    module procedure Right_Canonize_MPSTensor
+  end interface
+
+  interface SplitSpinFromBond
+    module procedure Split_Spin_From_Bond_Dimension
   end interface
 
 !######################################################################################
@@ -243,6 +256,36 @@ module MPSTensor_Class
 
    end function Apply_Operator_To_Spin_Dimension
 
+    function MPSTensor_times_matrix(aTensor,aMatrix) result(theResult)
+        class(MPSTensor),intent(IN) :: aTensor
+        class(Tensor2),intent(IN) :: aMatrix
+        type(MPSTensor) :: theResult
+        integer :: newDims(3)
+
+        theResult=TensorTranspose( TensorTranspose(aTensor,[1,3,2])*aMatrix , [1,3,2] )
+        newDims=theResult%GetDimensions()
+
+        theResult%spin=newDims(3)
+        theResult%DLeft=newDims(1)
+        theResult%DRight=newDims(2)
+
+    end function MPSTensor_times_matrix
+
+    function matrix_times_MPSTensor(aMatrix,aTensor) result(theResult)
+        class(MPSTensor),intent(IN) :: aTensor
+        class(Tensor2),intent(IN) :: aMatrix
+        type(MPSTensor) :: theResult
+        integer :: newDims(3)
+
+        theResult=aMatrix*aTensor
+        newDims=theResult%GetDimensions()
+
+        theResult%spin=newDims(3)
+        theResult%DLeft=newDims(1)
+        theResult%DRight=newDims(2)
+
+    end function matrix_times_MPSTensor
+
 
 !##################################################################
 !##################################################################
@@ -269,7 +312,34 @@ module MPSTensor_Class
         return
     end function Collapse_Spin_With_Bond_Dimension
 
+    function Split_Spin_From_Bond_Dimension(this,whichDimension,spinSize) result(splitTensor)
+        class(Tensor2),intent(IN) :: this
+        integer,intent(IN) :: whichDimension(1),spinSize
+        type(MPSTensor) :: splitTensor
+        integer :: newDims(3)
 
+        if(this%IsInitialized()) then
+            select case (whichDimension(1))
+                case (FIRST(1))
+                    splitTensor=TensorTranspose( SplitIndexOf(this,FIRST,spinSize), [3,1,2] )
+                    newDims=splitTensor%GetDimensions()
+                    splitTensor%spin=newDims(3)
+                    splitTensor%DLeft=newDims(1)
+                    splitTensor%DRight=newDims(2)
+                case (SECOND(1))
+                    splitTensor=TensorTranspose( SplitIndexOf(this,SECOND,spinSize), [1,3,2] )
+                    newDims=splitTensor%GetDimensions()
+                    splitTensor%spin=newDims(3)
+                    splitTensor%DLeft=newDims(1)
+                    splitTensor%DRight=newDims(2)
+                case default
+                    call ThrowException('Split_Spin_From_Bond_Dimension','Dimension must be FIRST or SECOND',whichDimension(1),CriticalError)
+            end select
+        else
+            call ThrowException('Split_Spin_From_Bond_Dimension','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+        return
+    end function Split_Spin_From_Bond_Dimension
 
 !##################################################################
 !##################################################################
@@ -282,9 +352,7 @@ module MPSTensor_Class
     class(MPSTensor),intent(INOUT) :: this !
     type(Tensor2) :: matrix
     type(Tensor2) :: U,Sigma,vTransposed,collapsedTensor
-!    integer :: Spin,LeftBond,RightBond
-!    integer :: newLeftBond,newRightBond
-    integer :: error
+    integer :: error,newUDims(2)
 
     if(.not.this%IsInitialized()) then
        call ThrowException('Left_Canonize_MPSTensor','Tensor not initialized',NoErrorCode,CriticalError)
@@ -299,87 +367,58 @@ module MPSTensor_Class
     endif
 
     call SingularValueDecomposition(CollapsedTensor,U,Sigma,vTransposed,error)
-    !CollapsedTensor has dimensions =  s*DL x DR
-    ! Output Dimensions are        U=  s*DL x s*DL   (but if DR < s*DL only DR entries are good)
-    !                          Sigma=  s*DL x DR
-    !                    vTransposed=    DR x DR
 
-!    newLeftBond=LeftBond
-!    newRightBond=Min(Spin*LeftBond,RightBond)
-!
-!    this=new_MPSTensor(Spin,newLeftBond,newRightBond,U)
-!    if (WasThereError()) then
-!       call ThrowException('Left_Canonize_MPSTensor','Could not split the matrix',NoErrorCode,CriticalError)
-!       return
-!    endif
-!
-!    !matrix is reshaped to fit the product with the tensor on the right
-!    matrix=new_MPSTensor(MatrixSpin,newRightBond,RightBond, &
-!         & reshape(vecmat(Sigma,vTransposed) , [newRightBond,RightBond,MatrixSpin], &
-!         & Pad= [ (zero, kk=1,newRightBond*RightBond*MatrixSpin) ]   ) )  !! Pad with zeros at the end
-    this=TensorTranspose( SplitIndexOf(U,FIRST,this%spin), [3,1,2] )
-    matrix=sigma*vTransposed
+    if (error.ne.Normal) then
+       call ThrowException('Left_Canonize_MPSTensor','Could not split the matrix',NoErrorCode,CriticalError)
+       return
+    endif
+
+    !We need to trim the matrix to get rid of useless dimensions
+    newUDims=[ this%spin*this%DLeft, min(this%spin * this%DLeft, this%Dright)]
+    this=SplitSpinFromBond( TensorPad(U,newUDims), FIRST, this%spin )
+
+    !matrix is reshaped to fit the product with the tensor on the right
+    matrix=TensorPad(sigma*Conjugate(vTransposed), [ newUDims(2), this%DRight ] )
 
   end function Left_Canonize_MPSTensor
-!
 
-
+!##################################################################
+!##################################################################
 ! Right Site Canonization -- Returns the matrix that needs to be multiplied
 ! to the adjacent site on the LEFT
 !##################################################################
 !##################################################################
 
-!  function Right_Canonize_MPSTensor(this) result(matrix)
-!    !!class(MPSTensor),intent(INOUT) :: this !!<<CLASS>>!!
-!    class(MPSTensor),intent(INOUT) :: this  !!<<TYPE>>!!
-!    type(MPSTensor) :: matrix
-!    complex(8), allocatable :: U(:,:),vTransposed(:,:),collapsedTensor(:,:)
-!    real(8),allocatable :: Sigma(:)
-!    integer :: Spin,LeftBond,RightBond
-!    integer :: newLeftBond,newRightBond
-!    integer :: jj,kk
-!
-!    if(.not.this%IsInitialized()_) then
-!       call ThrowException('Right_Canonize_MPSTensor','Tensor not initialized',NoErrorCode,CriticalError)
-!       return
-!    endif
-!
-!    Spin=this%spin
-!    LeftBond=this%DLeft
-!    RightBond=this%DRight
-!
-!    allocate(collapsedTensor(LeftBond,Spin*RightBond))
-!    allocate(U(LeftBond,LeftBond))
-!    allocate(Sigma(Min(LeftBond,Spin*RightBond)))
-!    allocate(vTransposed(Spin*RightBond,Spin*RightBond))
-!
-!    call CollapseSpinWithBond(this,collapsedTensor,SecondDimension)
-!    if (WasThereError()) then
-!       call ThrowException('Right_Canonize_MPSTensor','Could not collapse the tensor',NoErrorCode,CriticalError)
-!       return
-!    endif
-!
-!    if(Spin*RightBond.gt.MAX_D) then
-!       call ThrowException('Left_Canonize_MPSTensor','Working dimension larger than Maximum',NoErrorCode,CriticalError)
-!       return
-!    endif
-!
-!    kk= SingularValueDecomposition(CollapsedTensor,U,Sigma,vTransposed)
-!
-!    newLeftBond=Min(Spin*RightBond,LeftBond)
-!    newRightBond=RightBond
-!
-!    this=new_MPSTensor(Spin,newLeftBond,newRightBond,conjg(vTransposed))
-!    if (WasThereError()) then
-!       call ThrowException('Right_Canonize_MPSTensor','Could not split the matrix',NoErrorCode,CriticalError)
-!       return
-!    endif
-!
-!    matrix=new_MPSTensor(MatrixSpin,LeftBond,newLeftBond, &
-!         & reshape(matvec(U,Sigma) , [LeftBond,newLeftBond,MatrixSpin], &
-!         & Pad= [ (zero, kk=1,LeftBond*newLeftBond*MatrixSpin) ]   ) )
-!
-!  end function Right_Canonize_MPSTensor
+  function Right_Canonize_MPSTensor(this) result(matrix)
+    class(MPSTensor),intent(INOUT) :: this !
+    type(Tensor2) :: matrix
+    type(Tensor2) :: U,Sigma,vTransposed,collapsedTensor
+    integer :: error,newVDims(2)
+
+    if(.not.this%IsInitialized()) then
+       call ThrowException('Left_Canonize_MPSTensor','Tensor not initialized',NoErrorCode,CriticalError)
+       return
+    endif
+
+    collapsedTensor=this%CollapseSpinWithBond(SECOND)
+    if (WasThereError()) then
+       call ThrowException('Left_Canonize_MPSTensor','Could not collapse the tensor',NoErrorCode,CriticalError)
+       return
+    endif
+
+    call SingularValueDecomposition(CollapsedTensor,U,Sigma,vTransposed,error)
+    if (error.ne.Normal) then
+       call ThrowException('Left_Canonize_MPSTensor','Could not split the matrix',NoErrorCode,CriticalError)
+       return
+    endif
+
+    newVDims=[ min(this%spin * this%DRight, this%DLeft), this%spin*this%DRight]
+    this=SplitSpinFromBond( TensorPad(Conjugate(vTransposed),newVDims), FIRST, this%spin )
+
+    !matrix is reshaped to fit the product with the tensor on the right
+    matrix=TensorPad( U*sigma, [ this%DLeft, newVDims(1) ] )
+
+  end function Right_Canonize_MPSTensor
 
 !#######################################################################################
 !#######################################################################################

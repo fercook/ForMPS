@@ -29,7 +29,7 @@ module Tensor_Class
   public :: operator(.diff.),operator(.absdiff.)
   public :: operator(.equaldims.),operator(.equaltype.)
   public :: Conjugate,TensorTranspose,ConjugateTranspose
-  public :: JoinIndicesOf,SplitIndexOf
+  public :: JoinIndicesOf,SplitIndexOf,TensorPad
   public :: CompactLeft,CompactRight,CompactBelow,SingularValueDecomposition
 
   integer,parameter :: Max_Combined_Dimension = 100000
@@ -57,6 +57,7 @@ module Tensor_Class
   contains
     procedure,public :: SVD => SingularValueDecomposition
     procedure,public :: SplitIndex => SplitIndexOfTensor2
+    procedure,public :: Pad => Pad_Tensor2
     procedure,public :: dagger => ConjugateTranspose2
     procedure,public :: CompactFromLeft => Mirror_Compact_Left_With_Tensor3
     procedure,public :: CompactFromRight => Mirror_Compact_Right_With_Tensor3
@@ -164,6 +165,10 @@ module Tensor_Class
 
   interface SplitIndexOf
     module procedure SplitIndexOfTensor2
+  end interface
+
+  interface TensorPad
+    module procedure Pad_Tensor2
   end interface
 
   interface Conjugate
@@ -1977,6 +1982,25 @@ function SplitIndexOfTensor2(this,WhichIndex,Partition) result (aTensor)
 
 end function SplitIndexOfTensor2
 
+
+function Pad_Tensor2(this,newDims) result(reshapedTensor)
+    class(Tensor2),intent(IN) :: this
+    integer,intent(IN) :: newDims(2)
+    type(Tensor2) :: reshapedTensor
+    integer :: oldDims(2),minDims(2)
+
+    if(this%Initialized) then
+        reshapedTensor=new_Tensor(newDims(1),newDims(2),ZERO)
+        oldDims=this%GetDimensions()
+        minDims(1)=min(oldDims(1),newDims(1))
+        minDims(2)=min(oldDims(2),newDims(2))
+        reshapedTensor%data(1:minDims(1),1:minDims(2))=this%data(1:minDims(1),1:minDims(2))
+    else
+        call ThrowException('Pad_Tensor2','Tensor not initialized',NoErrorCode,CriticalError)
+   endif
+   return
+
+end function Pad_Tensor2
 !##################################################################
 
 function ConjugateTensor1(this) result(thisdagger)
