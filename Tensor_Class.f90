@@ -1,5 +1,21 @@
-!! Matrix Product States algorithms
-!! Author: Fernando M. Cucchietti 2010
+!!   Copyright 2010 Fernando M. Cucchietti
+!
+!    This file is part of FortranMPS
+!
+!    FortranMPS is free software: you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation, either version 3 of the License, or
+!    (at your option) any later version.
+!
+!    FortranMPS is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License
+!    along with FortranMPS.  If not, see <http://www.gnu.org/licenses/>.
+
+
 module Tensor_Class
 
   use ErrorHandling
@@ -7,13 +23,14 @@ module Tensor_Class
 
   implicit none
 ! Need to learn how to make operators public.
-  !private
+  private
   public :: new_Tensor
-  public :: operator(*),assignment(=)
+  public :: operator(*),assignment(=),operator(.x.),operator(+),operator(-),operator(.xx.)
   public :: operator(.diff.),operator(.absdiff.)
   public :: operator(.equaldims.),operator(.equaltype.)
   public :: Conjugate,TensorTranspose,ConjugateTranspose
   public :: JoinIndicesOf,SplitIndexOf
+  public :: CompactLeft,CompactRight,CompactBelow,SingularValueDecomposition
 
   integer,parameter :: Max_Combined_Dimension = 100000
 
@@ -21,12 +38,12 @@ module Tensor_Class
   	private
   	integer :: Initialized=.false.
   contains
-!  	procedure :: IsInitialized => Is_Tensor_init !Commented out because of Ifort bug
-    procedure :: delete => delete_Tensor
-  	procedure :: print => print_Tensor
-	procedure :: PrintDimensions => Print_Tensor_Dimensions
-    procedure :: getDimensions => getDimensions_Of_Tensor
-    procedure :: Norm => Norm_Of_Tensor
+  	procedure,public :: IsInitialized => Is_Tensor_init !Commented out because of Ifort bug
+    procedure,public :: delete => delete_Tensor
+  	procedure,public :: print => print_Tensor
+	procedure,public :: PrintDimensions => Print_Tensor_Dimensions
+    procedure,public :: getDimensions => getDimensions_Of_Tensor
+    procedure,public :: Norm => Norm_Of_Tensor
   end type Tensor
 
   type,public,extends(Tensor) :: Tensor1
@@ -38,33 +55,33 @@ module Tensor_Class
   	private
   	complex(8),allocatable :: data(:,:)
   contains
-    procedure :: SVD => SingularValueDecomposition
-    procedure :: SplitIndex => SplitIndexOfTensor2
-    procedure :: dagger => ConjugateTranspose2
-    procedure :: CompactFromLeft => Mirror_Compact_Left_With_Tensor3
-    procedure :: CompactFromRight => Mirror_Compact_Right_With_Tensor3
+    procedure,public :: SVD => SingularValueDecomposition
+    procedure,public :: SplitIndex => SplitIndexOfTensor2
+    procedure,public :: dagger => ConjugateTranspose2
+    procedure,public :: CompactFromLeft => Mirror_Compact_Left_With_Tensor3
+    procedure,public :: CompactFromRight => Mirror_Compact_Right_With_Tensor3
   end type Tensor2
 
   type,public,extends(Tensor) :: Tensor3
   	private
   	complex(8),allocatable :: data(:,:,:)
   contains
-    procedure :: JoinIndices => JoinIndicesOfTensor3
-    procedure :: CompactFromBelow => Compact_From_Below_With_Tensor4
+    procedure,public :: JoinIndices => JoinIndicesOfTensor3
+    procedure,public :: CompactFromBelow => Compact_From_Below_With_Tensor4
   end type Tensor3
 
   type,public,extends(Tensor) :: Tensor4
     private
     complex(8),allocatable :: data(:,:,:,:)
   contains
-    procedure :: JoinIndices => JoinIndicesOfTensor4
+    procedure,public :: JoinIndices => JoinIndicesOfTensor4
   end type Tensor4
 
   type,public,extends(Tensor) :: Tensor5
     private
     complex(8),allocatable :: data(:,:,:,:,:)
  ! contains
- !   procedure :: JoinIndices => JoinIndicesOfTensor5
+ !   procedure,public :: JoinIndices => JoinIndicesOfTensor5
   end type Tensor5
 
 !###############################
@@ -87,6 +104,11 @@ module Tensor_Class
      	  & Tensor3_matmul_Tensor3, Tensor2_matmul_Tensor3, Tensor3_matmul_Tensor2
   end interface
 
+  interface operator (**)
+     module procedure &
+     &   Tensor4_doubletimes_Tensor4
+  end interface
+
   interface operator (.x.)
      module procedure &
           & Tensor2_matmul_Tensor2, Tensor2_matmul_Tensor1, Tensor1_matmul_Tensor2, &
@@ -98,6 +120,11 @@ module Tensor_Class
      &   Tensor4_doubletimes_Tensor4
   end interface
 
+  interface operator (.xplus.)
+     module procedure &
+     &   MultAndCollapse_Tensor3_Tensor4
+  end interface
+
   interface operator (+)
      module procedure add_Tensor1,add_Tensor2,add_Tensor3,add_Tensor4,add_Tensor5
   end interface
@@ -106,8 +133,8 @@ module Tensor_Class
      module procedure subtract_Tensor1,subtract_Tensor2,subtract_Tensor3,subtract_Tensor4,subtract_Tensor5
   end interface
 
-  interface AddAndCollapse
-    module procedure AddAndCollapse_Tensor3_Tensor4
+  interface MultAndCollapse
+    module procedure MultAndCollapse_Tensor3_Tensor4
   end interface
 
   interface assignment (=)
@@ -539,7 +566,7 @@ module Tensor_Class
 
 !##################################################################
    function new_Tensor1_fromTensor1 (tensor) result (this)
-     type(Tensor1),intent(in) :: tensor
+     class(Tensor1),intent(in) :: tensor
      type(Tensor1) this
      integer error
 
@@ -551,7 +578,7 @@ module Tensor_Class
    end function new_Tensor1_fromTensor1
 
    function new_Tensor2_fromTensor2 (tensor) result (this)
-     type(Tensor2),intent(in) :: tensor
+     class(Tensor2),intent(in) :: tensor
      type(Tensor2) this
      integer error
 
@@ -563,7 +590,7 @@ module Tensor_Class
    end function new_Tensor2_fromTensor2
 
    function new_Tensor3_fromTensor3 (tensor) result (this)
-     type(Tensor3),intent(in) :: tensor
+     class(Tensor3),intent(in) :: tensor
      type(Tensor3) this
      integer error
 
@@ -575,7 +602,7 @@ module Tensor_Class
    end function new_Tensor3_fromTensor3
 
    function new_Tensor4_fromTensor4 (tensor) result (this)
-     type(Tensor4),intent(in) :: tensor
+     class(Tensor4),intent(in) :: tensor
      type(Tensor4) this
      integer error
 
@@ -587,7 +614,7 @@ module Tensor_Class
    end function new_Tensor4_fromTensor4
 
    function new_Tensor5_fromTensor5 (tensor) result (this)
-     type(Tensor5),intent(in) :: tensor
+     class(Tensor5),intent(in) :: tensor
      type(Tensor5) this
      integer error
 
@@ -689,6 +716,12 @@ module Tensor_Class
    end function delete_Tensor
 !##################################################################
 
+logical function Is_Tensor_init(this) result(AmIInitialized)
+    class(Tensor) :: this
+
+    AmIInitialized=this%Initialized
+
+end function Is_Tensor_Init
 
 integer function InitializationCheck(this) result(error)
     class(Tensor),intent(IN) :: this
@@ -1469,13 +1502,13 @@ integer function InitializationCheck(this) result(error)
     permutation_Of_3(2)=freeDims3(2)
     permutation_Of_3(3)=bound_index_of_3(1)
 
-    theResult=TensorTranspose(AddAndCollapse(thisTransposed,Tensor4Transposed),permutation_Of_3)
+    theResult=TensorTranspose(MultAndCollapse(thisTransposed,Tensor4Transposed),permutation_Of_3)
 
    end function Compact_From_Below_With_Tensor4
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-   function AddAndCollapse_Tensor3_Tensor4(aTensor3,aTensor4) result(this)
+   function MultAndCollapse_Tensor3_Tensor4(aTensor3,aTensor4) result(this)
     class(tensor3),intent(IN) :: aTensor3
     class(tensor4),intent(IN) :: aTensor4
     type(Tensor3) :: this
@@ -1485,7 +1518,7 @@ integer function InitializationCheck(this) result(error)
     complex(8),allocatable :: anArray(:,:,:)
 
     if(.not.(aTensor3%Initialized).or..not.(aTensor4%Initialized)) then
-        call ThrowException('AddAndCollapse34','Tensor not initialized',NoErrorCode,CriticalError)
+        call ThrowException('MultAndCollapse34','Tensor not initialized',NoErrorCode,CriticalError)
         return
     endif
 
@@ -1493,7 +1526,7 @@ integer function InitializationCheck(this) result(error)
     dims_Of_4=shape(aTensor4%data)
 
     if(dims_Of_3(1).ne.dims_Of_4(1)) then
-        call ThrowException('AddAndCollapse34','Contracted index is not equal on tensors', &
+        call ThrowException('MultAndCollapse34','Contracted index is not equal on tensors', &
            & dims_Of_3(1)-dims_Of_4(1),CriticalError)
         return
     endif
@@ -1525,7 +1558,7 @@ integer function InitializationCheck(this) result(error)
 
     this=new_Tensor(anArray)
 
-    end function AddAndCollapse_Tensor3_Tensor4
+    end function MultAndCollapse_Tensor3_Tensor4
 
 !!##################################################################
 !!##################################################################

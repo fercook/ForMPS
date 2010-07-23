@@ -1,101 +1,68 @@
-!! Matrix Product States algorithms
-!! Author: Fernando M. Cucchietti 2010
+!!   Copyright 2010 Fernando M. Cucchietti
+!
+!    This file is part of FortranMPS
+!
+!    FortranMPS is free software: you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation, either version 3 of the License, or
+!    (at your option) any later version.
+!
+!    FortranMPS is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License
+!    along with FortranMPS.  If not, see <http://www.gnu.org/licenses/>.
 
-!!TODO: Reimplement extendind the type from a Matrix class that performs some low level functions
 
 module Operator_Class
 
   use ErrorHandling
   use Constants
-  use MPSTensor_Class
+  use Tensor_Class
 
   implicit none
+  private
 
+  public :: PauliSigma
+
+  integer,parameter :: SPINONEHALF = 2
   integer,parameter :: OPERATOR_BASIS_SIZE = 3
+  integer,parameter :: I_Operator=0,X_Operator=1,Y_Operator=2,Z_Operator=3
 
 !###############################
 !#####  The class main object
 !###############################
-  type SpinOperator
+  type,public,extends(Tensor2) :: SpinOperator
      private
-     complex(8) :: data(MAX_spin, MAX_spin) !!$TODO: Change to extend a matrix (maybe abstract) type
-   contains
-     procedure :: ApplyToTensor => ApplyToMPSTensor
   end type SpinOperator
 
-  interface operator (.applyto.) 
-     module procedure ApplyToMPSTensor
-  end interface
 
-  complex(8),parameter,dimension(MAX_spin,MAX_spin):: PauliSigmaXMatrix = Reshape([zero,one,one,zero], [MAX_spin,MAX_spin]) 
-  complex(8),parameter,dimension(MAX_spin,MAX_spin):: PauliSigmaYMatrix = Reshape([zero,II,-II,zero], [MAX_spin,MAX_spin]) 
-  complex(8),parameter,dimension(MAX_spin,MAX_spin):: PauliSigmaZMatrix = Reshape([one,zero,zero,-one], [MAX_spin,MAX_spin]) 
-  complex(8),parameter,dimension(MAX_spin,MAX_spin):: IdentityOperatorMatrix = Reshape([one,zero,zero,one], [MAX_spin,MAX_spin]) 
+  complex(8),parameter,dimension(SPINONEHALF,SPINONEHALF):: PauliSigmaXMatrix = Reshape([zero,one,one,zero],  [SPINONEHALF,SPINONEHALF])
+  complex(8),parameter,dimension(SPINONEHALF,SPINONEHALF):: PauliSigmaYMatrix = Reshape([zero,II,-II,zero],   [SPINONEHALF,SPINONEHALF])
+  complex(8),parameter,dimension(SPINONEHALF,SPINONEHALF):: PauliSigmaZMatrix = Reshape([one,zero,zero,-one], [SPINONEHALF,SPINONEHALF])
+  complex(8),parameter,dimension(SPINONEHALF,SPINONEHALF):: IdentityOperatorMatrix = Reshape([one,zero,zero,one], [SPINONEHALF,SPINONEHALF])
 
-  type(SpinOperator),dimension(0:OPERATOR_BASIS_SIZE),target :: PauliSigma 
-  data PauliSigma/ SpinOperator(IdentityOperatorMatrix), SpinOperator(PauliSigmaXMatrix) ,  SpinOperator(PauliSigmaYMatrix) ,  SpinOperator(PauliSigmaZMatrix) /
+contains
 
-!################ Helper classes contained inside Hamiltonians
-  type :: SiteTerm
-     private
-     type(SpinOperator),pointer :: Op
-     integer :: site
-     complex(8) :: amplitude
-  end type SiteTerm
+    function PauliSigma(whichOperator) result(this)
+        integer,intent(IN) :: whichOperator
+        type(SpinOperator) :: this
 
-  type :: BondTerm
-     private
-     type(SpinOperator),pointer :: OpL,OpR
-     integer :: siteL, siteR
-     complex(8) :: amplitude
-  end type BondTerm
+        select case (whichOperator)
+            case(I_Operator)
+                this=new_Tensor(IdentityOperatorMatrix)
+            case(X_Operator)
+                this=new_Tensor(PauliSigmaXMatrix)
+            case(Y_Operator)
+                this=new_Tensor(PauliSigmaYMatrix)
+            case(Z_Operator)
+                this=new_Tensor(PauliSigmaZMatrix)
+            case default
+                call ThrowException('PauliSigma','Unknown operator requested',whichOperator,CriticalError)
+        end select
 
-
-  type, extends(SiteTerm) :: SiteTermList
-     private
-     type(SiteTermList),pointer :: next
-  end type SiteTermList
-
-
-!################# Methods
-
- contains
-
-
-   function ApplyToMPSTensor (this,aMPSTensor) result(newMPSTensor)
-     class(SpinOperator),intent(IN) :: this   !!<<TYPE>>!!
-     type(MPSTensor),intent(IN) :: aMPSTensor
-     type(MPSTensor) :: newMPSTensor
-     
-     newMPSTensor = aMPSTensor%ApplyOperator(this%data)
-
-   end function ApplyToMPSTensor
-
-
-
-   function new_SiteTerm(Op,site,amplitude) result(this)
-     type(SiteTerm) :: this
-     type(SpinOperator),target :: Op
-     integer :: site
-     complex(8) :: amplitude
-
-     this%Op => Op
-     this%site = site
-     this%amplitude = amplitude
-   end function new_SiteTerm
-
-
-
-   function new_SiteTermList(Op,site,amplitude) result(this)
-     type(SiteTermList) :: this
-     type(SpinOperator),target :: Op
-     integer :: site
-     complex(8) :: amplitude
-     this%Op => Op
-     this%site = site
-     this%amplitude = amplitude
-     this%next => null()
-   end function new_SiteTermList
-
+    end function PauliSigma
 
  end module Operator_Class

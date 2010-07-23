@@ -1,11 +1,30 @@
+!!   Copyright 2010 Fernando M. Cucchietti
+!
+!    This file is part of FortranMPS
+!
+!    FortranMPS is free software: you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation, either version 3 of the License, or
+!    (at your option) any later version.
+!
+!    FortranMPS is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License
+!    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+
+!TESTING WHERE WILL THIS APPEAR
+
 test_suite Tensor_Class
 
 !TODO: New tests with all possible combinations of index bonding
-!TODO: Some other tests about creation, products, and so on
+
+! use ErrorHandling
+! use Constants
 
 setup
-  !use ErrorHandling
-  !use Constants
   !Set testing mode
   MaxErrorAllowed=CriticalError
 end setup
@@ -91,7 +110,6 @@ test tensor4_joinindices
 end test
 
 
-
 test tensor2_Splitindex
   type(tensor3) :: aMPS,correct
   type(tensor2) :: aMatrix
@@ -104,7 +122,7 @@ test tensor2_Splitindex
 
   correct=new_Tensor(one*Reshape( matrixdata, [2,3,4]))
 
-  aMPS=SplitindexOf(aMatrix,FiRST,2)
+  aMPS=SplitindexOf(aMatrix,FIRST,2)
   assert_equal_within(aMPS.absdiff.correct, 0.0d0, 1.0e-8)
 
   correct=new_Tensor(one*Reshape( matrixdata, [6,2,2]))
@@ -342,7 +360,7 @@ test Compact_From_Below_T3_T4
     aT3=new_Tensor(origArray)
     aT4=new_Tensor(origTensor)
     correct=new_Tensor(correctArray)
-    result=Compact_From_Below_With_Tensor4(aT3,FIRST,aT4,THIRD,FOURTH)
+    result=CompactBelow(aT3,FIRST,aT4,THIRD,FOURTH)
 
     assert_equal_within(result.absdiff.correct, 0.0d0, 1.0e-8)
 

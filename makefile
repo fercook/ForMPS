@@ -29,18 +29,14 @@ LINKFLAGS=
 endif
 
 BINARIES=_$(SYS)
-SOURCES = constants.f90 error.f90 MatrixHelp.f90 MPSTensor_Class.f90 
-#Operator_Class.f90 MatrixProductState_Class.f90
+SOURCES = constants.f90 error.f90 Tensor_Class.f90 Operator_Class.f90 MPSTensor_Class.f90
 OBJS = $(SOURCES:.f90=.o)
-TESTED = MPSTensor_Class 
-#MatrixProductState_Class 
-#Operator_Class
+TESTED = Tensor MPSTensor #Operator
 
 all: fullmake
 obj: object
 exec: executable
 test: $(TESTED) 
-	#testsuite
 debug: debug
 
 #--------  HERE START THE USEFUL BITS
@@ -65,8 +61,12 @@ clean :
 testsuite: 
 	
 $(TESTED): $(OBJS)
-#	echo $@
-	funit $@ > $@.test 
-	gcov $@.f90
+	$(FCOMP) -c $@.helper.f90
+	funit $@_Class > $@.test 
+	#gcov $@.f90
+	#./checkcoverage.sh
 	tail -n 5 $@.test
-#
+
+coverage):
+	./checkcoverage.sh
+      #
