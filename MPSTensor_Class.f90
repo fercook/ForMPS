@@ -47,6 +47,7 @@ module MPSTensor_Class
      procedure,public :: getDLeft => DLeft_MPSTensor
      procedure,public :: getSpin => Spin_MPSTensor
      procedure,public :: CollapseSpinWithBond => Collapse_Spin_With_Bond_Dimension
+!     procedure,public :: delete => delete_MPSTensor
 !     procedure,public :: LCanonize => Left_Canonize_MPSTensor
 !     procedure,public :: RCanonize => Right_Canonize_MPSTensor
      procedure,public :: ApplyOperator => Apply_Operator_To_Spin_Dimension
@@ -106,19 +107,19 @@ module MPSTensor_Class
    end function new_MPSTensor_Random
 
 !##################################################################
-   function new_MPSTensor_withData (originalData) result (this)
-     complex(8),intent(in) :: originalData(:,:,:)
-     type(MPSTensor) this
+!   function new_MPSTensor_withData (originalData) result (this)
+!     complex(8),intent(in) :: originalData(:,:,:)
+!     type(MPSTensor) this
+!
+!     this=new_Tensor(originalData)
+!     !initialize internal variables
+!     this%spin=size(originalData,3)
+!     this%DLeft=size(originalData,1)
+!     this%DRight=size(originalData,2)
+!
+!   end function new_MPSTensor_withData
 
-     this=new_Tensor(originalData)
-     !initialize internal variables
-     this%spin=size(originalData,3)
-     this%DLeft=size(originalData,1)
-     this%DRight=size(originalData,2)
-
-   end function new_MPSTensor_withData
-
-
+!##################################################################
    function new_MPSTensor_with_SplitData (originalDataUP,originalDataDOWN) result (this)
      complex(8),intent(in) :: originalDataUP(:,:),originalDataDOWN(:,:)
      complex(8),allocatable :: JoinedData(:,:,:)
@@ -148,7 +149,7 @@ module MPSTensor_Class
    function new_MPSTensor_withConstant (spin,DLeft,DRight,constant) result (this)
      integer,intent(in) :: spin,DLeft,DRight
      complex(8),intent(in) :: constant
-     type(MPSTensor) this
+     type(MPSTensor) :: this
 
      this=new_Tensor(DLeft,DRight,spin,constant)
      !initialize internal variables
@@ -171,6 +172,7 @@ module MPSTensor_Class
 
    end function new_MPSTensor_fromMPSTensor
 
+!##################################################################
    subroutine new_MPSTensor_fromAssignment(lhs,rhs)
      class(MPSTensor),intent(out) :: lhs
      type(MPSTensor),intent(in) :: rhs
@@ -182,7 +184,6 @@ module MPSTensor_Class
      lhs%DRight=rhs%DRight
 
    end subroutine new_MPSTensor_fromAssignment
-
 
 
 !##################################################################
@@ -255,7 +256,7 @@ module MPSTensor_Class
      endif
 
    end function Apply_Operator_To_Spin_Dimension
-
+!##################################################################
     function MPSTensor_times_matrix(aTensor,aMatrix) result(theResult)
         class(MPSTensor),intent(IN) :: aTensor
         class(Tensor2),intent(IN) :: aMatrix
@@ -270,7 +271,7 @@ module MPSTensor_Class
         theResult%DRight=newDims(2)
 
     end function MPSTensor_times_matrix
-
+!##################################################################
     function matrix_times_MPSTensor(aMatrix,aTensor) result(theResult)
         class(MPSTensor),intent(IN) :: aTensor
         class(Tensor2),intent(IN) :: aMatrix
@@ -312,6 +313,8 @@ module MPSTensor_Class
         return
     end function Collapse_Spin_With_Bond_Dimension
 
+!##################################################################
+
     function Split_Spin_From_Bond_Dimension(this,whichDimension,spinSize) result(splitTensor)
         class(Tensor2),intent(IN) :: this
         integer,intent(IN) :: whichDimension(1),spinSize
@@ -343,12 +346,12 @@ module MPSTensor_Class
 
 !##################################################################
 !##################################################################
-! Left Site Canonization -- Returns the matrix that needs to be multiplied
+! Right Site Canonization -- Returns the matrix that needs to be multiplied
 ! to the adjacent site on the RIGHT
 !##################################################################
 !##################################################################
 
-  function Left_Canonize_MPSTensor(this) result(matrix)
+  function Right_Canonize_MPSTensor(this) result(matrix)
     class(MPSTensor),intent(INOUT) :: this !
     type(Tensor2) :: matrix
     type(Tensor2) :: U,Sigma,vTransposed,collapsedTensor
@@ -380,16 +383,16 @@ module MPSTensor_Class
     !matrix is reshaped to fit the product with the tensor on the right
     matrix=TensorPad(sigma*Conjugate(vTransposed), [ newUDims(2), this%DRight ] )
 
-  end function Left_Canonize_MPSTensor
+  end function Right_Canonize_MPSTensor
 
 !##################################################################
 !##################################################################
-! Right Site Canonization -- Returns the matrix that needs to be multiplied
+! Left Site Canonization -- Returns the matrix that needs to be multiplied
 ! to the adjacent site on the LEFT
 !##################################################################
 !##################################################################
 
-  function Right_Canonize_MPSTensor(this) result(matrix)
+  function Left_Canonize_MPSTensor(this) result(matrix)
     class(MPSTensor),intent(INOUT) :: this !
     type(Tensor2) :: matrix
     type(Tensor2) :: U,Sigma,vTransposed,collapsedTensor
@@ -418,7 +421,7 @@ module MPSTensor_Class
     !matrix is reshaped to fit the product with the tensor on the right
     matrix=TensorPad( U*sigma, [ this%DLeft, newVDims(1) ] )
 
-  end function Right_Canonize_MPSTensor
+  end function Left_Canonize_MPSTensor
 
 !#######################################################################################
 !#######################################################################################

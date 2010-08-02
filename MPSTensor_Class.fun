@@ -58,7 +58,7 @@ end test
 
 
 
-test LeftCanonTensor
+test RightCanonTensor
     !For some reason the output matrix U from SVD is different than the one from Mathematica
     ! but only in the non-important vectors (where Sigma=0)
     !Then, this test is changed to an automatic test that sees if the original tensor can be
@@ -82,7 +82,7 @@ test LeftCanonTensor
    TheTensor=new_MPSTensor(data(:,:,1),data(:,:,2))
    origTensor=TheTensor
    !CorrectTensor=new_MPSTensor(Correct(:,:,1),Correct(:,:,2))
-   outputMatrix=LeftCanonize(TheTensor) !  C=A%LCanonize()
+   outputMatrix=RightCanonize(TheTensor) !  C=A%LCanonize()
    correctMatrix=new_Tensor(matrix)
    call outputMatrix%PrintDimensions()
    call correctMatrix%PrintDimensions()
@@ -95,7 +95,7 @@ test LeftCanonTensor
 end test
 
 
-test RightCanonTensor
+test LeftCanonTensor
     !For some reason the output matrix U from SVD is different than the one from Mathematica
     ! but only in the non-important vectors (where Sigma=0)
     !Then, this test is changed to an automatic test that sees if the original tensor can be
@@ -110,7 +110,7 @@ test RightCanonTensor
    forall (i=1:DleftT ,j=1:DrightT, k=1:SpinT) data(i,j,k)=one*(i*II+(j-1)*DleftT+(k-1)*DrightT)
    TheTensor=new_MPSTensor(data(:,:,1),data(:,:,2))
    origTensor=TheTensor
-   outputMatrix=RightCanonize(TheTensor) !  C=A%LCanonize()
+   outputMatrix=LeftCanonize(TheTensor) !  C=A%LCanonize()
 
    CorrectTensor=matrix_times_MPSTensor(outputMatrix,TheTensor)
 

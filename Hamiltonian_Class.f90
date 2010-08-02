@@ -35,19 +35,17 @@ module Hamiltonian_Class
 !################ Operators con know to which site they are applied, and with which amplitude
   type :: SiteTerm
      private
-     type(SpinOperator),pointer :: Op
+     type(SpinOperator) :: Op
      integer :: site
      complex(8) :: amplitude
   end type SiteTerm
 
   type :: BondTerm
      private
-     type(SpinOperator),pointer :: OpL,OpR
-     integer :: siteL, siteR
+     type(SpinOperator) :: OpA,OpB
+     integer :: siteA, siteB
      complex(8) :: amplitude
   end type BondTerm
-!################# Methods
-
 
 !###############################
 !#####  The class main object
@@ -55,11 +53,23 @@ module Hamiltonian_Class
   type Hamiltonian
      private
      integer :: Length
+     integer :: InteractionRange
+
 !   contains
-!     procedure :: delete => delete_MPSTensor
+!     procedure,public :: addTerm => addTermToHamiltonian
+!     procedure,public :: FieldsAtSite =>
+!     procedure,public :: InteractionsAtSite =>
   end type Hamiltonian
 
 
+!THIS class must provide "Iterators", or lists of terms that involve a given site.
+!Example:
+!FieldTermsOfSite(i)%next() and so on
+!BondTermsOfSite(i)%ExistsNext()
+!
+!Look at common terminology for Iterators
+! Also this class must contain a function like
+! AddBondTerm(Op,i,j)
  contains
 
 

@@ -21,6 +21,8 @@ module Constants
   complex(8), parameter :: one=(1.0d0,0.0d0)
   complex(8), parameter :: zero=(0.0d0,0.0d0)
   real(8),parameter :: Pi=3.141592653589793
+  integer, parameter :: integerOne=1
+  integer, parameter :: integerZero=0
 
   integer,parameter :: FirstDimension=1
   integer,parameter :: SecondDimension=2

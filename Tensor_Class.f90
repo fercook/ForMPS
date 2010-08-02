@@ -894,7 +894,7 @@ integer function InitializationCheck(this) result(error)
 
    function number_times_Tensor1(constant, aTensor) result(this)
      complex(8),intent(IN) :: constant
-     type(Tensor1),intent(IN) :: aTensor
+     class(Tensor1),intent(IN) :: aTensor
      type(Tensor1) :: this
 
      if(.not.aTensor%Initialized) then
@@ -908,7 +908,7 @@ integer function InitializationCheck(this) result(error)
 
    function number_times_Tensor2(constant, aTensor) result(this)
      complex(8),intent(IN) :: constant
-     type(Tensor2),intent(IN) :: aTensor
+     class(Tensor2),intent(IN) :: aTensor
      type(Tensor2) :: this
 
      if(.not.aTensor%Initialized) then
@@ -922,7 +922,7 @@ integer function InitializationCheck(this) result(error)
 
    function number_times_Tensor3(constant, aTensor) result(this)
      complex(8),intent(IN) :: constant
-     type(Tensor3),intent(IN) :: aTensor
+     class(Tensor3),intent(IN) :: aTensor
      type(Tensor3) :: this
 
      if(.not.aTensor%Initialized) then
@@ -936,7 +936,7 @@ integer function InitializationCheck(this) result(error)
 
    function number_times_Tensor4(constant, aTensor) result(this)
      complex(8),intent(IN) :: constant
-     type(Tensor4),intent(IN) :: aTensor
+     class(Tensor4),intent(IN) :: aTensor
      type(Tensor4) :: this
 
      if(.not.aTensor%Initialized) then
@@ -950,7 +950,7 @@ integer function InitializationCheck(this) result(error)
 
    function number_times_Tensor5(constant, aTensor) result(this)
      complex(8),intent(IN) :: constant
-     type(Tensor5),intent(IN) :: aTensor
+     class(Tensor5),intent(IN) :: aTensor
      type(Tensor5) :: this
 
      if(.not.aTensor%Initialized) then
