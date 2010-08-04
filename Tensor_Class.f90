@@ -23,7 +23,7 @@ module Tensor_Class
 
   implicit none
 ! Need to learn how to make operators public.
-  private
+!  private
   public :: new_Tensor
   public :: operator(*),assignment(=),operator(.x.),operator(+),operator(-),operator(.xx.)
   public :: operator(.diff.),operator(.absdiff.)
@@ -107,7 +107,7 @@ module Tensor_Class
 
   interface operator (**)
      module procedure &
-     &   Tensor4_doubletimes_Tensor4
+     &   Tensor4_doubletimes_Tensor4,Tensor2_doubletimes_Tensor2
   end interface
 
   interface operator (.x.)
@@ -118,7 +118,7 @@ module Tensor_Class
 
   interface operator (.xx.)
      module procedure &
-     &   Tensor4_doubletimes_Tensor4
+     &   Tensor4_doubletimes_Tensor4,Tensor2_doubletimes_Tensor2
   end interface
 
   interface operator (.xplus.)
@@ -181,6 +181,10 @@ module Tensor_Class
 
   interface ConjugateTranspose
     module procedure ConjugateTranspose2,ConjugateTranspose3,ConjugateTranspose4,ConjugateTranspose5
+  end interface
+
+  interface TensorTrace
+    module procedure Tensor2Trace
   end interface
 
   interface CompactLeft
@@ -742,9 +746,10 @@ integer function InitializationCheck(this) result(error)
 
 
 !######################################     print
-   subroutine Print_Tensor(this,error)
+   subroutine Print_Tensor(this,message,error)
      class(Tensor),intent(IN) :: this
      integer i,j,k
+     character*(*),optional :: message
      integer,optional :: error
 
      If(present(error)) error = Warning
@@ -753,6 +758,8 @@ integer function InitializationCheck(this) result(error)
         call ThrowException('PrintTensor','Tensor not initialized',NoErrorCode,Warning)
         return
      endif
+
+     if(present(message)) print *,message
 
 	 select type (Typed_this => this)
 	 	class is (Tensor1)
@@ -779,8 +786,9 @@ integer function InitializationCheck(this) result(error)
    end subroutine Print_Tensor
 
 
-   subroutine Print_Tensor_Dimensions(this)
+   subroutine Print_Tensor_Dimensions(this,message)
      class(Tensor),intent(IN) :: this  !!<<TYPE>>!!
+     character*(*),optional :: message
      integer i,j,k
 
      if(.not.(this%Initialized)) then
@@ -790,18 +798,41 @@ integer function InitializationCheck(this) result(error)
 
 	 select type (Typed_this => this)
 	 	class is (Tensor1)
-        	print *,'Vector dimension:',size(Typed_this%data,1)
+	 	    if (present(message)) then
+                write(*,'(A,", Vector Dimension:",I6)'),message, size(Typed_this%data,1)
+            else
+                write(*,'("Vector Dimension:",I6)'), size(Typed_this%data,1)
+            endif
 	 	class is (Tensor2)
-        	print *,'Matrix dimensions:',size(Typed_this%data,1),'x',size(Typed_this%data,2)
+            if (present(message)) then
+                write(*,'(A,", Matrix Dimensions:",I4,"x",I4)'),message,size(Typed_this%data,1),size(Typed_this%data,2)
+            else
+                write(*,'("Matrix Dimensions:",I4,"x",I4)'),size(Typed_this%data,1),size(Typed_this%data,2)
+            endif
 	 	class is (Tensor3)
-        	print *,'3-Tensor data:',size(Typed_this%data,1),'x',size(Typed_this%data,2), &
-        		& 'x',size(Typed_this%data,3)
+            if (present(message)) then
+               write(*,'(A,", 3-Tensor Dimensions:",I3,"x",I3,"x",I3)'),message,size(Typed_this%data,1),size(Typed_this%data,2), &
+                  & size(Typed_this%data,3)
+            else
+               write(*,'("3-Tensor Dimensions:",I3,"x",I3,"x",I4)'),size(Typed_this%data,1),size(Typed_this%data,2), &
+                  & size(Typed_this%data,3)
+        	endif
         class is (Tensor4)
-            print *,'4-Tensor data:',size(Typed_this%data,1),'x',size(Typed_this%data,2), &
-                & 'x',size(Typed_this%data,3),'x',size(Typed_this%data,4)
+            if (present(message)) then
+                write(*,'(A,", 4-Tensor Dimensions:",I3,"x",I3,"x",I3,"x",I3)'),message,size(Typed_this%data,1),size(Typed_this%data,2), &
+                  & size(Typed_this%data,3),size(Typed_this%data,4)
+            else
+                write(*,'("4-Tensor Dimensions:",I3,"x",I3,"x",I3,"x",I3)'),size(Typed_this%data,1),size(Typed_this%data,2), &
+                  & size(Typed_this%data,3),size(Typed_this%data,4)
+            endif
         class is (Tensor5)
-            print *,'5-Tensor data:',size(Typed_this%data,1),'x',size(Typed_this%data,2), &
-                & 'x',size(Typed_this%data,3),'x',size(Typed_this%data,4),'x',size(Typed_this%data,5)
+            if (present(message)) then
+                write(*,'(A,", 5-Tensor Dimensions:",I3,"x",I3,"x",I3,"x",I3,"x",I3)'),message,size(Typed_this%data,1),size(Typed_this%data,2), &
+                  & size(Typed_this%data,3),size(Typed_this%data,4),size(Typed_this%data,5)
+            else
+                write(*,'("5-Tensor Dimensions:",I3,"x",I3,"x",I3,"x",I3,"x",I3)'),size(Typed_this%data,1),size(Typed_this%data,2), &
+                  & size(Typed_this%data,3),size(Typed_this%data,4),size(Typed_this%data,5)
+            endif
 	 	class is (Tensor)
 	 		print *,'No data in raw tensor'
 	 end select
@@ -1086,7 +1117,11 @@ integer function InitializationCheck(this) result(error)
       type(Tensor2) :: this
 
       if(TensorA%Initialized.and.TensorB%Initialized) then
-         this=new_Tensor(matmul(tensorA%data,tensorB%data))
+         if (size(TensorA%data,2).eq.size(TensorB%data,1)) then
+             this=new_Tensor(matmul(tensorA%data,tensorB%data))
+         else
+             call ThrowException('Tensor2_times_Tensor2','Tensors do not conform shape',NoErrorCode,CriticalError)
+         endif
       else
          call ThrowException('Tensor2_times_Tensor2','Tensor not initialized',NoErrorCode,CriticalError)
       endif
@@ -1320,10 +1355,24 @@ integer function InitializationCheck(this) result(error)
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
+    function Tensor2_doubletimes_Tensor2 ( tensorA,tensorB) result(theResult)
+        class(Tensor2),intent(IN) :: tensorA,tensorB
+        complex(8) :: theResult
+
+        if(TensorA%Initialized.and.TensorB%Initialized) then
+            theResult=TensorTrace(tensorA*tensorB)
+        else
+            call ThrowException('Tensor2_doubletimes_Tensor2','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function Tensor2_doubletimes_Tensor2
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
    function Mirror_Compact_Left_With_Tensor3(this,aTensor,IndexToCompact) result(theResult)
        class(Tensor2),intent(IN) :: this
        integer :: IndexToCompact(1)
-       type(Tensor3),intent(IN) :: aTensor
+       class(Tensor3),intent(IN) :: aTensor
        type(Tensor2) :: theResult
 
        theResult=CompactLeft(this,aTensor,aTensor,IndexToCompact)
@@ -1333,9 +1382,9 @@ integer function InitializationCheck(this) result(error)
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
    function Compact_Tensor3_From_Left_With_Tensor2(LeftTensor,upTensor,downTensor,IndexToCompact) result(theResult)
-      type(Tensor3),intent(IN) :: upTensor,downTensor
+      class(Tensor3),intent(IN) :: upTensor,downTensor
       integer :: IndexToCompact(1)
-      type(Tensor2),intent(IN) :: LeftTensor
+      class(Tensor2),intent(IN) :: LeftTensor
       type(Tensor2) :: theResult
       complex(8),allocatable :: aMatrix(:,:)
       integer :: upDims(3), downDims(3), leftDims(2), n
@@ -1386,7 +1435,7 @@ integer function InitializationCheck(this) result(error)
    function Mirror_Compact_Right_With_Tensor3(this,aTensor,IndexToCompact) result(theResult)
        class(Tensor2),intent(IN) :: this
        integer :: IndexToCompact(1)
-       type(Tensor3),intent(IN) :: aTensor
+       class(Tensor3),intent(IN) :: aTensor
        type(Tensor2) :: theResult
 
        theResult=CompactRight(this,aTensor,aTensor,IndexToCompact)
@@ -1396,9 +1445,9 @@ integer function InitializationCheck(this) result(error)
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
    function Compact_Tensor3_From_Right_With_Tensor2(RightTensor,upTensor,downTensor,IndexToCompact) result(theResult)
-      type(Tensor3),intent(IN) :: upTensor,downTensor
+      class(Tensor3),intent(IN) :: upTensor,downTensor
       integer :: IndexToCompact(1)
-      type(Tensor2),intent(IN) :: RightTensor
+      class(Tensor2),intent(IN) :: RightTensor
       type(Tensor2) :: theResult
       complex(8),allocatable :: aMatrix(:,:)
       integer :: upDims(3), downDims(3), rightDims(2), n
@@ -1448,7 +1497,7 @@ integer function InitializationCheck(this) result(error)
 
    function Compact_From_Below_With_Tensor4(this,bound_index_of_3,aTensor4,bound_index_of_4,free_index_of_4) result(theResult)
      class(Tensor3),intent(IN) :: this
-     type(Tensor4),intent(IN) :: aTensor4
+     class(Tensor4),intent(IN) :: aTensor4
      integer,intent(IN) :: bound_index_of_3(1),bound_index_of_4(1),free_index_of_4(1)
      type(Tensor3) :: theResult
      type(Tensor3) :: thisTransposed
@@ -1949,10 +1998,6 @@ function SplitIndexOfTensor2(this,WhichIndex,Partition) result (aTensor)
         call ThrowException('SplitIndexOfTensor2','Tensor not initialized',NoErrorCode,CriticalError)
         return
      endif
-     if( (.not.(WhichIndex.equalvector.FIRST)).and.(.not.(WhichIndex.equalvector.SECOND)) ) then
-        call ThrowException('SplitIndexOfTensor2','Index is inappropriate',WhichIndex(1),CriticalError)
-        return
-     endif
 
     OrigDims=shape(this%data)
 
@@ -1964,6 +2009,9 @@ function SplitIndexOfTensor2(this,WhichIndex,Partition) result (aTensor)
         error=mod( OrigDims(1),Partition )
       case (second(1))
         error=mod( OrigDims(2),Partition )
+      case default
+        call ThrowException('SplitIndexOfTensor2','Index is inappropriate',WhichIndex(1),CriticalError)
+        return
     end select
     if(error.ne.0.or.Partition.le.0.or.Partition.gt.maxval(OrigDims)) then
         call ThrowException('SplitIndexOfTensor2','Requested partition seems incorrect',Partition,CriticalError)
@@ -2200,6 +2248,23 @@ function TensorTranspose5(this,permutation) result(thisTransposed)
 end function TensorTranspose5
 
 !##################################################################
+
+complex(8) function Tensor2Trace(this) result(theTrace)
+    class(Tensor2),intent(IN) :: this
+    integer :: sumIndex
+    integer :: dims(2)
+
+    if(this%Initialized) then
+        dims=shape(this%data)
+        theTrace=ZERO
+        do sumIndex=1,min(dims(1),dims(2))
+            theTrace=theTrace+this%data(sumIndex,sumIndex)
+        enddo
+     else
+        call ThrowException('Tensor2Trace','Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+end function Tensor2Trace
+
 !##################################################################
 !##################################################################
 

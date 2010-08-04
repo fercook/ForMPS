@@ -30,7 +30,7 @@ module MPSTensor_Class
 
   implicit none
 
-  private
+!  private
 
   public :: new_MPSTensor,LeftCanonize,RightCanonize
   public :: MPSTensor_times_matrix, matrix_times_MPSTensor !operator(.times.)
@@ -41,13 +41,12 @@ module MPSTensor_Class
   type,public,extends(Tensor3) :: MPSTensor
      private
      integer :: spin,DLeft,DRight
-     integer :: Canonized=NO
    contains
      procedure,public :: getDRight => DRight_MPSTensor
      procedure,public :: getDLeft => DLeft_MPSTensor
      procedure,public :: getSpin => Spin_MPSTensor
      procedure,public :: CollapseSpinWithBond => Collapse_Spin_With_Bond_Dimension
-!     procedure,public :: delete => delete_MPSTensor
+     procedure,public :: PrintDimensions => Print_MPSTensor_Dimensions
 !     procedure,public :: LCanonize => Left_Canonize_MPSTensor
 !     procedure,public :: RCanonize => Right_Canonize_MPSTensor
      procedure,public :: ApplyOperator => Apply_Operator_To_Spin_Dimension
@@ -57,7 +56,7 @@ module MPSTensor_Class
 !#####  Operators and methods
 !###############################
   interface new_MPSTensor
-     module procedure new_MPSTensor_Random,new_MPSTensor_fromMPSTensor, & !new_MPSTensor_withData, &
+     module procedure new_MPSTensor_Random,new_MPSTensor_fromMPSTensor, &
           & new_MPSTensor_withConstant, new_MPSTensor_with_SplitData
   end interface
 
@@ -67,6 +66,18 @@ module MPSTensor_Class
 
   interface operator (.times.)
      module procedure MPSTensor_times_matrix, matrix_times_MPSTensor
+  end interface
+
+  interface operator (.apply.)
+     module procedure Apply_Operator_To_Spin_Dimension
+  end interface
+
+  interface MPSLeftProduct
+     module procedure LeftProductTwoMPS,LeftProductOneMPS
+  end interface
+
+  interface MPSRightProduct
+     module procedure RightProductTwoMPS,RightProductOneMPS
   end interface
 
   interface LeftCanonize
@@ -105,19 +116,6 @@ module MPSTensor_Class
      this%DRight=DRight
 
    end function new_MPSTensor_Random
-
-!##################################################################
-!   function new_MPSTensor_withData (originalData) result (this)
-!     complex(8),intent(in) :: originalData(:,:,:)
-!     type(MPSTensor) this
-!
-!     this=new_Tensor(originalData)
-!     !initialize internal variables
-!     this%spin=size(originalData,3)
-!     this%DLeft=size(originalData,1)
-!     this%DRight=size(originalData,2)
-!
-!   end function new_MPSTensor_withData
 
 !##################################################################
    function new_MPSTensor_with_SplitData (originalDataUP,originalDataDOWN) result (this)
@@ -204,7 +202,6 @@ module MPSTensor_Class
 !##################################################################
 
    integer function DLeft_MPSTensor(this) result(DL)
-     !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
      class(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
 
      if(.not.(this%IsInitialized())) then
@@ -217,8 +214,6 @@ module MPSTensor_Class
    end function DLeft_MPSTensor
 !##################################################################
    integer function DRight_MPSTensor(this) result(DR)
-
-     !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
      class(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
 
      if(.not.(this%IsInitialized())) then
@@ -230,12 +225,33 @@ module MPSTensor_Class
 
    end function DRight_MPSTensor
 
+
+    subroutine Print_MPSTensor_Dimensions(this,message)
+        class(MPSTensor) :: this
+        character*(*),optional :: message
+        integer :: dims(3)
+
+        if((this%IsInitialized())) then
+            dims=this%GetDimensions()
+            if (present(message) ) then
+                write(*,'(A,", Spin: ",I3,", DLeft: ",I3,", DRight: ",I3)') ,message,dims(3),dims(1),dims(2)
+            else
+                write(*,'("Spin: ",I3,", DLeft: ",I3,", DRight: ",I3)') ,dims(3),dims(1),dims(2)
+            endif
+        else
+            call ThrowException('DRight','Tensor not initialized',NoErrorCode,Warning)
+            return
+         endif
+
+   end subroutine Print_MPSTensor_Dimensions
+
+
 !##################################################################
 !#######################        Products by things
 !##################################################################
 
    function Apply_Operator_To_Spin_Dimension(this,anOperator) result(aTensor)
-     class(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this
      type(MPSTensor) :: aTensor
      class(SpinOperator),intent(IN) :: anOperator
      integer :: opDims(2),tensorDims(3)
@@ -256,6 +272,7 @@ module MPSTensor_Class
      endif
 
    end function Apply_Operator_To_Spin_Dimension
+
 !##################################################################
     function MPSTensor_times_matrix(aTensor,aMatrix) result(theResult)
         class(MPSTensor),intent(IN) :: aTensor
@@ -287,6 +304,43 @@ module MPSTensor_Class
 
     end function matrix_times_MPSTensor
 
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+   function LeftProductTwoMPS(LeftTensor,upMPSTensor,downMPSTensor) result(theResult)
+      class(MPSTensor),intent(IN) :: upMPSTensor,downMPSTensor
+      class(Tensor2),intent(IN) :: LeftTensor
+      type(Tensor2) :: theResult
+
+      theResult=CompactLeft(LeftTensor,upMPSTensor,downMPSTensor,THIRD)
+
+   end function LeftProductTwoMPS
+
+   function LeftProductOneMPS(LeftTensor,anMPSTensor) result(theResult)
+      class(MPSTensor),intent(IN) :: anMPSTensor
+      class(Tensor2),intent(IN) :: LeftTensor
+      type(Tensor2) :: theResult
+
+      theResult=CompactLeft(LeftTensor,anMPSTensor,anMPSTensor,THIRD)
+
+   end function LeftProductOneMPS
+
+   function RightProductTwoMPS(RightTensor,upMPSTensor,downMPSTensor) result(theResult)
+      class(MPSTensor),intent(IN) :: upMPSTensor,downMPSTensor
+      class(Tensor2),intent(IN) :: RightTensor
+      type(Tensor2) :: theResult
+
+      theResult=CompactRight(RightTensor,upMPSTensor,downMPSTensor,THIRD)
+
+   end function RightProductTwoMPS
+
+   function RightProductOneMPS(RightTensor,anMPSTensor) result(theResult)
+      class(MPSTensor),intent(IN) :: anMPSTensor
+      class(Tensor2),intent(IN) :: RightTensor
+      type(Tensor2) :: theResult
+
+      theResult=CompactRight(RightTensor,anMPSTensor,anMPSTensor,THIRD)
+
+   end function RightProductOneMPS
 
 !##################################################################
 !##################################################################
@@ -303,7 +357,7 @@ module MPSTensor_Class
                 case (FIRST(1))
                     collapsedTensor=this%JoinIndices(THIRDANDFIRST,SECOND)
                 case (SECOND(1))
-                    collapsedTensor=this%JoinIndices(THIRDANDSECOND,FIRST)
+                    collapsedTensor=this%JoinIndices(FIRST,THIRDANDSECOND)
                 case default
                     call ThrowException('Collapse_Spin_With_Bond_Dimension','Dimension must be FIRST or SECOND',whichDimension(1),CriticalError)
             end select
@@ -354,8 +408,8 @@ module MPSTensor_Class
   function Right_Canonize_MPSTensor(this) result(matrix)
     class(MPSTensor),intent(INOUT) :: this !
     type(Tensor2) :: matrix
-    type(Tensor2) :: U,Sigma,vTransposed,collapsedTensor
-    integer :: error,newUDims(2)
+    type(Tensor2) :: U,Sigma,V,collapsedTensor
+    integer :: error,newUDims(2),oldDRight
 
     if(.not.this%IsInitialized()) then
        call ThrowException('Left_Canonize_MPSTensor','Tensor not initialized',NoErrorCode,CriticalError)
@@ -369,7 +423,7 @@ module MPSTensor_Class
        return
     endif
 
-    call SingularValueDecomposition(CollapsedTensor,U,Sigma,vTransposed,error)
+    call SingularValueDecomposition(CollapsedTensor,U,Sigma,V,error)
 
     if (error.ne.Normal) then
        call ThrowException('Left_Canonize_MPSTensor','Could not split the matrix',NoErrorCode,CriticalError)
@@ -378,10 +432,9 @@ module MPSTensor_Class
 
     !We need to trim the matrix to get rid of useless dimensions
     newUDims=[ this%spin*this%DLeft, min(this%spin * this%DLeft, this%Dright)]
+    oldDRight=this%DRight
     this=SplitSpinFromBond( TensorPad(U,newUDims), FIRST, this%spin )
-
-    !matrix is reshaped to fit the product with the tensor on the right
-    matrix=TensorPad(sigma*Conjugate(vTransposed), [ newUDims(2), this%DRight ] )
+    matrix=TensorPad(sigma*V, [ newUDims(2), oldDRight ] )
 
   end function Right_Canonize_MPSTensor
 
@@ -395,8 +448,8 @@ module MPSTensor_Class
   function Left_Canonize_MPSTensor(this) result(matrix)
     class(MPSTensor),intent(INOUT) :: this !
     type(Tensor2) :: matrix
-    type(Tensor2) :: U,Sigma,vTransposed,collapsedTensor
-    integer :: error,newVDims(2)
+    type(Tensor2) :: U,Sigma,V,collapsedTensor
+    integer :: error,newVDims(2),oldDLeft
 
     if(.not.this%IsInitialized()) then
        call ThrowException('Left_Canonize_MPSTensor','Tensor not initialized',NoErrorCode,CriticalError)
@@ -409,17 +462,20 @@ module MPSTensor_Class
        return
     endif
 
-    call SingularValueDecomposition(CollapsedTensor,U,Sigma,vTransposed,error)
+    call SingularValueDecomposition(CollapsedTensor,U,Sigma,V,error)
     if (error.ne.Normal) then
-       call ThrowException('Left_Canonize_MPSTensor','Could not split the matrix',NoErrorCode,CriticalError)
+       call ThrowException('Left_Canonize_MPSTensor','Error in SVD',NoErrorCode,CriticalError)
        return
     endif
 
     newVDims=[ min(this%spin * this%DRight, this%DLeft), this%spin*this%DRight]
-    this=SplitSpinFromBond( TensorPad(Conjugate(vTransposed),newVDims), FIRST, this%spin )
+    oldDLeft=this%Dleft
 
     !matrix is reshaped to fit the product with the tensor on the right
-    matrix=TensorPad( U*sigma, [ this%DLeft, newVDims(1) ] )
+    this=SplitSpinFromBond( TensorPad(V,newVDims), SECOND, this%spin )
+
+    !matrix is reshaped to fit the product with the tensor on the right
+    matrix=TensorPad( U*sigma, [ oldDLeft, newVDims(1) ] )
 
   end function Left_Canonize_MPSTensor
 

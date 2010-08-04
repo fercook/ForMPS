@@ -37,7 +37,7 @@ test type_creation_deletion
   assert_equal(A%delete(),Normal)
   call LowerFlag()
   B=new_MPSTensor(SpinT,BondL,BondR)
-  call B%Print()
+  call B%Print('TESTING PRINTING')
   assert_equal(B%delete(),Normal)
   assert_false(WasThereError())
 end test
@@ -84,10 +84,6 @@ test RightCanonTensor
    !CorrectTensor=new_MPSTensor(Correct(:,:,1),Correct(:,:,2))
    outputMatrix=RightCanonize(TheTensor) !  C=A%LCanonize()
    correctMatrix=new_Tensor(matrix)
-   call outputMatrix%PrintDimensions()
-   call correctMatrix%PrintDimensions()
-   !call theTensor%Print()
-   !call correctTensor%Print()
    CorrectTensor=MPSTensor_times_matrix(TheTensor,outputMatrix)
    assert_equal_within(outputMatrix.absdiff.correctMatrix, 0.0d0, 1.0e-4)
    assert_equal_within(OrigTensor.absdiff.CorrectTensor, 0.0d0, 1.0e-5)
@@ -100,21 +96,21 @@ test LeftCanonTensor
     ! but only in the non-important vectors (where Sigma=0)
     !Then, this test is changed to an automatic test that sees if the original tensor can be
     !reconstructed by multiplying the canonized tensor with the output matrix
-   type(MPSTensor) :: TheTensor,CorrectTensor,origTensor
+   type(MPSTensor) :: TheTensor,ReconstructedTensor,origTensor
    type(Tensor2) :: outputMatrix
-   integer,parameter :: spinT=2,DleftT=7, DrightT=5
+   integer,parameter :: spinT=2,DleftT=3, DrightT=4
    complex(8) :: data(DleftT,DrightT,spinT)
    integer :: i,j,k
 
    !Initialization
-   forall (i=1:DleftT ,j=1:DrightT, k=1:SpinT) data(i,j,k)=one*(i*II+(j-1)*DleftT+(k-1)*DrightT)
+   forall (i=1:DleftT ,j=1:DrightT, k=1:SpinT) data(i,j,k)=one*(i+10*j+II*k)
    TheTensor=new_MPSTensor(data(:,:,1),data(:,:,2))
    origTensor=TheTensor
    outputMatrix=LeftCanonize(TheTensor) !  C=A%LCanonize()
 
-   CorrectTensor=matrix_times_MPSTensor(outputMatrix,TheTensor)
+   ReconstructedTensor=matrix_times_MPSTensor(outputMatrix,TheTensor)
 
-   assert_equal_within(OrigTensor.absdiff.CorrectTensor, 0.0d0, 1.0e-5)
+   assert_equal_within(OrigTensor.absdiff.ReconstructedTensor, 0.0d0, 1.0e-5)
 
 end test
 !

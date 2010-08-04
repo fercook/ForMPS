@@ -29,9 +29,10 @@ LINKFLAGS=
 endif
 
 BINARIES=_$(SYS)
-SOURCES = constants.f90 error.f90 Tensor_Class.f90 Operator_Class.f90 MPSTensor_Class.f90
+SOURCES = constants.f90 error.f90 Tensor_Class.f90 Operator_Class.f90 MPSTensor_Class.f90 MPS_Class.f90 Multiplicator_Class.f90
 OBJS = $(SOURCES:.f90=.o)
-TESTED = Tensor MPSTensor #Operator
+TESTED = Tensor MPSTensor MPS Multiplicator
+#Operator
 
 all: fullmake
 obj: object

@@ -23,9 +23,9 @@ Module MPS_Class
   use Operator_Class
   use MPSTensor_Class
 
-  private
+!  private
 
-  public :: new_MPS,delete_MPS,LeftCanonizeAtSite,RightCanonizeAtSite,Normalize
+  public :: new_MPS,delete_MPS,LeftCanonizeAtSite,RightCanonizeAtSite,ScaleBy
 
 !###############################
 !#####  The class main object
@@ -34,15 +34,16 @@ Module MPS_Class
      private
      integer :: length
      type(MPSTensor), allocatable :: TensorCollection(:)
-     logical :: IsInitialized=.false.
-     integer :: CanonizedAt=0
+     logical :: Initialized=.false.
    contains
      procedure,public :: LeftCanonizeAtSite => LeftCanonizeMPS_AtSite
      procedure,public :: RightCanonizeAtSite => RightCanonizeMPS_AtSite
      procedure,public :: Canonize => CanonizeMPS
-     procedure,public :: Normalize => NormalizeMPS
+     procedure,public :: ScaleBy => ScaleMPSByFactor
      procedure,public :: TensorAt => GetMPSTensorAtSite
      procedure,public :: delete => delete_MPS
+     procedure,public :: GetSize => GetMPSLength
+     procedure,public :: IsInitialized => Is_MPS_Initialized
   end type MPS
 
   interface new_MPS
@@ -70,7 +71,7 @@ Module MPS_Class
         this%TensorCollection(n)=new_MPSTensor(spin,bond,bond)
     enddo
     this%Length=length
-    this%IsInitialized=.true.
+    this%Initialized=.true.
 
   end function new_MPS_Random
 
@@ -80,17 +81,17 @@ Module MPS_Class
      type(MPS) :: this
      integer  :: n,error
 
-     if(.not.aMPS%IsInitialized) then
+     if(.not.aMPS%Initialized) then
          call ThrowException('new_MPS_fromMPS','MPS not initialized',NoErrorCode,CriticalError)
      endif
      length=aMPS%length
-     if (this%IsInitialized) error=this%delete()
+     if (this%Initialized) error=this%delete()
      allocate(this%TensorCollection(0:length+1))
      do n=0,length+1
          this%TensorCollection(n)=new_MPSTensor(aMPS%TensorCollection(n))
      enddo
      this%Length=length
-     this%IsInitialized=.true.
+     this%initialized=.true.
 
    end function new_MPS_fromMPS
 
@@ -101,17 +102,17 @@ Module MPS_Class
      type(MPS),intent(in) :: rhs
      integer  :: n,error
 
-     if(.not.rhs%IsInitialized) then
+     if(.not.rhs%initialized) then
          call ThrowException('new_MPS_fromAssignment','MPS not initialized',NoErrorCode,CriticalError)
      endif
      length=rhs%length
-     if (lhs%IsInitialized) error=lhs%delete()
+     if (lhs%initialized) error=lhs%delete()
      allocate(lhs%TensorCollection(0:length+1))
      do n=0,length+1
          lhs%TensorCollection(n)=new_MPSTensor(rhs%TensorCollection(n))
      enddo
      lhs%Length=length
-     lhs%IsInitialized=.true.
+     lhs%initialized=.true.
 
    end subroutine new_MPS_fromAssignment
 
@@ -121,21 +122,29 @@ Module MPS_Class
       class(MPS),intent(INOUT) :: this
       integer :: n
 
-     if(.not.this%IsInitialized) then
+     if(.not.this%initialized) then
          call ThrowException('delete_MPS','Tensor is not initalized',error,CriticalError)
      endif
-     n=1
+     n=0
      error=Normal
-     do while (error.eq.Normal.and.n.le.this%length)
+     do while (error.eq.Normal.and.n.le.this%length+1)
         error=this%TensorCollection(n)%delete()
         n=n+1
      enddo
      if (error.ne.Normal) then
          call ThrowException('delete_MPS','Some error while deleting tensors !',error,CriticalError)
      endif
+     this%Initialized=.false.
 
     end function delete_MPS
 
+
+   logical function Is_MPS_initialized(this) result(AmIInitialized)
+    class(MPS) :: this
+
+    AmIInitialized=this%Initialized
+
+   end function Is_MPS_initialized
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   subroutine LeftCanonizeMPS_AtSite(aMPS,site)
@@ -143,7 +152,7 @@ Module MPS_Class
     integer,intent(IN) :: site
     type(Tensor2) :: canonizingMatrix
 
-    if(.not.aMPS%IsInitialized) then
+    if(.not.aMPS%Initialized) then
         call ThrowException('LeftCanonizeMPS_AtSite','MPS not initialized',NoErrorCode,CriticalError)
     endif
     if(site.lt.1.or.site.gt.aMPS%length) then
@@ -158,7 +167,7 @@ Module MPS_Class
     integer,intent(IN) :: site
     type(Tensor2) :: canonizingMatrix
 
-    if(.not.aMPS%IsInitialized) then
+    if(.not.aMPS%Initialized) then
         call ThrowException('LeftCanonizeMPS_AtSite','MPS not initialized',NoErrorCode,CriticalError)
     endif
     if(site.lt.1.or.site.gt.aMPS%length) then
@@ -173,7 +182,7 @@ Module MPS_Class
     class(MPS),intent(INOUT) :: aMPS
     integer :: n
 
-    if(aMPS%IsInitialized) then
+    if(aMPS%Initialized) then
         !First canonize to the right
         do n=1,aMPS%length
             call aMPS%RightCanonizeAtSite(n)
@@ -189,30 +198,30 @@ Module MPS_Class
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-  subroutine NormalizeMPS(aMPS,factor)
+  subroutine ScaleMPSByFactor(aMPS,factor)
     class(MPS),intent(INOUT) :: aMPS
     complex(8), intent(IN) :: factor
     integer :: n
 
-    if(aMPS%IsInitialized) then
+    if(aMPS%Initialized) then
         do n=1,aMPS%length
             aMPS%TensorCollection(n)=factor*(aMPS%TensorCollection(n))
         enddo
     else
-        call ThrowException('NormalizeMPS','MPS not initialized',NoErrorCode,CriticalError)
+        call ThrowException('ScaleMPSByFactor','MPS not initialized',NoErrorCode,CriticalError)
     endif
-  end subroutine NormalizeMPS
+  end subroutine ScaleMPSByFactor
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
    function GetMPSTensorAtSite(aMPS,site) result(aMPSTensor)
-     class(MPS),intent(INOUT) :: aMPS
+     class(MPS),intent(IN) :: aMPS
      integer,intent(IN) :: site
      type(MPSTensor) :: aMPSTensor
 
-     if(aMPS%IsInitialized) then
+     if(aMPS%Initialized) then
         if(site.ge.1.or.site.le.length) then
-             aMPSTensor=aMPS%TensorCollection(n)
+             aMPSTensor=aMPS%TensorCollection(site)
         else
              call ThrowException('GetMPSTensorAtSite','Site is wrong index',site,CriticalError)
         endif
@@ -220,5 +229,14 @@ Module MPS_Class
          call ThrowException('GetMPSTensorAtSite','MPS not initialized',NoErrorCode,CriticalError)
      endif
    end function GetMPSTensorAtSite
+
+   integer function GetMPSLength(aMPS) result(length)
+     class(MPS),intent(IN) :: aMPS
+     if(aMPS%Initialized) then
+         length = aMPS%length
+     else
+         call ThrowException('GetMPSLength','MPS not initialized',NoErrorCode,CriticalError)
+     endif
+   end function GetMPSLength
 
  end module MPS_Class
