@@ -50,7 +50,7 @@ module Multiplicator_Class
         module procedure Multiplicator_Left_Clean,Multiplicator_Left_with_operator
     end interface
 
-    interface RighAtSite
+    interface RightAtSite
         module procedure Multiplicator_Right_Clean,Multiplicator_Right_with_operator
     end interface
 
@@ -167,7 +167,7 @@ contains
                 Mult_LeftAtSite=this%LeftTensors(site)
             else
                 this%LeftTensors(site)=MPSLeftProduct(Multiplicator_Left_Clean(this,site-1), &
-                        & this%MPS_Normal%TensorAt(site),this%MPS_Conjugated%TensorAt(site))
+                        & this%MPS_Normal%GetTensorAt(site),this%MPS_Conjugated%GetTensorAt(site))
                 Mult_LeftAtSite=this%LeftTensors(site)
             endif
         else
@@ -187,9 +187,9 @@ contains
             if (this%LeftTensors(site)%IsInitialized()) then
                 Mult_LeftAtSite=this%LeftTensors(site)
             else
-                OperatedTensor=this%MPS_Normal%TensorAt(site)
+                OperatedTensor=this%MPS_Normal%GetTensorAt(site)
                 this%LeftTensors(site)=MPSLeftProduct(Multiplicator_Left_Clean(this,site-1), &
-                        & OperatedTensor.Apply.anOperator,this%MPS_Conjugated%TensorAt(site))
+                        & OperatedTensor.Apply.anOperator,this%MPS_Conjugated%GetTensorAt(site))
                 Mult_LeftAtSite=this%LeftTensors(site)
             endif
         else
@@ -209,7 +209,7 @@ contains
                 Mult_RightAtSite=this%RightTensors(site)
             else
                 this%RightTensors(site)=MPSRightProduct(Multiplicator_Right_Clean(this,site+1), &
-                    & this%MPS_Normal%TensorAt(site),this%MPS_Conjugated%TensorAt(site))
+                    & this%MPS_Normal%GetTensorAt(site),this%MPS_Conjugated%GetTensorAt(site))
                 Mult_RightAtSite=this%RightTensors(site)
             endif
         else
@@ -229,9 +229,9 @@ contains
             if (this%RightTensors(site)%IsInitialized()) then
                 Mult_RightAtSite=this%RightTensors(site)
             else
-                OperatedTensor=this%MPS_Normal%TensorAt(site)
+                OperatedTensor=this%MPS_Normal%GetTensorAt(site)
                 this%RightTensors(site)=MPSRightProduct(Multiplicator_Right_Clean(this,site+1), &
-                    & OperatedTensor.Apply.anOperator,this%MPS_Conjugated%TensorAt(site))
+                    & OperatedTensor.Apply.anOperator,this%MPS_Conjugated%GetTensorAt(site))
                 Mult_RightAtSite=this%RightTensors(site)
             endif
         else

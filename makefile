@@ -1,5 +1,5 @@
 #
-# issue make all
+# issue make all or make test
 #
 
 ARCH:=$(shell uname)
@@ -29,9 +29,9 @@ LINKFLAGS=
 endif
 
 BINARIES=_$(SYS)
-SOURCES = constants.f90 error.f90 Tensor_Class.f90 Operator_Class.f90 MPSTensor_Class.f90 MPS_Class.f90 Multiplicator_Class.f90
+SOURCES = constants.f90 error.f90 Tensor_Class.f90 Operator_Class.f90 MPSTensor_Class.f90 MPOTensor_Class.f90 MPS_Class.f90 MPO_CLass.f90 Multiplicator_Class.f90 MPSAlgorithms_Class.f90
 OBJS = $(SOURCES:.f90=.o)
-TESTED = Tensor MPSTensor MPS Multiplicator
+TESTED = Tensor MPSTensor MPOTensor MPS MPO Multiplicator MPSAlgorithms
 #Operator
 
 all: fullmake

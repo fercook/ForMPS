@@ -44,6 +44,7 @@ module MPSTensor_Class
    contains
      procedure,public :: getDRight => DRight_MPSTensor
      procedure,public :: getDLeft => DLeft_MPSTensor
+     procedure,public :: getMaxBondDimension => Get_MaxBondDimensionMPSTensor
      procedure,public :: getSpin => Spin_MPSTensor
      procedure,public :: CollapseSpinWithBond => Collapse_Spin_With_Bond_Dimension
      procedure,public :: PrintDimensions => Print_MPSTensor_Dimensions
@@ -57,7 +58,7 @@ module MPSTensor_Class
 !###############################
   interface new_MPSTensor
      module procedure new_MPSTensor_Random,new_MPSTensor_fromMPSTensor, &
-          & new_MPSTensor_withConstant, new_MPSTensor_with_SplitData
+          & new_MPSTensor_withConstant, new_MPSTensor_with_SplitData,new_MPSTensor_fromTensor3
   end interface
 
   interface assignment (=)
@@ -183,6 +184,20 @@ module MPSTensor_Class
 
    end subroutine new_MPSTensor_fromAssignment
 
+!##################################################################
+   function new_MPSTensor_fromTensor3 (tensor) result (this)
+     type(Tensor3),intent(in) :: tensor
+     type(MPSTensor) this
+     integer :: dims(3)
+
+     this=new_Tensor(tensor)
+     dims=tensor%GetDimensions()
+     !initialize internal variables
+     this%spin=dims(3)
+     this%DLeft=dims(1)
+     this%DRight=dims(2)
+
+   end function new_MPSTensor_fromTensor3
 
 !##################################################################
 !###########       Accessor methods
@@ -225,6 +240,17 @@ module MPSTensor_Class
 
    end function DRight_MPSTensor
 
+   integer function Get_MaxBondDimensionMPSTensor(this) result(maxDimension)
+     class(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
+
+     if(.not.(this%IsInitialized())) then
+        call ThrowException('Get_MaxBondDimensionMPSTensor','Tensor not initialized',NoErrorCode,Warning)
+        return
+     else
+        maxDimension=max(this%DRight,this%DLeft)
+     endif
+
+   end function Get_MaxBondDimensionMPSTensor
 
     subroutine Print_MPSTensor_Dimensions(this,message)
         class(MPSTensor) :: this
@@ -265,7 +291,7 @@ module MPSTensor_Class
            aTensor%DLeft=tensorDims(1)
            aTensor%DRight=tensorDims(2)
         else
-           call ThrowException('Apply_Operator_To_Spin_Dimension','Operator is not of the rigt size',opDims(1)-opDims(2),CriticalError)
+           call ThrowException('Apply_Operator_To_Spin_Dimension','Operator is not of the right size',opDims(1)-opDims(2),CriticalError)
         endif
      else
         call ThrowException('Apply_Operator_To_Spin_Dimension','Tensor not initialized',NoErrorCode,CriticalError)

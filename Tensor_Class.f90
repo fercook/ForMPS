@@ -34,6 +34,18 @@ module Tensor_Class
 
   integer,parameter :: Max_Combined_Dimension = 100000
 
+!> \class Tensor (virtual)
+!! \brief
+!! Base class for tensors.
+!!
+!! Tensor provides general functionality for all derived classes
+!!     logical %IsInitialized()
+!!     integer %Delete()
+!!     subroutine %Print ( Message, error )
+!!     subroutine %PrintDimnesions ( Message )
+!!     integer(:) %getDimensions()
+!!     real(8) %Norm()
+!!
   type,private :: Tensor
   	private
   	integer :: Initialized=.false.
@@ -57,7 +69,7 @@ module Tensor_Class
   contains
     procedure,public :: SVD => SingularValueDecomposition
     procedure,public :: SplitIndex => SplitIndexOfTensor2
-    procedure,public :: Pad => Pad_Tensor2
+!    procedure,public :: Pad => Pad_Tensor2
     procedure,public :: dagger => ConjugateTranspose2
     procedure,public :: CompactFromLeft => Mirror_Compact_Left_With_Tensor3
     procedure,public :: CompactFromRight => Mirror_Compact_Right_With_Tensor3
@@ -805,32 +817,32 @@ integer function InitializationCheck(this) result(error)
             endif
 	 	class is (Tensor2)
             if (present(message)) then
-                write(*,'(A,", Matrix Dimensions:",I4,"x",I4)'),message,size(Typed_this%data,1),size(Typed_this%data,2)
+                write(*,'(A,", Matrix Dimensions:",I4," x",I4)'),message,size(Typed_this%data,1),size(Typed_this%data,2)
             else
-                write(*,'("Matrix Dimensions:",I4,"x",I4)'),size(Typed_this%data,1),size(Typed_this%data,2)
+                write(*,'("Matrix Dimensions:",I4," x",I4)'),size(Typed_this%data,1),size(Typed_this%data,2)
             endif
 	 	class is (Tensor3)
             if (present(message)) then
-               write(*,'(A,", 3-Tensor Dimensions:",I3,"x",I3,"x",I3)'),message,size(Typed_this%data,1),size(Typed_this%data,2), &
+               write(*,'(A,", 3-Tensor Dimensions:",I3," x",I3," x",I3)'),message,size(Typed_this%data,1),size(Typed_this%data,2), &
                   & size(Typed_this%data,3)
             else
-               write(*,'("3-Tensor Dimensions:",I3,"x",I3,"x",I4)'),size(Typed_this%data,1),size(Typed_this%data,2), &
+               write(*,'("3-Tensor Dimensions:",I3," x",I3," x",I4)'),size(Typed_this%data,1),size(Typed_this%data,2), &
                   & size(Typed_this%data,3)
         	endif
         class is (Tensor4)
             if (present(message)) then
-                write(*,'(A,", 4-Tensor Dimensions:",I3,"x",I3,"x",I3,"x",I3)'),message,size(Typed_this%data,1),size(Typed_this%data,2), &
+                write(*,'(A,", 4-Tensor Dimensions:",I3," x",I3," x",I3," x",I3)'),message,size(Typed_this%data,1),size(Typed_this%data,2), &
                   & size(Typed_this%data,3),size(Typed_this%data,4)
             else
-                write(*,'("4-Tensor Dimensions:",I3,"x",I3,"x",I3,"x",I3)'),size(Typed_this%data,1),size(Typed_this%data,2), &
+                write(*,'("4-Tensor Dimensions:",I3," x",I3," x",I3," x",I3)'),size(Typed_this%data,1),size(Typed_this%data,2), &
                   & size(Typed_this%data,3),size(Typed_this%data,4)
             endif
         class is (Tensor5)
             if (present(message)) then
-                write(*,'(A,", 5-Tensor Dimensions:",I3,"x",I3,"x",I3,"x",I3,"x",I3)'),message,size(Typed_this%data,1),size(Typed_this%data,2), &
+                write(*,'(A,", 5-Tensor Dimensions:",I3," x",I3," x",I3," x",I3," x",I3)'),message,size(Typed_this%data,1),size(Typed_this%data,2), &
                   & size(Typed_this%data,3),size(Typed_this%data,4),size(Typed_this%data,5)
             else
-                write(*,'("5-Tensor Dimensions:",I3,"x",I3,"x",I3,"x",I3,"x",I3)'),size(Typed_this%data,1),size(Typed_this%data,2), &
+                write(*,'("5-Tensor Dimensions:",I3," x",I3," x",I3," x",I3," x",I3)'),size(Typed_this%data,1),size(Typed_this%data,2), &
                   & size(Typed_this%data,3),size(Typed_this%data,4),size(Typed_this%data,5)
             endif
 	 	class is (Tensor)
@@ -1404,19 +1416,19 @@ integer function InitializationCheck(this) result(error)
       endif
 
       If(IndexToCompact.equalvector.FIRST) then
-          allocate ( aMatrix(upDims(3),downDims(3)) )
+          allocate ( aMatrix(downDims(3),upDims(3)) )
           aMatrix=ZERO
           do n=1,upDims(IndexToCompact(1))
             aMatrix=aMatrix+ matmul( dconjg(Transpose(downTensor%data(n,:,:))) ,matmul( LeftTensor%data, upTensor%data(n,:,:) ) )
           enddo
       else if (IndexToCompact.equalvector.SECOND) then
-          allocate ( aMatrix(upDims(3),downDims(3)) )
+          allocate ( aMatrix(downDims(3),upDims(3)) )
           aMatrix=ZERO
           do n=1,upDims(IndexToCompact(1))
             aMatrix=aMatrix+ matmul( dconjg(Transpose(downTensor%data(:,n,:))) ,matmul( LeftTensor%data, upTensor%data(:,n,:) ) )
           enddo
       else if (IndexToCompact.equalvector.THIRD) then
-          allocate ( aMatrix(upDims(2),downDims(2)) )
+          allocate ( aMatrix(downDims(2),upDims(2)) )
           aMatrix=ZERO
           do n=1,upDims(IndexToCompact(1))
             aMatrix=aMatrix+ matmul( dconjg(Transpose(downTensor%data(:,:,n))) ,matmul( LeftTensor%data, upTensor%data(:,:,n) ) )

@@ -53,6 +53,8 @@ module Constants
   integer,parameter :: Left = -1
   integer,parameter :: No = 0
   
+  logical,parameter :: Verbose = .true.
+
   interface operator (.equalvector.)
      module procedure AreIntVectorsEqual
   end interface

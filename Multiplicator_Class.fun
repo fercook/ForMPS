@@ -29,7 +29,7 @@ end teardown
 
 
 test type_creation_deletion
-  type(MPS),target :: anMPS
+  type(MPS) :: anMPS
   type(Multiplicator) :: Prod
   integer :: length=10,spin=2,bond=20
   complex(8) :: overlap
@@ -37,17 +37,46 @@ test type_creation_deletion
 
   anMPS=new_MPS(length,spin,bond)
   Prod=new_Multiplicator(anMPS)
-  overlap=(Multiplicator_Left_Clean(Prod,1))**(Multiplicator_Right_Clean(Prod,2))
+  overlap=(LeftAtSite(Prod,1)).xx.(Multiplicator_Right_Clean(Prod,2))
   print *,overlap
+  matrix=(Multiplicator_Left_Clean(Prod,2)).x.(Multiplicator_Right_Clean(Prod,3))
+  call matrix%PrintDimensions()
 
   call anMPS%Canonize()
   call Prod%Reset(LEFT)
   call Prod%Reset(RIGHT)
-  matrix=(Multiplicator_Left_Clean(Prod,2))*(Multiplicator_Right_Clean(Prod,3))
+  matrix=(Multiplicator_Left_Clean(Prod,2)).x.(Multiplicator_Right_Clean(Prod,3))
   call matrix%PrintDimensions()
-  overlap=(Multiplicator_Left_Clean(Prod,0))**(Multiplicator_Right_Clean(Prod,1))
+  overlap=(Multiplicator_Left_Clean(Prod,0)).xx.(Multiplicator_Right_Clean(Prod,1))
   print *,overlap
   assert_equal_within(abs(overlap),1.0d0,1.0e-8)
+
+  call Prod%delete()
+end test
+
+test twoMPSsizes
+  type(MPS) :: anMPS,anotherMPS
+  type(Multiplicator) :: Prod
+  integer :: length=10,spin=2,bondU=20,bondD=10
+  complex(8) :: overlap
+  type(Tensor2) :: matrix
+  integer :: dimensions(2)
+
+  anMPS=new_MPS(length,spin,bondU)
+  anotherMPS=new_MPS(length,spin,bondD)
+
+  call anMPS%Canonize()
+  call anotherMPS%Canonize()
+
+  Prod=new_Multiplicator(anMPS,anotherMPS)
+  matrix=(LeftAtSite(Prod,5))
+  dimensions=matrix%GetDimensions()
+  assert_equal(dimensions(1), 10 )
+  assert_equal(dimensions(2), 20 )
+  matrix=(RightAtSite(Prod,6))
+  dimensions=matrix%GetDimensions()
+  assert_equal(dimensions(2), 10 )
+  assert_equal(dimensions(1), 20 )
 
   call Prod%delete()
 end test
