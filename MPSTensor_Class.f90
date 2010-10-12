@@ -58,7 +58,8 @@ module MPSTensor_Class
 !###############################
   interface new_MPSTensor
      module procedure new_MPSTensor_Random,new_MPSTensor_fromMPSTensor, &
-          & new_MPSTensor_withConstant, new_MPSTensor_with_SplitData,new_MPSTensor_fromTensor3
+          & new_MPSTensor_withConstant, new_MPSTensor_with_SplitData, &
+          & new_MPSTensor_fromTensor3, new_MPSTensor_fromTensor3_Transposed
   end interface
 
   interface assignment (=)
@@ -198,6 +199,25 @@ module MPSTensor_Class
      this%DRight=dims(2)
 
    end function new_MPSTensor_fromTensor3
+
+!##################################################################
+   function new_MPSTensor_fromTensor3_Transposed (tensor,whichDimIsSpin,whichDimIsLeft,whichDimIsRight) result (this)
+     type(Tensor3),intent(in) :: tensor
+     integer, intent(IN) :: whichDimIsSpin,whichDimIsLeft,whichDimIsRight
+     type(MPSTensor) this
+     integer :: newDims(3)
+
+     newDims(whichDimIsLeft)=1
+     newDims(whichDimIsRight)=2
+     newDims(whichDimIsSpin)=3
+     this=TensorTranspose(tensor,newDims)
+     newDims=tensor%GetDimensions()
+     !initialize internal variables
+     this%spin=newDims(3)
+     this%DLeft=newDims(1)
+     this%DRight=newDims(2)
+
+   end function new_MPSTensor_fromTensor3_Transposed
 
 !##################################################################
 !###########       Accessor methods

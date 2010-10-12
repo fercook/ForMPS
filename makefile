@@ -29,9 +29,9 @@ LINKFLAGS=
 endif
 
 BINARIES=_$(SYS)
-SOURCES = constants.f90 error.f90 Tensor_Class.f90 Operator_Class.f90 MPSTensor_Class.f90 MPOTensor_Class.f90 MPS_Class.f90 MPO_CLass.f90 Multiplicator_Class.f90 MPSAlgorithms_Class.f90
+SOURCES = constants.f90 error.f90 Tensor_Class.f90 Operator_Class.f90 MPSTensor_Class.f90 MPOTensor_Class.f90 MPS_Class.f90 MPO_CLass.f90 Multiplicator_Class.f90 PEPSTensor_Class.f90 PEPOTensor_Class.f90 PEPS_Class.f90 MPSAlgorithms_Class.f90
 OBJS = $(SOURCES:.f90=.o)
-TESTED = Tensor MPSTensor MPOTensor MPS MPO Multiplicator MPSAlgorithms
+TESTED = Tensor MPSTensor MPOTensor MPS MPO Multiplicator PEPSTensor PEPOTensor PEPS MPSAlgorithms
 #Operator
 
 all: fullmake
@@ -55,7 +55,7 @@ install:
 	cp  $(DIR)
 
 clean :
-	@ ${RM} -rf *.o *.mod $(BINARIES) *.gcov *.gcda *.gcno profiles/*
+	@ ${RM} -rf *.o *.mod $(BINARIES) *.gcov *.gcda *.gcno *.dyn profiles/*
 	funit --clean
 #-----------------------------------------------------------------------
 #
@@ -63,7 +63,7 @@ testsuite:
 	
 $(TESTED): $(OBJS)
 	$(FCOMP) -c $@.helper.f90
-	funit $@_Class > $@.test 
+	funit $@_Class > TESTS/$@.test 
 	#gcov $@.f90
 	#./checkcoverage.sh
 	tail -n 5 $@.test

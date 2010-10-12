@@ -1,0 +1,327 @@
+
+\documentclass[12pt]{article}
+\usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{listings}
+\usepackage[usenames,dvipsnames]{color}
+
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+\lstset{ %
+language=Fortran,                % choose the language of the code
+basicstyle=\footnotesize,       % the size of the fonts that are used for the code
+%numbers=left,                   % where to put the line-numbers
+%numberstyle=\footnotesize,      % the size of the fonts that are used for the line-numbers
+stepnumber=1,                   % the step between two line-numbers. If it's 1 each line 
+                                % will be numbered
+numbersep=5pt,                  % how far the line-numbers are from the code
+%aboveskip=2pt,
+%belowskip=2pt,
+backgroundcolor=\color{White},  % choose the background color. You must add \usepackage{color}
+showspaces=false,               % show spaces adding particular underscores
+showstringspaces=false,         % underline spaces within strings
+showtabs=false,                 % show tabs within strings adding particular underscores
+frame=single,	                % adds a frame around the code
+tabsize=2,	                % sets default tabsize to 2 spaces
+captionpos=b,                   % sets the caption-position to bottom
+breaklines=true,                % sets automatic line breaking
+breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+%title=\lstname,                 % show the filename of files included with \lstinputlisting;
+                                % also try caption instead of title
+escapeinside={\%*}{*)},         % if you want to add a comment within your code
+morekeywords={*,...},            % if you want to add more keywords to the set
+moredelim=[is][{\itshape \color{Mahogany}}]{|}{|}
+}
+
+\title{{\em FortranMPS} and {\em Tensor} reference manual}
+\author{Fernando M. Cucchietti}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\begin{document}
+
+\maketitle
+
+
+\section{Tensor\_Class}
+\subsection{Type Tensor}
+
+\subsubsection{Creators}
+
+\begin{lstlisting}
+Tensor# new_Tensor( integer dim1 [, dim2, ...,dim# ] )
+		|Creates a random new Tensor of # dimensions, each of length dimX|
+Tensor# new_Tensor( integer dim1 [, dim2, ...,dim# ], complex(8) constant )
+		|Creates a new Tensor of # dimensions where all entries are constant|
+Tensor# new_Tensor( Tensor aTensor )
+		|Creates a new Tensor of # dimensions that is a copy of aTensor|
+Tensor# new_Tensor( complex(8) data(:,...,:) )
+		|Creates a new Tensor of # dimensions from a complex(8) array|
+\end{lstlisting}
+
+\subsubsection{Destructor}
+
+\begin{lstlisting}
+integer Tensor%Delete()
+		|Deletes the tensor and frees all associated memory. Returns an error type|
+\end{lstlisting}
+
+\subsubsection{Public methods}
+
+\begin{lstlisting}
+logical Tensor%IsInitialized
+		|Returns true if tensor is properly initialized|
+subroutine Tensor%Print( ?character Message, ?integer error)
+		|Prints the contents of the tensor to screen, with optional Message. Optionally an error code can be obtained|
+subroutine Tensor%PrintDimensions( ?character Message )
+		|Prints the dimensions of the tensor to screen, with optional Message.|
+integer(:) Tensor%getDimensions()
+		|Returns the dimensions of the tensor in an integer vector|
+real(8) Tensor%Norm()
+		|Returns the 1-norm of the tensor|
+\end{lstlisting}
+In this last case the 1-norm is defined as $\sum_{i_1,i_2,...} |t_{i_1,i_2,...}|$.
+
+\subsubsection{Tensor2 extra methods}
+\begin{lstlisting}
+subroutine Tensor%SVD( Tensor2 U, Tensor2  Sigma, Tensor2  vTransposed, ?integer errorCode )
+-- also subroutine SingularValueDecomposition(thisTensor, U, Sigma, vTransposed, ErrorCode)
+	|Returns the SVD of the Tensor = U*Sigma*vTransposed.
+	Sigma is a diagonal Tensor2.|
+Tensor3 Tensor%SplitIndex( Index whichIndex ,integer Partition) 
+	|Splits the index (can be FIRST or SECOND) in Partition times. 
+	Example: 	(8x6)%SplitIndex(FIRST, 2) => (2x4x6)
+			(8x6)%SplitIndex(SECOND, 3) => (8x3x2)|
+-- also SplitIndexOfTensor2( Tensor2 thisTensor, Index whichIndex ,integer Partition) 
+Tensor2 Tensor%dagger(this) |Transpose-conjugates the tensor|
+-- also ConjugateTranspose2
+Tensor2 Tensor%CompactFromLeft (Tensor3 aTensor, Index indexToCompact)
+-- also Mirror_Compact_Left_With_Tensor3 (Tensor2 thisTensor, Tensor3 aTensor, Index indexToCompact)
+Tensor2 Tensor%CompactFromRight (Tensor3 aTensor, Index indexToCompact)
+-- also Mirror_Compact_Right_With_Tensor3 (Tensor2 thisTensor, Tensor3 aTensor, Index indexToCompact)
+	|These methods implement a typical operation of an MPS chain: contract a matrix with two 3-tensors. See formula and plot below.|
+\end{lstlisting}
+CompactFromLeft and CompactFromRight above are the following:
+\begin{eqnarray}
+L'(T)=\sum_{n \in whichIndex} T^\dagger_n L T_n \\
+R'(T)=\sum_{n \in whichIndex} T_n R T^\dagger_n 
+\end{eqnarray}
+where $T_n$ is the Tensor2 extracted from Tensor3 by fixing the index whichIndex to $n$. Schematically, the LeftCompact (L,T) is
+
+\setlength{\unitlength}{0.4cm}
+\begin{picture}(11,8)
+\thicklines
+\put(1,2){\line(0,1){4}}
+\put(1,2){\line(1,0){5}}
+\put(4,2){\line(0,1){4}}
+\put(1,6){\line(1,0){5}}
+\put(2,3.5){$L$}
+\put(7,2){\circle{2}}
+\put(7,6){\circle{2}}
+\put(6.5,1.5){$T^*$}
+\put(6.5,5.5){$T$}
+\put(7,3){\line(0,1){2}}
+\put(8,6){\line(1,0){2}}
+\put(8,2){\line(1,0){2}}
+\end{picture}
+
+and the RightCompact (R,T) is
+
+\setlength{\unitlength}{0.4cm}
+\begin{picture}(11,8)
+\thicklines
+\put(10,2){\line(0,1){4}}
+\put(5,2){\line(1,0){5}}
+\put(7,2){\line(0,1){4}}
+\put(5,6){\line(1,0){5}}
+\put(8,3.5){$R$}
+\put(4,2){\circle{2}}
+\put(4,6){\circle{2}}
+\put(3.5,1.5){$T^*$}
+\put(3.5,5.5){$T$}
+\put(4,3){\line(0,1){2}}
+\put(1,6){\line(1,0){2}}
+\put(1,2){\line(1,0){2}}
+\end{picture}
+
+  \subsubsection{Tensor3 extra methods}
+\begin{lstlisting}
+Tensor2 JoinIndices (DoubleIndex Index1, DoubleIndex Index2 )
+	|Joins two of the indices of Tensor3. Indexn can be FIRST, SECOND, THIRD to leave that index alone, and combinations like THIRDANDFIRST to join those indices|
+-- also JoinIndicesOfTensor3
+Tensor3 CompactFromBelow (Index Bound3, Tensor4 aTensor, Index Bound4, Index Free4)
+	|Sums over one index of Tensor3 and aTensor4, and joins two indices of Tensor4 with the other two indices of Tensor3|
+-- also Compact_From_Below_With_Tensor4 (Index Bound3, Tensor4 aTensor, Index Bound4, Index Free4)
+\end{lstlisting}
+CompactFromBelow is schematically
+
+\setlength{\unitlength}{0.4cm}
+\begin{picture}(7,4)
+\thicklines
+\put(0,3){\line(1,0){2}}
+\put(4,3){\line(1,0){2}}
+\put(3,0){\line(0,1){2}}
+\put(3,3){\circle{2}}
+\put(2.5,2.7){${\tilde T}_3$}
+\put(3.2,0.5){$F_4$}
+\put(0.1,3.2){$\alpha \alpha'$}
+\put(4.3,3.2){$\beta \beta'$}
+\put(6.5,3){$=$}
+\end{picture}
+\setlength{\unitlength}{0.4cm}
+\begin{picture}(6,9)
+\thicklines
+\put(0,3){\line(1,0){2}}
+\put(4,3){\line(1,0){2}}
+\put(0,7){\line(1,0){2}}
+\put(4,7){\line(1,0){2}}
+\put(3,0){\line(0,1){2}}
+\put(3,4){\line(0,1){2}}
+\put(3,3){\circle{2}}
+\put(3,7){\circle{2}}
+\put(2.5,2.7){$T_4$}
+\put(2.5,6.7){$T_3$}
+\put(3.2,0.5){$F_4$}
+\put(0.5,3.2){$\alpha'$}
+\put(5,3.2){$\beta'$}
+\put(0.5,7.2){$\alpha$}
+\put(5,7.2){$\beta$}
+\put(3.1,4.2){$B_4$}
+\put(1.5,5){$B_3$}
+\end{picture}
+
+  \subsubsection{Tensor4 extra methods}
+\begin{lstlisting}    
+Tensor2 JoinIndices (DoubleIndex Index1, DoubleIndex Index2 )
+	|Joins two pairs of the indices of Tensor4. Indexn can be FIRSTANDFOURTH or SECONDANDTHIRD constants. |
+-- also JoinIndicesOfTensor4
+\end{lstlisting}
+
+\subsection{Operators and methods}
+\begin{lstlisting} 
+operator(.x.): 
+	Usage 		TensorN .x. TensorM
+	-- also		TensorN * TensorM
+	|Contracts the right-most index of TensorN with the left-most index of TensorM
+	Use with T2=T2.x.T2, T1=T2.x.T1, T0=T1.x.T1, T4=T3.x.T3, T3=T2.x.T3|
+\end{lstlisting}
+
+\begin{lstlisting} 
+operator(.xx.): 
+	Usage 		TensorN .xx. TensorM
+	-- also		TensorN ** TensorM
+	|Contracts the first two indexes of TensorN with the  first two indexes of TensorM
+	Use with T0=T2.xx.T2, T4=T4.xx.T4|
+\end{lstlisting}
+
+\section{MPSTensor\_Class}
+
+\section{MPS\_Class}
+
+\section{Multiplicator\_Class}
+\end{document}
+
+
+
+
+  interface operator (*)
+     module procedure &
+     	  & number_times_Tensor1,number_times_Tensor2,number_times_Tensor3,number_times_Tensor4, &
+     	  & Tensor2_matmul_Tensor2, Tensor2_matmul_Tensor1, Tensor1_matmul_Tensor2, &
+     	  & Tensor1_dotProduct_Tensor1, &
+     	  & Tensor3_matmul_Tensor3, Tensor2_matmul_Tensor3, Tensor3_matmul_Tensor2
+  end interface
+
+  interface operator (**)
+     module procedure &
+     &   Tensor4_doubletimes_Tensor4,Tensor2_doubletimes_Tensor2
+  end interface
+
+  interface operator (.x.)
+     module procedure &
+          & Tensor2_matmul_Tensor2, Tensor2_matmul_Tensor1, Tensor1_matmul_Tensor2, &
+          & Tensor1_dotProduct_Tensor1, Tensor3_matmul_Tensor3, Tensor2_matmul_Tensor3, Tensor3_matmul_Tensor2
+  end interface
+
+  interface operator (.xx.)
+     module procedure &
+     &   Tensor4_doubletimes_Tensor4,Tensor2_doubletimes_Tensor2
+  end interface
+
+  interface operator (.xplus.)
+     module procedure &
+     &   MultAndCollapse_Tensor3_Tensor4
+  end interface
+
+  interface operator (+)
+     module procedure add_Tensor1,add_Tensor2,add_Tensor3,add_Tensor4,add_Tensor5
+  end interface
+
+  interface operator (-)
+     module procedure subtract_Tensor1,subtract_Tensor2,subtract_Tensor3,subtract_Tensor4,subtract_Tensor5
+  end interface
+
+  interface MultAndCollapse
+    module procedure MultAndCollapse_Tensor3_Tensor4
+  end interface
+
+  interface assignment (=)
+     module procedure new_Tensor1_fromAssignment, new_Tensor2_fromAssignment, &
+          & new_Tensor3_fromAssignment, new_Tensor4_fromAssignment, new_Tensor5_fromAssignment
+  end interface
+
+  interface operator (.diff.)
+     module procedure Difference_btw_Tensors
+  end interface
+
+  interface operator (.absdiff.)
+     module procedure Difference_btw_Tensors_WithAbsoluteValue
+  end interface
+
+  interface operator (.equaldims.)
+     module procedure  Tensors_are_of_equal_Shape
+  end interface
+
+  interface operator (.equaltype.)
+     module procedure Tensors_are_of_equal_Type
+  end interface
+
+  interface JoinIndicesOf
+  	module procedure JoinIndicesOfTensor3,JoinIndicesOfTensor4
+  end interface
+
+  interface SplitIndexOf
+    module procedure SplitIndexOfTensor2
+  end interface
+
+  interface TensorPad
+    module procedure Pad_Tensor2
+  end interface
+
+  interface Conjugate
+    module procedure ConjugateTensor1,ConjugateTensor2,ConjugateTensor3,ConjugateTensor4, ConjugateTensor5
+  end interface
+
+  interface TensorTranspose
+    module procedure TensorTranspose2,TensorTranspose3,TensorTranspose4,TensorTranspose5
+  end interface
+
+  interface ConjugateTranspose
+    module procedure ConjugateTranspose2,ConjugateTranspose3,ConjugateTranspose4,ConjugateTranspose5
+  end interface
+
+  interface TensorTrace
+    module procedure Tensor2Trace
+  end interface
+
+  interface CompactLeft
+    module procedure Compact_Tensor3_From_Left_With_Tensor2,Mirror_Compact_Left_With_Tensor3
+  end interface
+
+  interface CompactRight
+    module procedure Compact_Tensor3_From_Right_With_Tensor2,Mirror_Compact_Right_With_Tensor3
+  end interface
+
+  interface CompactBelow
+    module procedure Compact_From_Below_With_Tensor4
+  end interface

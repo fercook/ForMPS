@@ -255,7 +255,7 @@ Module MPS_Class
      type(MPSTensor) :: aMPSTensor
 
      if(aMPS%Initialized) then
-        if(site.ge.1.or.site.le.aMPS%length) then
+        if(site.ge.1.and.site.le.aMPS%length) then
              aMPSTensor=aMPS%TensorCollection(site)
         else
              call ThrowException('GetMPSTensorAtSite','Site is wrong index',site,CriticalError)
@@ -271,7 +271,7 @@ Module MPS_Class
      class(MPSTensor),intent(IN) :: aMPSTensor
 
      if(thisMPS%Initialized.and.aMPSTensor%IsInitialized()) then
-        if(site.ge.1.or.site.le.thisMPS%length) then
+        if(site.ge.1 .and. site.le.thisMPS%length) then
              thisMPS%TensorCollection(site)=aMPSTensor
              !Now update Bond list
              thisMPS%BondList(site)=aMPSTensor%GetMaxBondDimension()

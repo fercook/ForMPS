@@ -26,6 +26,7 @@ Module MPO_Class
   use MPS_Class
 
 !  private
+  implicit none
 
 !###############################
 !#####  The class main object
@@ -88,7 +89,7 @@ Module MPO_Class
    function new_MPO_fromMPO (aMPO) result (this)
      class(MPO),intent(in) :: aMPO
      type(MPO) :: this
-     integer  :: n,error
+     integer  :: n,error,length,spin,bond
 
      if(.not.aMPO%Initialized) then
          call ThrowException('new_MPO_fromMPO','MPO not initialized',NoErrorCode,CriticalError)
@@ -111,7 +112,7 @@ Module MPO_Class
    subroutine new_MPO_fromAssignment(lhs,rhs)
      class(MPO),intent(out) :: lhs
      type(MPO),intent(in) :: rhs
-     integer  :: n,error
+     integer  :: n,error,length,spin,bond
 
      if(.not.rhs%initialized) then
          call ThrowException('new_MPO_fromAssignment','MPO not initialized',NoErrorCode,CriticalError)
@@ -170,7 +171,7 @@ Module MPO_Class
      type(MPOTensor) :: aMPOTensor
 
      if(aMPO%Initialized) then
-        if(site.ge.1.or.site.le.length) then
+        if(site.ge.1.or.site.le.aMPO%length) then
              aMPOTensor=aMPO%TensorCollection(site)
         else
              call ThrowException('GetMPOTensorAtSite','Site is wrong index',site,CriticalError)
@@ -187,7 +188,7 @@ Module MPO_Class
      class(MPOTensor),intent(IN) :: aMPOTensor
 
      if(thisMPO%Initialized.and.aMPOTensor%IsInitialized()) then
-        if(site.ge.1.or.site.le.length) then
+        if(site.ge.1.or.site.le.thisMPO%length) then
              thisMPO%TensorCollection(site)=aMPOTensor
         else
              call ThrowException('SetMPOTensorAtSite','Site is wrong index',site,CriticalError)
