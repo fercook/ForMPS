@@ -22,6 +22,7 @@ module Multiplicator_Class
   use Tensor_Class
   use Operator_Class
   use MPSTensor_Class
+  use MPOTensor_Class
   use MPS_Class
 
     implicit none
@@ -29,7 +30,7 @@ module Multiplicator_Class
 
     type, public :: Multiplicator
         private
-        integer :: length
+        integer :: Length
         logical :: Initialized=.false.
         type(Tensor2),allocatable :: LeftTensors(:)
         type(Tensor2),allocatable :: RightTensors(:)
@@ -70,10 +71,12 @@ contains
     if (MPS_A%IsInitialized()) then
         length=MPS_A%GetSize()
         allocate(this%LeftTensors(0:length+1),this%RightTensors(0:length+1))
+        !Initialize the border matrices to 1
         this%LeftTensors(0)=new_Tensor(integerONE,integerONE,ONE)
         this%LeftTensors(length+1)=new_Tensor(integerONE,integerONE,ONE)
         this%RightTensors(0)=new_Tensor(integerONE,integerONE,ONE)
         this%RightTensors(length+1)=new_Tensor(integerONE,integerONE,ONE)
+        !Set the source MPSes
         this%MPS_Normal => MPS_A
         this%MPS_Conjugated => MPS_A
         this%length = length
@@ -93,10 +96,12 @@ contains
         length=MPS_A%GetSize()
         if(length.eq.MPS_B%GetSize()) then
             allocate(this%LeftTensors(0:length+1),this%RightTensors(0:length+1))
+            !Initialize the border matrices to 1
             this%LeftTensors(0)=new_Tensor(integerONE,integerONE,ONE)
             this%LeftTensors(length+1)=new_Tensor(integerONE,integerONE,ONE)
             this%RightTensors(0)=new_Tensor(integerONE,integerONE,ONE)
             this%RightTensors(length+1)=new_Tensor(integerONE,integerONE,ONE)
+            !Set the source MPSes
             this%MPS_Normal => MPS_A
             this%MPS_Conjugated => MPS_B
             this%length = length

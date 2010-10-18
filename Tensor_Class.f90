@@ -81,6 +81,7 @@ module Tensor_Class
   contains
     procedure,public :: JoinIndices => JoinIndicesOfTensor3
     procedure,public :: CompactFromBelow => Compact_From_Below_With_Tensor4
+    procedure,public :: Slice => Take_Slice_Of_Tensor3
   end type Tensor3
 
   type,public,extends(Tensor) :: Tensor4
@@ -88,7 +89,8 @@ module Tensor_Class
     complex(8),allocatable :: data(:,:,:,:)
   contains
     procedure,public :: JoinIndices => JoinIndicesOfTensor4
-    procedure,public :: DropIndex => DropAnIndexOfTensor4
+    !procedure,public :: DropIndex => DropAnIndexOfTensor4
+    !procedure,public :: Slice => Take_Slice_Of_Tensor4
   end type Tensor4
 
   type,public,extends(Tensor) :: Tensor5
@@ -96,6 +98,7 @@ module Tensor_Class
     complex(8),allocatable :: data(:,:,:,:,:)
   contains
      procedure,public :: CompactFromBelow => CompactTensor5_From_Below_With_Tensor6
+     procedure,public :: MirrorCompact => Mirror_Compact_Tensor5
   end type Tensor5
 
   type,public,extends(Tensor) :: Tensor6
@@ -146,7 +149,7 @@ module Tensor_Class
 
   interface operator (.xplus.)
      module procedure &
-     &   MultAndCollapse_Tensor3_Tensor4
+     &   MultAndCollapse_Tensor3_Tensor4, MultAndCollapse_Tensor5_Tensor5
   end interface
 
   interface operator (+)
@@ -158,7 +161,8 @@ module Tensor_Class
   end interface
 
   interface MultAndCollapse
-    module procedure MultAndCollapse_Tensor3_Tensor4, MultAndCollapse_Tensor5_Tensor6
+    module procedure MultAndCollapse_Tensor3_Tensor4, MultAndCollapse_Tensor5_Tensor6, &
+        & MultAndCollapse_Tensor5_Tensor5
   end interface
 
   interface assignment (=)
@@ -221,6 +225,10 @@ module Tensor_Class
   interface CompactBelow
     module procedure Compact_From_Below_With_Tensor4, & !Mirror_Compact_Tensor5, Compact_Tensor5, &
                     & CompactTensor5_From_Below_With_Tensor6
+  end interface
+
+  interface MirrorCompact
+    module procedure Mirror_Compact_Tensor5
   end interface
 
 !######################################################################################
@@ -1623,19 +1631,19 @@ integer function InitializationCheck(this) result(error)
           allocate ( aMatrix(downDims(3),upDims(3)) )
           aMatrix=ZERO
           do n=1,upDims(IndexToCompact(1))
-            aMatrix=aMatrix+ matmul( dconjg(Transpose(downTensor%data(n,:,:))) ,matmul( LeftTensor%data, upTensor%data(n,:,:) ) )
+            aMatrix=aMatrix+ matmul( Transpose(downTensor%data(n,:,:)) ,matmul( LeftTensor%data, upTensor%data(n,:,:) ) )
           enddo
       else if (IndexToCompact.equalvector.SECOND) then
           allocate ( aMatrix(downDims(3),upDims(3)) )
           aMatrix=ZERO
           do n=1,upDims(IndexToCompact(1))
-            aMatrix=aMatrix+ matmul( dconjg(Transpose(downTensor%data(:,n,:))) ,matmul( LeftTensor%data, upTensor%data(:,n,:) ) )
+            aMatrix=aMatrix+ matmul( Transpose(downTensor%data(:,n,:)) ,matmul( LeftTensor%data, upTensor%data(:,n,:) ) )
           enddo
       else if (IndexToCompact.equalvector.THIRD) then
           allocate ( aMatrix(downDims(2),upDims(2)) )
           aMatrix=ZERO
           do n=1,upDims(IndexToCompact(1))
-            aMatrix=aMatrix+ matmul( dconjg(Transpose(downTensor%data(:,:,n))) ,matmul( LeftTensor%data, upTensor%data(:,:,n) ) )
+            aMatrix=aMatrix+ matmul( Transpose(downTensor%data(:,:,n)) ,matmul( LeftTensor%data, upTensor%data(:,:,n) ) )
           enddo
       else
         call ThrowException('Compact_From_Left','Index to Compact is not 1,2, or 3',IndexToCompact(1),CriticalError)
@@ -1686,19 +1694,19 @@ integer function InitializationCheck(this) result(error)
           allocate ( aMatrix(upDims(2),downDims(2)) )
           aMatrix=ZERO
           do n=1,upDims(IndexToCompact(1))
-            aMatrix=aMatrix+ matmul( matmul( upTensor%data(n,:,:), RightTensor%data ) , dconjg(Transpose(downTensor%data(n,:,:))) )
+            aMatrix=aMatrix+ matmul( matmul( upTensor%data(n,:,:), RightTensor%data ) , Transpose(downTensor%data(n,:,:)) )
           enddo
       else if (IndexToCompact.equalvector.SECOND) then
           allocate ( aMatrix(upDims(1),downDims(1)) )
           aMatrix=ZERO
           do n=1,upDims(IndexToCompact(1))
-            aMatrix=aMatrix+ matmul( matmul( upTensor%data(:,n,:), RightTensor%data ) , dconjg(Transpose(downTensor%data(:,n,:))) )
+            aMatrix=aMatrix+ matmul( matmul( upTensor%data(:,n,:), RightTensor%data ) , Transpose(downTensor%data(:,n,:)) )
           enddo
       else if (IndexToCompact.equalvector.THIRD) then
           allocate ( aMatrix(upDims(1),downDims(1)) )
           aMatrix=ZERO
           do n=1,upDims(IndexToCompact(1))
-            aMatrix=aMatrix+ matmul( matmul( upTensor%data(:,:,n), RightTensor%data ) , dconjg(Transpose(downTensor%data(:,:,n))) )
+            aMatrix=aMatrix+ matmul( matmul( upTensor%data(:,:,n), RightTensor%data ) , Transpose(downTensor%data(:,:,n)) )
           enddo
       else
         call ThrowException('Compact_From_Right','Index to Compact is not 1,2, or 3',IndexToCompact(1),CriticalError)
@@ -1952,11 +1960,11 @@ integer function InitializationCheck(this) result(error)
 
     !Structure of loop inspired from BLAS level 3
     do freeIndex=1,dims_Of_4(4)
-      do beta=1,dims_Of_4(3)
-        do alpha=1,dims_Of_4(2)
-          do b=1,dims_Of_3(3)
-            rightIndex=beta+(b-1)*dims_Of_4(3)
-            do a=1,dims_Of_3(2)
+     do b=1,dims_Of_3(3)
+       do beta=1,dims_Of_4(3)
+         rightIndex=beta+(b-1)*dims_Of_4(3)
+         do a=1,dims_Of_3(2)
+            do alpha=1,dims_Of_4(2)
               leftIndex=alpha+(a-1)*dims_Of_4(2)
               ctemp=ZERO
               do sumIndex=1,dims_Of_3(1)
@@ -1972,8 +1980,103 @@ integer function InitializationCheck(this) result(error)
     this=new_Tensor(anArray)
 
     end function MultAndCollapse_Tensor3_Tensor4
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+    function Mirror_Compact_Tensor5(upTensor,downTensor,boundIndex) result(theResult)
+        class(Tensor5),intent(IN) :: upTensor,downTensor
+        integer,intent(IN) :: boundIndex(1)
+        type(Tensor4) :: theResult
+        integer :: permutation(5),freeDims(4)
+        integer :: n,index
+
+        if(.not.(upTensor%Initialized.and.downTensor%Initialized)) then
+            call ThrowException('Mirror_Compact_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
+            return
+        endif
+
+        !Skip the bound indices to find the free dimensions
+        index=1
+        do n=1,5
+          if (n.ne.boundIndex(1)) then
+            freeDims(index)=n
+            index=index+1
+          endif
+        enddo
+
+        !Prepare permutation vectors for transposition of bound index to the last position
+        permutation(boundIndex(1))=5
+        permutation(freeDims(1))=1
+        permutation(freeDims(2))=2
+        permutation(freeDims(3))=3
+        permutation(freeDims(4))=4
+
+        theResult=MultAndCollapse(TensorTranspose(upTensor,permutation),TensorTranspose(downTensor,permutation))
+
+    end function Mirror_Compact_Tensor5
 
 !!##################################################################
+
+  function MultAndCollapse_Tensor5_Tensor5(upTensor,downTensor) result(theResult)
+     class(Tensor5),intent(IN) :: upTensor,downTensor
+     type(Tensor4) :: theResult
+     integer :: dimsUp(5),dimsDown(5),newDims(4)
+     integer :: freeIndex1,freeIndex2,freeIndex3,freeIndex4,sumIndex
+     integer :: a,b,c,d,alpha,beta,gama,delta
+     complex(8),allocatable :: anArray(:,:,:,:)
+     integer,parameter :: BoundIndex=5
+
+     if(.not.(upTensor%Initialized.and.downTensor%Initialized)) then
+        call ThrowException('MultAndCollapse_Tensor5_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+     dimsUp=shape(upTensor%data)
+     dimsDown=shape(downTensor%data)
+
+     if(dimsUp(BoundIndex).ne.dimsDown(BoundIndex)) then
+        call ThrowException('MultAndCollapse_Tensor5_Tensor5','Contracted index is not equal on tensors', &
+           & dimsUp(BoundIndex)-dimsDown(BoundIndex),CriticalError)
+        return
+     endif
+
+    newDims=dimsUp(1:4)*dimsDown(1:4)
+
+    allocate(anArray(newDims(1),newDims(2),newDims(3),newDims(4)) )
+    anArray=ZERO
+
+    do sumIndex=1,dimsUp(BoundIndex)
+      do d=1,dimsUp(4)
+      do delta=1,dimsDown(4)
+        freeIndex4=delta+(d-1)*dimsDown(4)
+	    do c=1,dimsUp(3)
+	    do gama=1,dimsDown(3)
+	      freeIndex3=gama+(c-1)*dimsDown(3)
+	      do b=1,dimsUp(2)
+	      do beta=1,dimsDown(2)
+	        freeIndex2=beta+(b-1)*dimsDown(2)
+	        do a=1,dimsUp(1)
+	        do alpha=1,dimsDown(1)
+	          freeIndex1=alpha+(a-1)*dimsDown(1)
+              anArray(freeIndex1,freeIndex2,freeIndex3,freeIndex4)= anArray(freeIndex1,freeIndex2,freeIndex3,freeIndex4) + &
+                & upTensor%data(a,b,c,d,sumIndex) * &
+                & conjg( downTensor%data(alpha,beta,gama,delta,sumIndex) )
+            enddo
+            enddo
+          enddo
+          enddo
+        enddo
+        enddo
+      enddo
+      enddo
+    enddo
+
+    theResult=new_Tensor(anArray)
+    deallocate(anArray)
+
+   end function MultAndCollapse_Tensor5_Tensor5
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
 !!##################################################################
 !!##################################################################
 !!##################################################################
@@ -2190,7 +2293,7 @@ integer function InitializationCheck(this) result(error)
 
 !##################################################################
 
-!
+!POSIBLE CALLING FORMS:
 !aTensor%JoinIndices(FirstAndSecond,Third)
 !aTensor%JoinIndices(Second,FirstAndThird)
 !aTensor%JoinIndices(ThirdAndSecond,First)
@@ -2372,6 +2475,72 @@ function DropAnIndexOfTensor4(this,whichIndexToDrop) result (aTensor)
     return
 
 end function DropAnIndexOfTensor4
+
+function Take_Slice_Of_Tensor4(this,whichIndex,whatValue) result (aTensor)
+    integer,intent(IN) :: whichIndex(1),whatValue
+    class(tensor4),intent(IN) :: this
+    type(tensor3) :: aTensor
+    integer :: dims(4)
+
+     if(this%Initialized) then
+	     if(whichIndex(1).le.FOURTH(1).and.whichIndex(1).ge.FIRST(1)) then
+	        dims=shape(this%data)
+	        if (whatValue.ge.1.and.whatValue.le.dims(whichIndex(1))) then
+		        select case (whichIndex(1))
+		          case (FIRST(1))
+			        aTensor=new_Tensor(this%data(whatValue,:,:,:))
+			      case (SECOND(1))
+			        aTensor=new_Tensor(this%data(:,whatValue,:,:))
+			      case (THIRD(1))
+			        aTensor=new_Tensor(this%data(:,:,whatValue,:))
+			      case (FOURTH(1))
+			        aTensor=new_Tensor(this%data(:,:,:,whatValue))
+			      case default
+			        call ThrowException('Take_Slice_Of_Tensor4','Unexpected Error',whichIndex(1),CriticalError)
+		  	    end select
+	        else
+	            call ThrowException('Take_Slice_Of_Tensor4','Position is not valid',whatValue,CriticalError)
+		  	endif
+	  	else
+	  	    call ThrowException('Take_Slice_Of_Tensor4','Index is inappropriate',whichIndex(1),CriticalError)
+	  	endif
+     else
+        call ThrowException('Take_Slice_Of_Tensor4','Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+end function Take_Slice_Of_Tensor4
+
+!##################################################################
+
+function Take_Slice_Of_Tensor3(this,whichIndex,whatValue) result (aTensor)
+    integer,intent(IN) :: whichIndex(1),whatValue
+    class(tensor3),intent(IN) :: this
+    type(tensor2) :: aTensor
+    integer :: dims(3)
+
+     if(this%Initialized) then
+         if(whichIndex(1).le.THIRD(1).and.whichIndex(1).ge.FIRST(1)) then
+            dims=shape(this%data)
+            if (whatValue.ge.1.and.whatValue.le.dims(whichIndex(1))) then
+                select case (whichIndex(1))
+                  case (FIRST(1))
+                    aTensor=new_Tensor(this%data(whatValue,:,:))
+                  case (SECOND(1))
+                    aTensor=new_Tensor(this%data(:,whatValue,:))
+                  case (THIRD(1))
+                    aTensor=new_Tensor(this%data(:,:,whatValue))
+                  case default
+                    call ThrowException('Take_Slice_Of_Tensor3','Unexpected Error',whichIndex(1),CriticalError)
+                end select
+            else
+                call ThrowException('Take_Slice_Of_Tensor3','Position is not valid',whatValue,CriticalError)
+            endif
+        else
+            call ThrowException('Take_Slice_Of_Tensor3','Index is inappropriate',whichIndex(1),CriticalError)
+        endif
+     else
+        call ThrowException('Take_Slice_Of_Tensor3','Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+end function Take_Slice_Of_Tensor3
 
 !##################################################################
 

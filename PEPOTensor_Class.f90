@@ -179,6 +179,7 @@ contains
    end function new_PEPOTensor_fromTensor6_Transposed
 
 !##################################################################
+!##################################################################
 !###########       Accessor methods
 !##################################################################
    integer function spin_PEPOTensor(this) result(s)

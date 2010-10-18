@@ -47,7 +47,7 @@ Module MPO_Class
   end type MPO
 
   interface new_MPO
-    module procedure new_MPO_Random,new_MPO_fromMPO
+    module procedure new_MPO_Random,new_MPO_fromMPO,new_MPO_Template
   end interface
 
   interface assignment (=)
@@ -85,6 +85,23 @@ Module MPO_Class
 
   end function new_MPO_Random
 
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+  function new_MPO_Template(length) result (this)
+    integer,intent(IN) :: length
+    type(MPO) :: this
+    integer :: n,bond=integerONE,spin=integerONE
+
+    allocate(this%TensorCollection(0:length+1))
+    do n=0,length+1
+        this%TensorCollection(n)=new_MPOTensor(spin,bond,bond)
+    enddo
+    this%Length=length
+    this%Spin=spin
+    this%Bond=bond
+    this%Initialized=.true.
+
+  end function new_MPO_Template
 !##################################################################
    function new_MPO_fromMPO (aMPO) result (this)
      class(MPO),intent(in) :: aMPO

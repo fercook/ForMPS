@@ -357,7 +357,7 @@ module MPSTensor_Class
       class(Tensor2),intent(IN) :: LeftTensor
       type(Tensor2) :: theResult
 
-      theResult=CompactLeft(LeftTensor,upMPSTensor,downMPSTensor,THIRD)
+      theResult=CompactLeft(LeftTensor,upMPSTensor,Conjugate(downMPSTensor),THIRD)
 
    end function LeftProductTwoMPS
 
@@ -366,7 +366,7 @@ module MPSTensor_Class
       class(Tensor2),intent(IN) :: LeftTensor
       type(Tensor2) :: theResult
 
-      theResult=CompactLeft(LeftTensor,anMPSTensor,anMPSTensor,THIRD)
+      theResult=CompactLeft(LeftTensor,anMPSTensor,Conjugate(anMPSTensor),THIRD)
 
    end function LeftProductOneMPS
 
@@ -375,7 +375,7 @@ module MPSTensor_Class
       class(Tensor2),intent(IN) :: RightTensor
       type(Tensor2) :: theResult
 
-      theResult=CompactRight(RightTensor,upMPSTensor,downMPSTensor,THIRD)
+      theResult=CompactRight(RightTensor,upMPSTensor,Conjugate(downMPSTensor),THIRD)
 
    end function RightProductTwoMPS
 
@@ -384,7 +384,7 @@ module MPSTensor_Class
       class(Tensor2),intent(IN) :: RightTensor
       type(Tensor2) :: theResult
 
-      theResult=CompactRight(RightTensor,anMPSTensor,anMPSTensor,THIRD)
+      theResult=CompactRight(RightTensor,anMPSTensor,Conjugate(anMPSTensor),THIRD)
 
    end function RightProductOneMPS
 

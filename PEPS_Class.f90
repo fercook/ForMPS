@@ -234,17 +234,15 @@ Module PEPS_Class
     complex(8), intent(IN) :: factor
     integer :: n,m
 
-!    if(aPEPS%Initialized) then
-!        do m=1,aPEPS%Ylength
-!        do n=1,aPEPS%Xlength
-!            aPEPS%TensorCollection(n,m)= factor * (aPEPS%TensorCollection(n,m))
-!        enddo
-!        enddo
-!    else
-!        call ThrowException('ScalePEPSByFactor','PEPS not initialized',NoErrorCode,CriticalError)
-!    endif
-
-  n=1
+    if(aPEPS%Initialized) then
+        do m=1,aPEPS%Ylength
+        do n=1,aPEPS%Xlength
+            aPEPS%TensorCollection(n,m) = aPEPS%TensorCollection(n,m)
+        enddo
+        enddo
+    else
+        call ThrowException('ScalePEPSByFactor','PEPS not initialized',NoErrorCode,CriticalError)
+    endif
 
   end subroutine ScalePEPSByFactor
 
