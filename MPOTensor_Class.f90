@@ -39,7 +39,7 @@ module MPOTensor_Class
 
   interface new_MPOTensor
      module procedure new_MPOTensor_Random,new_MPOTensor_fromMPOTensor, &
-          & new_MPOTensor_fromSplitData
+          & new_MPOTensor_fromSplitData, new_MPOTensor_fromTensor4_Transposed
   end interface
 
   interface assignment (=)
@@ -119,6 +119,31 @@ contains
      lhs%DRight=rhs%DRight
 
    end subroutine new_MPOTensor_fromAssignment
+
+!##################################################################
+   function new_MPOTensor_fromTensor4_Transposed (tensor,whichDimIsSpinUp,whichDimIsSpinDown,whichDimIsLeft,whichDimIsRight) result (this)
+     type(Tensor4),intent(in) :: tensor
+     integer, intent(IN) :: whichDimIsSpinUp,whichDimIsSpinDown,whichDimIsLeft,whichDimIsRight
+     type(MPOTensor) this
+     integer :: newDims(4)
+
+     newDims=tensor%GetDimensions()
+     if(newDims(whichDimIsSpinUp).eq.newDims(whichDimIsSpinDown)) then
+        newDims(whichDimIsLeft)=1
+        newDims(whichDimIsRight)=2
+        newDims(whichDimIsSpinUp)=3
+        newDims(whichDimIsSpinDown)=4
+        this=TensorTranspose(tensor,newDims)
+        !initialize internal variables
+        newDims=this%GetDimensions()
+        this%spin=newDims(3)
+        this%DLeft=newDims(1)
+        this%DRight=newDims(2)
+     else
+        call ThrowException('MPOTensor from Tensor4','spin dimensions are not equal',NoErrorCode,Warning)
+        return
+     endif
+   end function new_MPOTensor_fromTensor4_Transposed
 
 !##################################################################
 !###########       Accessor methods

@@ -16,6 +16,7 @@
 !    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
 
 module Constants
+
   
   complex(8), parameter :: II=(0.0d0,1.0d0)
   complex(8), parameter :: one=(1.0d0,0.0d0)
@@ -24,16 +25,20 @@ module Constants
   integer, parameter :: integerOne=1
   integer, parameter :: integerZero=0
 
+  integer,parameter :: SpinDimension=0
   integer,parameter :: FirstDimension=1
   integer,parameter :: SecondDimension=2
   integer,parameter :: ThirdDimension=3
   integer,parameter :: FourthDimension=4
+  integer,parameter :: FifthDimension=5
+  integer,parameter :: SixthDimension=6
 
   integer,parameter,dimension(1) :: First  = [1]
   integer,parameter,dimension(1) :: Second = [2]
   integer,parameter,dimension(1) :: Third = [3]
   integer,parameter,dimension(1) :: Fourth = [4]
   integer,parameter,dimension(1) :: Fifth = [5]
+  integer,parameter,dimension(1) :: Sixth = [6]
 
   integer,parameter,dimension(2) :: FirstAndSecond = [1,2]
   integer,parameter,dimension(2) :: FirstAndThird = [1,3]

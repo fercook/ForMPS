@@ -56,6 +56,18 @@ test accesors_work
   assert_false(WasThereError())
 end test
 
+test CreateATransposedTensor
+    type(MPSTensor) :: A
+    type(Tensor3) :: aTensor
+    integer :: spin=2, bondL=3, bondR=4
+    integer :: dims(3)
+
+    aTensor=new_Tensor(bondR,spin,bondL)
+    A=new_MPSTensor(aTensor,SecondDimension,ThirdDimension,FirstDimension)
+    dims=A%GetDimensions()
+    assert_true( dims .equalvector. [bondL, bondR, spin] )
+  assert_false(WasThereError())
+end test
 
 
 test RightCanonTensor
