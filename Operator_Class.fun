@@ -41,21 +41,10 @@ test ApplyOperator
    Correct(:,:,1)=data(:,:,1)
    Correct(:,:,2)=(-1.0d0)*data(:,:,2)
 
-     A=new_MPSTensor(SpinT,DleftT,DrightT,data)
-     B=new_MPSTensor(SpinT,DleftT,DrightT,Correct)
-     C=PauliSigma(3).ApplyTo.(A)
-    assert_equal_within(B.absdiff.C, 0.0d0, 1.0e-5)
-     assert_false(WasThereError())
-end test
-
-test Site_and_Bond_terms
-     type(SiteTerm) :: S
-     type(SiteTermList) :: SList
-     integer :: site=5
-     complex(8) :: amp=1.0d0
-     S=new_SiteTerm(PauliSigma(3),site,amp)
-     SList=new_SiteTermList(PauliSigma(3),site,amp)
-     !call ReduceAmplitude(SList)
+     A=new_MPSTensor(data(:,:,1),data(:,:,2))
+     B=new_MPSTensor(Correct(:,:,1),Correct(:,:,2))
+     C=A.Apply.PauliSigma(3)
+     assert_equal_within(B.absdiff.C, 0.0d0, 1.0e-5)
      assert_false(WasThereError())
 end test
 

@@ -23,7 +23,7 @@ module Operator_Class
   use Tensor_Class
 
   implicit none
-  private
+!  private
 
   public :: PauliSigma
 

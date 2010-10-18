@@ -57,6 +57,7 @@ module Constants
   integer,parameter :: Right = 1
   integer,parameter :: Left = -1
   integer,parameter :: No = 0
+  integer,parameter :: NOCONJUGATE=0
   
   logical,parameter :: Verbose = .true.
 

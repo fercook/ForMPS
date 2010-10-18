@@ -352,40 +352,57 @@ module MPSTensor_Class
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-   function LeftProductTwoMPS(LeftTensor,upMPSTensor,downMPSTensor) result(theResult)
+   function LeftProductTwoMPS(LeftTensor,upMPSTensor,downMPSTensor,ShouldConjugate) result(theResult)
       class(MPSTensor),intent(IN) :: upMPSTensor,downMPSTensor
       class(Tensor2),intent(IN) :: LeftTensor
+      integer,intent(IN),optional :: ShouldConjugate
       type(Tensor2) :: theResult
 
-      theResult=CompactLeft(LeftTensor,upMPSTensor,Conjugate(downMPSTensor),THIRD)
+      If(present(ShouldConjugate)) then
+        theResult=CompactLeft(LeftTensor,upMPSTensor,downMPSTensor,THIRD)
+      else
+        theResult=CompactLeft(LeftTensor,upMPSTensor,Conjugate(downMPSTensor),THIRD)
+      endif
 
    end function LeftProductTwoMPS
 
-   function LeftProductOneMPS(LeftTensor,anMPSTensor) result(theResult)
+   function LeftProductOneMPS(LeftTensor,anMPSTensor,ShouldConjugate) result(theResult)
       class(MPSTensor),intent(IN) :: anMPSTensor
       class(Tensor2),intent(IN) :: LeftTensor
+      integer,intent(IN),optional :: ShouldConjugate
       type(Tensor2) :: theResult
 
-      theResult=CompactLeft(LeftTensor,anMPSTensor,Conjugate(anMPSTensor),THIRD)
-
+      If(present(ShouldConjugate)) then
+        theResult=CompactLeft(LeftTensor,anMPSTensor,anMPSTensor,THIRD)
+      else
+        theResult=CompactLeft(LeftTensor,anMPSTensor,Conjugate(anMPSTensor),THIRD)
+      endif
    end function LeftProductOneMPS
 
-   function RightProductTwoMPS(RightTensor,upMPSTensor,downMPSTensor) result(theResult)
+   function RightProductTwoMPS(RightTensor,upMPSTensor,downMPSTensor,ShouldConjugate) result(theResult)
       class(MPSTensor),intent(IN) :: upMPSTensor,downMPSTensor
       class(Tensor2),intent(IN) :: RightTensor
+      integer,intent(IN),optional :: ShouldConjugate
       type(Tensor2) :: theResult
 
-      theResult=CompactRight(RightTensor,upMPSTensor,Conjugate(downMPSTensor),THIRD)
-
+      If(present(ShouldConjugate)) then
+        theResult=CompactRight(RightTensor,upMPSTensor,downMPSTensor,THIRD)
+      else
+        theResult=CompactRight(RightTensor,upMPSTensor,Conjugate(downMPSTensor),THIRD)
+      endif
    end function RightProductTwoMPS
 
-   function RightProductOneMPS(RightTensor,anMPSTensor) result(theResult)
+   function RightProductOneMPS(RightTensor,anMPSTensor,ShouldConjugate) result(theResult)
       class(MPSTensor),intent(IN) :: anMPSTensor
       class(Tensor2),intent(IN) :: RightTensor
+      integer,intent(IN),optional :: ShouldConjugate
       type(Tensor2) :: theResult
 
-      theResult=CompactRight(RightTensor,anMPSTensor,Conjugate(anMPSTensor),THIRD)
-
+      If(present(ShouldConjugate)) then
+          theResult=CompactRight(RightTensor,anMPSTensor,anMPSTensor,THIRD)
+      else
+          theResult=CompactRight(RightTensor,anMPSTensor,Conjugate(anMPSTensor),THIRD)
+      endif
    end function RightProductOneMPS
 
 !##################################################################
