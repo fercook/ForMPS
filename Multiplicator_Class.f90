@@ -37,8 +37,8 @@ module Multiplicator_Class
         type(MPS),pointer :: MPS_Normal => null()
         type(MPS),pointer :: MPS_Conjugated => null()
     contains
-        !procedure,public :: LeftAtSite => Multiplicator_Left
-        !procedure,public :: RighAtSite => Multiplicator_Right
+        procedure,public :: LeftAt => Multiplicator_Left
+        procedure,public :: RightAt => Multiplicator_Right
         procedure,public :: Reset => Reset_Multiplicator
         procedure,public :: Delete => Delete_Multiplicator
     end type Multiplicator
@@ -48,11 +48,11 @@ module Multiplicator_Class
     end interface
 
     interface LeftAtSite
-        module procedure Multiplicator_Left_Clean,Multiplicator_Left_with_operator
+        module procedure Multiplicator_Left
     end interface
 
     interface RightAtSite
-        module procedure Multiplicator_Right_Clean,Multiplicator_Right_with_operator
+        module procedure Multiplicator_Right
     end interface
 
 !##################################################################
@@ -160,31 +160,11 @@ contains
 
 
 !##################################################################
-!##################################################################
 
-    recursive function Multiplicator_Left_Clean(this,site) result(Mult_LeftAtSite)
+    recursive function Multiplicator_Left(this,site,anOperator) result(Mult_LeftAtSite)
         class(Multiplicator),intent(INOUT) :: this
         integer,intent(IN) :: site
-        type(Tensor2) :: Mult_LeftAtSite
-
-        if(this%Initialized) then
-            if (this%LeftTensors(site)%IsInitialized()) then
-                Mult_LeftAtSite=this%LeftTensors(site)
-            else
-                this%LeftTensors(site)=MPSLeftProduct(Multiplicator_Left_Clean(this,site-1), &
-                        & this%MPS_Normal%GetTensorAt(site),this%MPS_Conjugated%GetTensorAt(site))
-                Mult_LeftAtSite=this%LeftTensors(site)
-            endif
-        else
-            call ThrowException('new_Multiplicator_two_MPS','MPS not initialized',NoErrorCode,CriticalError)
-        endif
-    end function Multiplicator_Left_Clean
-
-
-    function Multiplicator_Left_with_operator(this,site,anOperator) result(Mult_LeftAtSite)
-        class(Multiplicator),intent(INOUT) :: this
-        integer,intent(IN) :: site
-        class(SpinOperator),intent(IN) :: anOperator
+        class(SpinOperator),intent(IN),optional :: anOperator
         type(Tensor2) :: Mult_LeftAtSite
         type(MPSTensor) :: OperatedTensor
 
@@ -192,41 +172,47 @@ contains
             if (this%LeftTensors(site)%IsInitialized()) then
                 Mult_LeftAtSite=this%LeftTensors(site)
             else
-                OperatedTensor=this%MPS_Normal%GetTensorAt(site)
-                this%LeftTensors(site)=MPSLeftProduct(Multiplicator_Left_Clean(this,site-1), &
+                if (present(anOperator)) then
+                    OperatedTensor=this%MPS_Normal%GetTensorAt(site)
+                    this%LeftTensors(site)=MPSLeftProduct(Multiplicator_Left(this,site-1), &
                         & OperatedTensor.Apply.anOperator,this%MPS_Conjugated%GetTensorAt(site))
+                else
+                    this%LeftTensors(site)=MPSLeftProduct(Multiplicator_Left(this,site-1), &
+                        & this%MPS_Normal%GetTensorAt(site),this%MPS_Conjugated%GetTensorAt(site))
+                endif
                 Mult_LeftAtSite=this%LeftTensors(site)
             endif
         else
             call ThrowException('new_Multiplicator_two_MPS','MPS not initialized',NoErrorCode,CriticalError)
         endif
-    end function Multiplicator_Left_with_operator
+    end function Multiplicator_Left
 
 !##################################################################
+!##################################################################
+!
+!    recursive function Multiplicator_Right_Clean(this,site) result(Mult_RightAtSite)
+!        class(Multiplicator),intent(INOUT) :: this
+!        integer,intent(IN) :: site
+!        type(Tensor2) :: Mult_RightAtSite
+!
+!        if(this%Initialized) then
+!            if (this%RightTensors(site)%IsInitialized()) then
+!                Mult_RightAtSite=this%RightTensors(site)
+!            else
+!                this%RightTensors(site)=MPSRightProduct(Multiplicator_Right_Clean(this,site+1), &
+!                    & this%MPS_Normal%GetTensorAt(site),this%MPS_Conjugated%GetTensorAt(site))
+!                Mult_RightAtSite=this%RightTensors(site)
+!            endif
+!        else
+!            call ThrowException('new_Multiplicator_two_MPS','MPS not initialized',NoErrorCode,CriticalError)
+!        endif
+!    end function Multiplicator_Right_Clean
 
-    recursive function Multiplicator_Right_Clean(this,site) result(Mult_RightAtSite)
+
+    recursive function Multiplicator_Right(this,site,anOperator) result(Mult_RightAtSite)
         class(Multiplicator),intent(INOUT) :: this
         integer,intent(IN) :: site
-        type(Tensor2) :: Mult_RightAtSite
-
-        if(this%Initialized) then
-            if (this%RightTensors(site)%IsInitialized()) then
-                Mult_RightAtSite=this%RightTensors(site)
-            else
-                this%RightTensors(site)=MPSRightProduct(Multiplicator_Right_Clean(this,site+1), &
-                    & this%MPS_Normal%GetTensorAt(site),this%MPS_Conjugated%GetTensorAt(site))
-                Mult_RightAtSite=this%RightTensors(site)
-            endif
-        else
-            call ThrowException('new_Multiplicator_two_MPS','MPS not initialized',NoErrorCode,CriticalError)
-        endif
-    end function Multiplicator_Right_Clean
-
-
-    function Multiplicator_Right_with_operator(this,site,anOperator) result(Mult_RightAtSite)
-        class(Multiplicator),intent(INOUT) :: this
-        integer,intent(IN) :: site
-        class(SpinOperator),intent(IN) :: anOperator
+        class(SpinOperator),intent(IN),optional :: anOperator
         type(Tensor2) :: Mult_RightAtSite
         type(MPSTensor) :: OperatedTensor
 
@@ -234,15 +220,20 @@ contains
             if (this%RightTensors(site)%IsInitialized()) then
                 Mult_RightAtSite=this%RightTensors(site)
             else
-                OperatedTensor=this%MPS_Normal%GetTensorAt(site)
-                this%RightTensors(site)=MPSRightProduct(Multiplicator_Right_Clean(this,site+1), &
-                    & OperatedTensor.Apply.anOperator,this%MPS_Conjugated%GetTensorAt(site))
+                if (present(anOperator)) then
+                    OperatedTensor=this%MPS_Normal%GetTensorAt(site)
+                    this%RightTensors(site)=MPSRightProduct(Multiplicator_Right(this,site+1), &
+                        & OperatedTensor.Apply.anOperator,this%MPS_Conjugated%GetTensorAt(site))
+                else
+                    this%RightTensors(site)=MPSRightProduct(Multiplicator_Right(this,site+1), &
+                        & this%MPS_Normal%GetTensorAt(site),this%MPS_Conjugated%GetTensorAt(site))
+                endif
                 Mult_RightAtSite=this%RightTensors(site)
             endif
         else
             call ThrowException('new_Multiplicator_two_MPS','MPS not initialized',NoErrorCode,CriticalError)
         endif
-    end function Multiplicator_Right_with_operator
+    end function Multiplicator_Right
 
 !##################################################################
 !##################################################################

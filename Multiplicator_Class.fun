@@ -37,17 +37,18 @@ test type_creation_deletion
 
   anMPS=new_MPS(length,spin,bond)
   Prod=new_Multiplicator(anMPS)
-  overlap=(LeftAtSite(Prod,1)).xx.(Multiplicator_Right_Clean(Prod,2))
+  overlap=(LeftAtSite(Prod,1)).xx.(Multiplicator_Right(Prod,2))
   print *,overlap
-  matrix=(Multiplicator_Left_Clean(Prod,2)).x.(Multiplicator_Right_Clean(Prod,3))
+  !matrix=(Multiplicator_Left_Clean(Prod,2)).x.(Multiplicator_Right_Clean(Prod,3))
+  matrix=(Prod%LeftAt(2)).x.(RightAtSite(Prod,3))
   call matrix%PrintDimensions()
 
   call anMPS%Canonize()
   call Prod%Reset(LEFT)
   call Prod%Reset(RIGHT)
-  matrix=(Multiplicator_Left_Clean(Prod,2)).x.(Multiplicator_Right_Clean(Prod,3))
+  matrix=(Multiplicator_Left(Prod,2)).x.(Prod%RightAt(3))
   call matrix%PrintDimensions()
-  overlap=(Multiplicator_Left_Clean(Prod,0)).xx.(Multiplicator_Right_Clean(Prod,1))
+  overlap=(Multiplicator_Left(Prod,0)).xx.(Multiplicator_Right(Prod,1))
   print *,overlap
   assert_equal_within(abs(overlap),1.0d0,1.0e-8)
 
