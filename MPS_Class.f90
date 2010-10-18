@@ -52,7 +52,7 @@ Module MPS_Class
   end type MPS
 
   interface new_MPS
-    module procedure new_MPS_Random,new_MPS_fromMPS
+    module procedure new_MPS_Random,new_MPS_fromMPS,new_MPS_Template
   end interface
 
   interface assignment (=)
@@ -89,6 +89,26 @@ Module MPS_Class
     this%Initialized=.true.
 
   end function new_MPS_Random
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+  function new_MPS_Template(length) result (this)
+    integer,intent(IN) :: length
+    type(MPS) :: this
+    integer :: n,spin=1
+
+    allocate(this%TensorCollection(0:length+1))
+    do n=0,length+1
+        this%TensorCollection(0)=new_MPSTensor(spin,integerONE,integerONE,ONE)
+    enddo
+    this%Length=length
+    this%Spin=spin
+    this%bond=integerONE
+    Allocate(this%BondList(0:Length+1))
+    this%bondList=integerONE
+    this%Initialized=.true.
+
+  end function new_MPS_Template
 
 !##################################################################
    function new_MPS_fromMPS (aMPS) result (this)

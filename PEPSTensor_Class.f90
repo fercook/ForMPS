@@ -41,6 +41,7 @@ module PEPSTensor_Class
      procedure,public :: getSpin => Spin_PEPSTensor
      procedure,public :: PrintDimensions => Print_PEPSTensor_Dimensions
      procedure,public :: ApplyOperator => Apply_Operator_To_PEPS_Spin_Dimension
+     procedure,public :: Collapse => Collapse_PEPS_Into_Tensor4
   end type PEPSTensor
 
 !###############################
@@ -64,6 +65,9 @@ module PEPSTensor_Class
      module procedure Apply_Operator_To_PEPS_Spin_Dimension
   end interface
 
+  interface CollapsePEPS
+     module procedure Collapse_PEPS_Into_Tensor4, Collapse_Two_PEPS_into_Tensor4
+  end interface
 
 !######################################################################################
 !######################################################################################
@@ -337,9 +341,44 @@ module PEPSTensor_Class
 
    end function Apply_Operator_To_PEPS_Spin_Dimension
 
+!##################################################################
+
+    function Collapse_PEPS_Into_Tensor4(this,anOperator) result (aTensor)
+        class(PEPSTensor),intent(IN) :: this
+        class(SpinOperator),intent(IN),optional :: anOperator
+        type(Tensor4) :: aTensor
+
+        if(this%IsInitialized()) then
+            if(present(anOperator)) then
+                aTensor=MirrorCompact(this, this.apply.anOperator, FIFTH)
+            else
+                aTensor=MirrorCompact(this, this, FIFTH)
+            endif
+        else
+            call ThrowException('Collapse_PEPS_Into_Tensor4','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function Collapse_PEPS_Into_Tensor4
 
 !##################################################################
-!##################################################################
+
+    function Collapse_Two_PEPS_into_Tensor4(upPEPS,downPEPS,anOperator) result (aTensor)
+        class(PEPSTensor),intent(IN) :: upPEPS,downPEPS
+        class(SpinOperator),intent(IN),optional :: anOperator
+        type(Tensor4) :: aTensor
+
+        if(upPEPS%IsInitialized().and.downPEPS%IsInitialized()) then
+            if(present(anOperator)) then
+                aTensor=MirrorCompact(upPEPS.apply.anOperator, downPEPS, FIFTH)
+            else
+                aTensor=MirrorCompact(upPEPS, downPEPS, FIFTH)
+            endif
+        else
+            call ThrowException('Collapse_Two_PEPS_into_Tensor4','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function Collapse_Two_PEPS_into_Tensor4
+
 !##################################################################
 !##################################################################
 

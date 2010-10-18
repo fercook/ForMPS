@@ -274,7 +274,7 @@ test Right_Compactification
   T_Tensor=new_Tensor(data)
   T_Matrix=new_Tensor(matrix)
   T_Correct=new_Tensor(CorrectResult)
-  T_Compacted=CompactRight(T_Matrix,T_Tensor,T_Tensor,THiRD)
+  T_Compacted=CompactRight(T_Matrix,T_Tensor,Conjugate(T_Tensor),THiRD)
   assert_equal_within(T_Compacted.absdiff.T_Correct, 0.0d0, 1.0e-8)
 
 end test
@@ -317,7 +317,7 @@ test Left_Compactification
   T_Tensor=new_Tensor(data)
   T_Matrix=new_Tensor(matrix)
   T_Correct=new_Tensor(CorrectResult)
-  T_Compacted=CompactLeft(T_Matrix,T_Tensor,T_Tensor,THiRD)
+  T_Compacted=CompactLeft(T_Matrix,T_Tensor,Conjugate(T_Tensor),THiRD)
   assert_equal_within(T_Compacted.absdiff.T_Correct, 0.0d0, 1.0e-8)
 
 end test
