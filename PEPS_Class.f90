@@ -237,7 +237,7 @@ Module PEPS_Class
     if(aPEPS%Initialized) then
         do m=1,aPEPS%Ylength
         do n=1,aPEPS%Xlength
-            aPEPS%TensorCollection(n,m) = new_PEPSTensor(factor*new_Tensor5(aPEPS%TensorCollection(n,m)))
+            aPEPS%TensorCollection(n,m) = aPEPS%TensorCollection(n,m)
         enddo
         enddo
     else
