@@ -89,8 +89,7 @@ module Tensor_Class
     complex(8),allocatable :: data(:,:,:,:)
   contains
     procedure,public :: JoinIndices => JoinIndicesOfTensor4
-    !procedure,public :: DropIndex => DropAnIndexOfTensor4
-    !procedure,public :: Slice => Take_Slice_Of_Tensor4
+    procedure,public :: Slice => Take_Slice_Of_Tensor4
   end type Tensor4
 
   type,public,extends(Tensor) :: Tensor5
@@ -145,6 +144,11 @@ module Tensor_Class
   interface operator (.xx.)
      module procedure &
      &   Tensor4_doubletimes_Tensor4,Tensor2_doubletimes_Tensor2
+  end interface
+
+  interface operator (.xxx.)
+     module procedure &
+     &   Tensor3_tripletimes_Tensor3
   end interface
 
   interface operator (.xplus.)
@@ -851,6 +855,8 @@ module Tensor_Class
         class is (Tensor6)
             deallocate(Typed_this%data)
 	 	class is (Tensor)
+	        call ThrowException('delete_Tensor','Unknown class for tensor',NoErrorCode,error)
+	        return
 	 end select
 
      !Flip flag
@@ -1593,6 +1599,34 @@ integer function InitializationCheck(this) result(error)
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
+    function Tensor3_tripletimes_Tensor3 ( tensorA,tensorB) result(theResult)
+        class(Tensor3),intent(IN) :: tensorA,tensorB
+        complex(8) :: theResult
+        integer :: a,b,c,dimsOfA(3),dimsOfB(3)
+
+        if(TensorA%Initialized.and.TensorB%Initialized) then
+            dimsofA=shape(tensorA%data)
+            dimsofB=shape(tensorB%data)
+            if (dimsofA.equalvector.dimsOfB) then
+                theResult=ZERO
+                do c=1,dimsOfA(3)
+                  do b=1,dimsOfA(3)
+                    do a=1,dimsOfA(3)
+                      theResult=theResult+tensorA%data(a,b,c)*tensorB%data(a,b,c)
+                    enddo
+                  enddo
+                enddo
+            else
+                call ThrowException('Tensor3_tripletimes_Tensor3','Tensor not initialized',NoErrorCode,CriticalError)
+            endif
+        else
+            call ThrowException('Tensor3_tripletimes_Tensor3','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function Tensor3_tripletimes_Tensor3
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
    function Mirror_Compact_Left_With_Tensor3(this,aTensor,IndexToCompact) result(theResult)
        class(Tensor2),intent(IN) :: this
        integer :: IndexToCompact(1)
@@ -1901,13 +1935,13 @@ integer function InitializationCheck(this) result(error)
         do beta=1,dims_Of_6(3)
         do alpha=1,dims_Of_6(2)
             do d=1,dims_Of_5(5)
-            multIndex4=delta+(d-1)*dims_Of_6(5)
+            multIndex4=d+(delta-1)*dims_Of_5(5)
             do g=1,dims_Of_5(4)
-            multIndex3=gama+(g-1)*dims_Of_6(4)
+            multIndex3=g+(gama-1)*dims_Of_5(4)
             do b=1,dims_Of_5(3)
-            multIndex2=beta+(b-1)*dims_Of_6(3)
+            multIndex2=b+(beta-1)*dims_Of_5(3)
             do a=1,dims_Of_5(2)
-              multIndex1=alpha+(a-1)*dims_Of_6(2)
+              multIndex1=a+(alpha-1)*dims_Of_5(2)
               ctemp=ZERO
               do sumIndex=1,dims_Of_5(1)
                  ctemp=ctemp+aTensor5%data(sumIndex,a,b,g,d)*aTensor6%data(sumIndex,alpha,beta,gama,delta,freeIndex)
@@ -1960,12 +1994,12 @@ integer function InitializationCheck(this) result(error)
 
     !Structure of loop inspired from BLAS level 3
     do freeIndex=1,dims_Of_4(4)
-     do b=1,dims_Of_3(3)
-       do beta=1,dims_Of_4(3)
-         rightIndex=beta+(b-1)*dims_Of_4(3)
-         do a=1,dims_Of_3(2)
-            do alpha=1,dims_Of_4(2)
-              leftIndex=alpha+(a-1)*dims_Of_4(2)
+    do beta=1,dims_Of_4(3)
+      do b=1,dims_Of_3(3)
+        rightIndex=b+(beta-1)*dims_Of_3(3)
+          do alpha=1,dims_Of_4(2)
+            do a=1,dims_Of_3(2)
+              leftIndex=a+(alpha-1)*dims_Of_3(2)
               ctemp=ZERO
               do sumIndex=1,dims_Of_3(1)
                  ctemp=ctemp+aTensor3%data(sumIndex,a,b)*aTensor4%data(sumIndex,alpha,beta,freeIndex)
@@ -2449,32 +2483,6 @@ function JoinIndicesOfTensor4(this,firstindex,secondindex) result (aTensor)
 end function JoinIndicesOfTensor4
 
 !##################################################################
-
-function DropAnIndexOfTensor4(this,whichIndexToDrop) result (aTensor)
-    integer,intent(IN) :: whichIndexToDrop(1)
-    class(tensor4),intent(IN) :: this
-    type(tensor3) :: aTensor
-
-     if(.not.(this%Initialized)) then
-        call ThrowException('DropAnIndexOfTensor4','Tensor not initialized',NoErrorCode,CriticalError)
-        return
-     endif
-
-    select case (whichIndexToDrop(1))
-      case (first(1))
-        aTensor=new_Tensor(this%data(1,:,:,:))
-      case (second(1))
-        aTensor=new_Tensor(this%data(:,1,:,:))
-      case (third(1))
-        aTensor=new_Tensor(this%data(:,:,1,:))
-      case (fourth(1))
-        aTensor=new_Tensor(this%data(:,:,:,1))
-      case default
-        call ThrowException('DropAnIndexOfTensor4','Index is inappropriate',whichIndexToDrop(1),CriticalError)
-    end select
-    return
-
-end function DropAnIndexOfTensor4
 
 function Take_Slice_Of_Tensor4(this,whichIndex,whatValue) result (aTensor)
     integer,intent(IN) :: whichIndex(1),whatValue

@@ -54,10 +54,14 @@ module Constants
   integer,parameter,dimension(2) :: FourthAndSecond = [4,2]
   integer,parameter,dimension(2) :: FourthAndThird = [4,3]
 
-  integer,parameter :: Right = 1
-  integer,parameter :: Left = -1
+  enum,bind(C)
+  enumerator :: LEFT, RIGHT, UP, DOWN
+  end enum
+
   integer,parameter :: No = 0
-  integer,parameter :: NOCONJUGATE=0
+  integer,parameter :: Yes = 1
+  integer,parameter :: DONOTCONJUGATE=NO
+  integer,parameter :: UNDEFINED = -999
   
   logical,parameter :: Verbose = .true.
 

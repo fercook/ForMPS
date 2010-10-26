@@ -49,7 +49,6 @@ test type_creation_deletion
   matrix=(Multiplicator_Left(Prod,2)).x.(Prod%RightAt(3))
   call matrix%PrintDimensions()
   overlap=(Multiplicator_Left(Prod,0)).xx.(Multiplicator_Right(Prod,1))
-  print *,overlap
   assert_equal_within(abs(overlap),1.0d0,1.0e-8)
 
   call Prod%delete()
@@ -81,5 +80,34 @@ test twoMPSsizes
 
   call Prod%delete()
 end test
+
+
+test MultiplicatorMPOMPS
+    type(MPO) :: anMPO
+    type(MPS) :: anMPS,anotherMPS,combinedMPOMPS
+    integer :: bondMPS=20,bondMPO=4, Length=6, spin=2
+    type(Multiplicator) :: NormalMult
+    type(Multiplicator_With_MPO) :: MPOMult
+    complex(8) :: overlapCombined,overlapWithMPO
+    type(MPSTensor) :: tempMPS
+
+    !Define MPS and MPO, then canonize
+    anMPO=new_MPO(Length,spin,bondMPO)
+    anMPS=new_MPS(Length,spin,bondMPS)
+    anotherMPS=new_MPS(Length,spin,bondMPS)
+    call anMPS%Canonize()
+    call anotherMPS%Canonize()
+    !Create multiplicators and combined MPO times MPS
+    combinedMPOMPS=anMPO.ApplyMPOTo.anMPS
+    NormalMult=new_Multiplicator(combinedMPOMPS,anotherMPS)
+    MPOMult=new_Multiplicator(anMPS,anotherMPS,anMPO,YES)
+    !Compute Overlaps
+    overlapCombined=NormalMult%LeftAt(0).xx.NormalMult%RightAt(1)
+    overlapWithMPO=MPOMult%MPSLeftAt(0).xxx.MPOMult%MPSRightAt(1)
+    assert_equal_within(abs(overlapCombined),abs(overlapWithMPO),1E-8)
+    assert_false(WasThereError())
+
+end test
+!
 
 end test_suite

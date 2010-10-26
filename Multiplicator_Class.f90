@@ -24,6 +24,7 @@ module Multiplicator_Class
   use MPSTensor_Class
   use MPOTensor_Class
   use MPS_Class
+  use MPO_Class
 
     implicit none
     !private
@@ -32,10 +33,11 @@ module Multiplicator_Class
         private
         integer :: Length
         logical :: Initialized=.false.
+        integer :: IsMPSBelowConjugated
         type(Tensor2),allocatable :: LeftTensors(:)
         type(Tensor2),allocatable :: RightTensors(:)
-        type(MPS),pointer :: MPS_Normal => null()
-        type(MPS),pointer :: MPS_Conjugated => null()
+        type(MPS),pointer :: MPS_Above => null()
+        type(MPS),pointer :: MPS_Below => null()
     contains
         procedure,public :: LeftAt => Multiplicator_Left
         procedure,public :: RightAt => Multiplicator_Right
@@ -43,16 +45,25 @@ module Multiplicator_Class
         procedure,public :: Delete => Delete_Multiplicator
     end type Multiplicator
 
+    type, extends(Multiplicator) :: Multiplicator_With_MPO
+        private
+        type(MPO),pointer :: MPO_Center => null()
+    contains
+        procedure,public :: MPSLeftAt => MultiplicatorMPO_Left
+        procedure,public :: MPSRightAt => MultiplicatorMPO_Right
+    end type Multiplicator_With_MPO
+
     interface new_Multiplicator
-        module procedure new_Multiplicator_one_MPS,new_Multiplicator_two_MPS
+        module procedure new_Multiplicator_one_MPS,new_Multiplicator_two_MPS, &
+            & new_MultiplicatorMPO_one_MPS,new_MultiplicatorMPO_two_MPS
     end interface
 
     interface LeftAtSite
-        module procedure Multiplicator_Left
+        module procedure Multiplicator_Left,MultiplicatorMPO_Left
     end interface
 
     interface RightAtSite
-        module procedure Multiplicator_Right
+        module procedure Multiplicator_Right,MultiplicatorMPO_Right
     end interface
 
 !##################################################################
@@ -64,7 +75,7 @@ contains
 !##################################################################
 
   function new_Multiplicator_one_MPS(MPS_A) result (this)
-    type(MPS),target,intent(IN) :: MPS_A
+    class(MPS),target,intent(IN) :: MPS_A
     type(Multiplicator) :: this
     integer :: length
 
@@ -77,8 +88,8 @@ contains
         this%RightTensors(0)=new_Tensor(integerONE,integerONE,ONE)
         this%RightTensors(length+1)=new_Tensor(integerONE,integerONE,ONE)
         !Set the source MPSes
-        this%MPS_Normal => MPS_A
-        this%MPS_Conjugated => MPS_A
+        this%MPS_Above => MPS_A
+        this%MPS_Below => MPS_A
         this%length = length
         this%Initialized = .true.
     else
@@ -102,8 +113,8 @@ contains
             this%RightTensors(0)=new_Tensor(integerONE,integerONE,ONE)
             this%RightTensors(length+1)=new_Tensor(integerONE,integerONE,ONE)
             !Set the source MPSes
-            this%MPS_Normal => MPS_A
-            this%MPS_Conjugated => MPS_B
+            this%MPS_Above => MPS_A
+            this%MPS_Below => MPS_B
             this%length = length
             this%Initialized = .true.
         else
@@ -121,12 +132,16 @@ contains
     integer :: n,error=0
 
     if(this%Initialized) then
-        this%MPS_Normal => null()
-        this%MPS_Conjugated => null()
+        this%MPS_Above => null()
+        this%MPS_Below => null()
         do n=0,this%length+1
             if(this%LeftTensors(n)%IsInitialized()) error=this%LeftTensors(n)%Delete()
             if(this%RightTensors(n)%IsInitialized()) error=this%RightTensors(n)%Delete()
         enddo
+	    select type (Typed_this => this)
+	        class is (Multiplicator_With_MPO)
+	           typed_this%MPO_Center => null()
+        end select
         this%Initialized=.false.
     else
         call ThrowException('Delete_Multiplicator','Multiplicator is already deleted',NoErrorCode,Warning)
@@ -135,13 +150,13 @@ contains
 
 !##################################################################
 
-  subroutine Reset_Multiplicator(this,Direction)
+  subroutine Reset_Multiplicator(this,aDirection)
     class(Multiplicator),intent(INOUT) :: this
-    integer,intent(IN) :: Direction
+    integer,intent(IN) :: aDirection
     integer :: n,error=0
 
     if(this%Initialized) then
-        select case (Direction)
+        select case (aDirection)
             case(LEFT)
                 do n=1,this%length
                     if(this%LeftTensors(n)%IsInitialized()) error=this%LeftTensors(n)%Delete()
@@ -151,7 +166,7 @@ contains
                     if(this%RightTensors(n)%IsInitialized()) error=this%RightTensors(n)%Delete()
                 enddo
             case default
-                call ThrowException('Reset_Multiplicator','Direction must be LEFT or RIGHT',Direction,CriticalError)
+                call ThrowException('Reset_Multiplicator','Direction must be LEFT or RIGHT',aDirection,CriticalError)
         end select
     else
         call ThrowException('Reset_Multiplicator','Multiplicator is not initialized',NoErrorCode,CriticalError)
@@ -172,15 +187,19 @@ contains
             if (this%LeftTensors(site)%IsInitialized()) then
                 Mult_LeftAtSite=this%LeftTensors(site)
             else
-                if (present(anOperator)) then
-                    OperatedTensor=this%MPS_Normal%GetTensorAt(site)
-                    this%LeftTensors(site)=MPSLeftProduct(Multiplicator_Left(this,site-1), &
-                        & OperatedTensor.Apply.anOperator,this%MPS_Conjugated%GetTensorAt(site))
-                else
-                    this%LeftTensors(site)=MPSLeftProduct(Multiplicator_Left(this,site-1), &
-                        & this%MPS_Normal%GetTensorAt(site),this%MPS_Conjugated%GetTensorAt(site))
-                endif
-                Mult_LeftAtSite=this%LeftTensors(site)
+                select type (Typed_this => this)
+                    class is (Multiplicator_With_MPO)
+		                OperatedTensor=Typed_this%MPO_Center%GetTensorAt(site).applyTo.Typed_this%MPS_Above%GetTensorAt(site)
+                    class is (Multiplicator)
+		                if (present(anOperator)) then
+		                    OperatedTensor=Typed_this%MPS_Above%GetTensorAt(site).Apply.anOperator
+		                else
+		                    OperatedTensor=Typed_this%MPS_Above%GetTensorAt(site)
+		                endif
+                end select
+                Mult_LeftAtSite=MPSLeftProduct(Multiplicator_Left(this,site-1), &
+                                & OperatedTensor,this%MPS_Below%GetTensorAt(site))
+                this%LeftTensors(site)=Mult_LeftAtSite
             endif
         else
             call ThrowException('new_Multiplicator_two_MPS','MPS not initialized',NoErrorCode,CriticalError)
@@ -189,25 +208,6 @@ contains
 
 !##################################################################
 !##################################################################
-!
-!    recursive function Multiplicator_Right_Clean(this,site) result(Mult_RightAtSite)
-!        class(Multiplicator),intent(INOUT) :: this
-!        integer,intent(IN) :: site
-!        type(Tensor2) :: Mult_RightAtSite
-!
-!        if(this%Initialized) then
-!            if (this%RightTensors(site)%IsInitialized()) then
-!                Mult_RightAtSite=this%RightTensors(site)
-!            else
-!                this%RightTensors(site)=MPSRightProduct(Multiplicator_Right_Clean(this,site+1), &
-!                    & this%MPS_Normal%GetTensorAt(site),this%MPS_Conjugated%GetTensorAt(site))
-!                Mult_RightAtSite=this%RightTensors(site)
-!            endif
-!        else
-!            call ThrowException('new_Multiplicator_two_MPS','MPS not initialized',NoErrorCode,CriticalError)
-!        endif
-!    end function Multiplicator_Right_Clean
-
 
     recursive function Multiplicator_Right(this,site,anOperator) result(Mult_RightAtSite)
         class(Multiplicator),intent(INOUT) :: this
@@ -220,15 +220,19 @@ contains
             if (this%RightTensors(site)%IsInitialized()) then
                 Mult_RightAtSite=this%RightTensors(site)
             else
-                if (present(anOperator)) then
-                    OperatedTensor=this%MPS_Normal%GetTensorAt(site)
-                    this%RightTensors(site)=MPSRightProduct(Multiplicator_Right(this,site+1), &
-                        & OperatedTensor.Apply.anOperator,this%MPS_Conjugated%GetTensorAt(site))
-                else
-                    this%RightTensors(site)=MPSRightProduct(Multiplicator_Right(this,site+1), &
-                        & this%MPS_Normal%GetTensorAt(site),this%MPS_Conjugated%GetTensorAt(site))
-                endif
-                Mult_RightAtSite=this%RightTensors(site)
+                select type (Typed_this => this)
+                    class is (Multiplicator_With_MPO)
+                        OperatedTensor=Typed_this%MPO_Center%GetTensorAt(site).applyTo.Typed_this%MPS_Above%GetTensorAt(site)
+                    class is (Multiplicator)
+                        if (present(anOperator)) then
+                            OperatedTensor=Typed_this%MPS_Above%GetTensorAt(site).Apply.anOperator
+                        else
+                            OperatedTensor=Typed_this%MPS_Above%GetTensorAt(site)
+                        endif
+                end select
+                Mult_RightAtSite=MPSRightProduct(Multiplicator_Right(this,site+1), &
+                        & OperatedTensor,this%MPS_Below%GetTensorAt(site))
+                this%RightTensors(site)=Mult_RightAtSite
             endif
         else
             call ThrowException('new_Multiplicator_two_MPS','MPS not initialized',NoErrorCode,CriticalError)
@@ -237,5 +241,130 @@ contains
 
 !##################################################################
 !##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+
+  function new_MultiplicatorMPO_one_MPS(MPS_A,MPO_C,ShouldConjugate) result (this)
+    class(MPS),target,intent(IN) :: MPS_A
+    class(MPO),target,intent(IN) :: MPO_C
+    integer,intent(IN),optional :: ShouldConjugate
+    type(Multiplicator_With_MPO) :: this
+    integer :: length
+
+    if (MPS_A%IsInitialized().and.MPO_C%IsInitialized()) then
+        length=MPS_A%GetSize()
+        if(MPO_C%GetSize().eq.length) then
+	        allocate(this%LeftTensors(0:length+1),this%RightTensors(0:length+1))
+	        !Initialize the border matrices to 1
+	        this%LeftTensors(0)=new_Tensor(integerONE,integerONE,ONE)
+	        this%LeftTensors(length+1)=new_Tensor(integerONE,integerONE,ONE)
+	        this%RightTensors(0)=new_Tensor(integerONE,integerONE,ONE)
+	        this%RightTensors(length+1)=new_Tensor(integerONE,integerONE,ONE)
+	        !Set the source MPSes
+	        this%MPS_Above => MPS_A
+	        this%MPS_Below => MPS_A
+	        this%MPO_Center => MPO_C
+	        this%length = length
+	        if (present(ShouldConjugate)) then
+                this%IsMPSBelowConjugated=ShouldConjugate
+            else
+                this%IsMPSBelowConjugated=NO
+	        endif
+	        this%Initialized = .true.
+        else
+            call ThrowException('new_MultiplicatorMPO_one_MPS','MPO and MPS are of different length',NoErrorCode,CriticalError)
+        endif
+    else
+        call ThrowException('new_MultiplicatorMPO_one_MPS','MPS not initialized',NoErrorCode,CriticalError)
+    endif
+  end function new_MultiplicatorMPO_one_MPS
+
+
+  function new_MultiplicatorMPO_two_MPS(MPS_A,MPS_B,MPO_C,ShouldConjugate) result (this)
+    class(MPS),target,intent(IN) :: MPS_A,MPS_B
+    class(MPO),target,intent(IN) :: MPO_C
+    integer,intent(IN),optional :: ShouldConjugate
+    type(Multiplicator_With_MPO) :: this
+    integer :: length
+
+    if (MPS_A%IsInitialized().and.MPS_B%IsInitialized()) then
+        length=MPS_A%GetSize()
+        if(length.eq.MPS_B%GetSize().and.length.eq.MPO_C%GetSize()) then
+            allocate(this%LeftTensors(0:length+1),this%RightTensors(0:length+1))
+            !Initialize the border matrices to 1
+            this%LeftTensors(0)=new_Tensor(integerONE,integerONE,ONE)
+            this%LeftTensors(length+1)=new_Tensor(integerONE,integerONE,ONE)
+            this%RightTensors(0)=new_Tensor(integerONE,integerONE,ONE)
+            this%RightTensors(length+1)=new_Tensor(integerONE,integerONE,ONE)
+            !Set the source MPSes
+            this%MPS_Above => MPS_A
+            this%MPS_Below => MPS_B
+            this%MPO_Center => MPO_C
+            this%length = length
+            if (present(ShouldConjugate)) then
+                this%IsMPSBelowConjugated=ShouldConjugate
+            else
+                this%IsMPSBelowConjugated=NO
+            endif
+            this%Initialized = .true.
+        else
+            call ThrowException('new_MultiplicatorMPO_two_MPS','MPSs have different length',this%length-MPS_B%GetSize(),CriticalError)
+        endif
+    else
+        call ThrowException('new_MultiplicatorMPO_two_MPS','MPS not initialized',NoErrorCode,CriticalError)
+    endif
+
+  end function new_MultiplicatorMPO_two_MPS
+
+  function MultiplicatorMPO_Left(this,site) result(Mult_LeftAtSite)
+        class(Multiplicator_With_MPO),intent(INOUT) :: this
+        integer,intent(IN) :: site
+        type(MPSTensor) :: Mult_LeftAtSite
+        type(MPOTensor) :: TempMPOTensor
+
+        if(this%Initialized) then
+            Mult_LeftAtSite=SplitSpinFromBond(Multiplicator_Left(this,site),SECOND,this%MPO_Center%GetBond(site,RIGHT) )
+        else
+            call ThrowException('MultiplicatorMPO_Left','Multiplicator not initialized',NoErrorCode,CriticalError)
+        endif
+    end function MultiplicatorMPO_Left
+
+!##################################################################
+!##################################################################
+
+  function MultiplicatorMPO_Right(this,site) result(Mult_RightAtSite)
+        class(Multiplicator_with_MPO),intent(INOUT) :: this
+        integer,intent(IN) :: site
+        type(MPSTensor) :: Mult_RightAtSite
+
+        if(this%Initialized) then
+            Mult_RightAtSite=TensorTranspose( &
+              & SplitSpinFromBond(Multiplicator_Right(this,site),FIRST,this%MPO_Center%GetBond(site,LEFT) ), [3,2,1] )
+        else
+            call ThrowException('MultiplicatorMPO_Right','Multiplicator not initialized',NoErrorCode,CriticalError)
+        endif
+    end function MultiplicatorMPO_Right
+
+!##################################################################
+!##################################################################
+
 
 end module Multiplicator_Class

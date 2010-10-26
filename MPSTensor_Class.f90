@@ -1,4 +1,3 @@
-!!   Copyright 2010 Fernando M. Cucchietti
 !
 !    This file is part of FortranMPS
 !
@@ -48,8 +47,6 @@ module MPSTensor_Class
      procedure,public :: getSpin => Spin_MPSTensor
      procedure,public :: CollapseSpinWithBond => Collapse_Spin_With_Bond_Dimension
      procedure,public :: PrintDimensions => Print_MPSTensor_Dimensions
-!     procedure,public :: LCanonize => Left_Canonize_MPSTensor
-!     procedure,public :: RCanonize => Right_Canonize_MPSTensor
      procedure,public :: ApplyOperator => Apply_Operator_To_Spin_Dimension
   end type MPSTensor
 
@@ -223,8 +220,7 @@ module MPSTensor_Class
 !###########       Accessor methods
 !##################################################################
    integer function spin_MPSTensor(this) result(s)
-     !!class(MPSTensor),intent(IN) :: this !!<<CLASS>>!!
-     class(MPSTensor),intent(IN) :: this  !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this
  
     if(.not.(this%IsInitialized())) then
         call ThrowException('Spin','Tensor not initialized',NoErrorCode,Warning)
@@ -237,7 +233,7 @@ module MPSTensor_Class
 !##################################################################
 
    integer function DLeft_MPSTensor(this) result(DL)
-     class(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this
 
      if(.not.(this%IsInitialized())) then
         call ThrowException('DLeft','Tensor not initialized',NoErrorCode,Warning)
@@ -249,7 +245,7 @@ module MPSTensor_Class
    end function DLeft_MPSTensor
 !##################################################################
    integer function DRight_MPSTensor(this) result(DR)
-     class(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this
 
      if(.not.(this%IsInitialized())) then
         call ThrowException('DRight','Tensor not initialized',NoErrorCode,Warning)
@@ -261,7 +257,7 @@ module MPSTensor_Class
    end function DRight_MPSTensor
 
    integer function Get_MaxBondDimensionMPSTensor(this) result(maxDimension)
-     class(MPSTensor),intent(IN) :: this   !!<<TYPE>>!!
+     class(MPSTensor),intent(IN) :: this
 
      if(.not.(this%IsInitialized())) then
         call ThrowException('Get_MaxBondDimensionMPSTensor','Tensor not initialized',NoErrorCode,Warning)
@@ -358,7 +354,7 @@ module MPSTensor_Class
       integer,intent(IN),optional :: ShouldConjugate
       type(Tensor2) :: theResult
 
-      If(present(ShouldConjugate)) then
+      If(present(ShouldConjugate).and.ShouldConjugate.eq.NO) then
         theResult=CompactLeft(LeftTensor,upMPSTensor,downMPSTensor,THIRD)
       else
         theResult=CompactLeft(LeftTensor,upMPSTensor,Conjugate(downMPSTensor),THIRD)
@@ -372,7 +368,7 @@ module MPSTensor_Class
       integer,intent(IN),optional :: ShouldConjugate
       type(Tensor2) :: theResult
 
-      If(present(ShouldConjugate)) then
+      If(present(ShouldConjugate).and.ShouldConjugate.eq.NO) then
         theResult=CompactLeft(LeftTensor,anMPSTensor,anMPSTensor,THIRD)
       else
         theResult=CompactLeft(LeftTensor,anMPSTensor,Conjugate(anMPSTensor),THIRD)
@@ -385,7 +381,7 @@ module MPSTensor_Class
       integer,intent(IN),optional :: ShouldConjugate
       type(Tensor2) :: theResult
 
-      If(present(ShouldConjugate)) then
+      If(present(ShouldConjugate).and.ShouldConjugate.eq.NO) then
         theResult=CompactRight(RightTensor,upMPSTensor,downMPSTensor,THIRD)
       else
         theResult=CompactRight(RightTensor,upMPSTensor,Conjugate(downMPSTensor),THIRD)
@@ -398,7 +394,7 @@ module MPSTensor_Class
       integer,intent(IN),optional :: ShouldConjugate
       type(Tensor2) :: theResult
 
-      If(present(ShouldConjugate)) then
+      If(present(ShouldConjugate).and.ShouldConjugate.eq.NO) then
           theResult=CompactRight(RightTensor,anMPSTensor,anMPSTensor,THIRD)
       else
           theResult=CompactRight(RightTensor,anMPSTensor,Conjugate(anMPSTensor),THIRD)
@@ -412,17 +408,17 @@ module MPSTensor_Class
 
     function Collapse_Spin_With_Bond_Dimension(this,whichDimension) result(collapsedTensor)
         class(MPSTensor),intent(IN) :: this
-        integer,intent(IN) :: whichDimension(1)
+        integer,intent(IN) :: whichDimension
         type(Tensor2) :: collapsedTensor
 
         if(this%IsInitialized()) then
-            select case (whichDimension(1))
-                case (FIRST(1))
+            select case (whichDimension)
+                case (LEFT)
                     collapsedTensor=this%JoinIndices(THIRDANDFIRST,SECOND)
-                case (SECOND(1))
+                case (RIGHT)
                     collapsedTensor=this%JoinIndices(FIRST,THIRDANDSECOND)
                 case default
-                    call ThrowException('Collapse_Spin_With_Bond_Dimension','Dimension must be FIRST or SECOND',whichDimension(1),CriticalError)
+                    call ThrowException('Collapse_Spin_With_Bond_Dimension','Dimension must be FIRST or SECOND',whichDimension,CriticalError)
             end select
         else
             call ThrowException('Collapse_Spin_With_Bond_Dimension','Tensor not initialized',NoErrorCode,CriticalError)
@@ -479,7 +475,7 @@ module MPSTensor_Class
        return
     endif
 
-    collapsedTensor=this%CollapseSpinWithBond(FIRST)
+    collapsedTensor=this%CollapseSpinWithBond(LEFT)
 
     if (WasThereError()) then
        call ThrowException('Left_Canonize_MPSTensor','Could not collapse the tensor',NoErrorCode,CriticalError)
@@ -519,7 +515,7 @@ module MPSTensor_Class
        return
     endif
 
-    collapsedTensor=this%CollapseSpinWithBond(SECOND)
+    collapsedTensor=this%CollapseSpinWithBond(RIGHT)
     if (WasThereError()) then
        call ThrowException('Left_Canonize_MPSTensor','Could not collapse the tensor',NoErrorCode,CriticalError)
        return
