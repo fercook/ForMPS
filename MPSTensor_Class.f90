@@ -48,6 +48,7 @@ module MPSTensor_Class
      procedure,public :: CollapseSpinWithBond => Collapse_Spin_With_Bond_Dimension
      procedure,public :: PrintDimensions => Print_MPSTensor_Dimensions
      procedure,public :: ApplyOperator => Apply_Operator_To_Spin_Dimension
+     procedure,public :: SplitSpinDimension => Split_SpinDimension_ToObtainTensor4
   end type MPSTensor
 
 !###############################
@@ -456,6 +457,28 @@ module MPSTensor_Class
         endif
         return
     end function Split_Spin_From_Bond_Dimension
+
+
+!##################################################################
+
+    function Split_SpinDimension_ToObtainTensor4(this,firstDimension,secondDimension) result(splitTensor)
+        class(MPSTensor),intent(IN) :: this
+        integer,intent(IN) :: firstDimension,secondDimension
+        type(Tensor4) :: splitTensor
+
+        if(this%IsInitialized()) then
+            if (firstDimension*secondDimension.eq.this%spin) then
+                splitTensor= this%SplitIndex(THIRD,firstDimension)
+            else
+                call ThrowException('Split_SpinDimension_ToObtainTensor4','Requested partition does not match spin dimension', &
+                    & firstDimension*secondDimension-this%spin,CriticalError)
+            endif
+        else
+            call ThrowException('Split_Spin_From_Bond_Dimension','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+        return
+    end function Split_SpinDimension_ToObtainTensor4
+
 
 !##################################################################
 !##################################################################

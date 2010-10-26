@@ -60,7 +60,7 @@ Module MPO_Class
   end interface
 
   interface operator (.applyMPOTo.)
-    module procedure Apply_MPO_To_MPS
+    module procedure Apply_MPO_To_MPS,Apply_MPS_To_MPO
   end interface
 
     contains
@@ -280,10 +280,31 @@ Module MPO_Class
         else
             call ThrowException('Apply MPO to MPS','MPO or MPS not initialized',NoErrorCode,CriticalError)
         endif
-
-
-
     end function Apply_MPO_To_MPS
+
+
+    function Apply_MPS_To_MPO(anMPS,anMPO) result(this)
+        class(MPS),intent(IN) :: anMPS
+        class(MPO),intent(IN) :: anMPO
+        type(MPS) :: this
+        type(MPSTensor) ::localTensor
+        integer :: Length, site
+
+        if(anMPO%IsInitialized().and.anMPS%IsInitialized()) then
+            if(anMPO%getSize().eq.anMPS%GetSize()) then
+                this=new_MPS(anMPS)
+                do site=1,anMPS%getSize()
+                    call this%SetTensorAt(site, (anMPS.TensorAt.site) .applyTo. (anMPO%TensorCollection(site))  )
+                enddo
+            else
+                call ThrowException('Apply MPS to MPO','MPO and MPS of different size',NoErrorCode,CriticalError)
+            endif
+        else
+            call ThrowException('Apply MPS to MPO','MPO or MPS not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function Apply_MPS_To_MPO
+
 
 
  end module MPO_Class

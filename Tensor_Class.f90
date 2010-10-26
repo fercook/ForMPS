@@ -80,6 +80,7 @@ module Tensor_Class
   	complex(8),allocatable :: data(:,:,:)
   contains
     procedure,public :: JoinIndices => JoinIndicesOfTensor3
+    procedure,public :: SplitIndex => SplitIndexOfTensor3
     procedure,public :: CompactFromBelow => Compact_From_Below_With_Tensor4
     procedure,public :: Slice => Take_Slice_Of_Tensor3
   end type Tensor3
@@ -195,7 +196,7 @@ module Tensor_Class
   end interface
 
   interface SplitIndexOf
-    module procedure SplitIndexOfTensor2
+    module procedure SplitIndexOfTensor2,SplitIndexOfTensor3
   end interface
 
   interface TensorPad
@@ -2079,18 +2080,18 @@ integer function InitializationCheck(this) result(error)
     anArray=ZERO
 
     do sumIndex=1,dimsUp(BoundIndex)
-      do d=1,dimsUp(4)
       do delta=1,dimsDown(4)
-        freeIndex4=delta+(d-1)*dimsDown(4)
-	    do c=1,dimsUp(3)
+      do d=1,dimsUp(4)
+        freeIndex4=d+(delta-1)*dimsUp(4)
 	    do gama=1,dimsDown(3)
-	      freeIndex3=gama+(c-1)*dimsDown(3)
-	      do b=1,dimsUp(2)
+        do c=1,dimsUp(3)
+          freeIndex3=c+(gama-1)*dimsUp(3)
 	      do beta=1,dimsDown(2)
-	        freeIndex2=beta+(b-1)*dimsDown(2)
-	        do a=1,dimsUp(1)
+          do b=1,dimsUp(2)
+	        freeIndex2=b+(beta-1)*dimsUp(2)
 	        do alpha=1,dimsDown(1)
-	          freeIndex1=alpha+(a-1)*dimsDown(1)
+            do a=1,dimsUp(1)
+	          freeIndex1=a+(alpha-1)*dimsUp(1)
               anArray(freeIndex1,freeIndex2,freeIndex3,freeIndex4)= anArray(freeIndex1,freeIndex2,freeIndex3,freeIndex4) + &
                 & upTensor%data(a,b,c,d,sumIndex) * &
                 & conjg( downTensor%data(alpha,beta,gama,delta,sumIndex) )
@@ -2594,6 +2595,55 @@ function SplitIndexOfTensor2(this,WhichIndex,Partition) result (aTensor)
 
 end function SplitIndexOfTensor2
 
+!##################################################################
+
+function SplitIndexOfTensor3(this,WhichIndex,Partition) result (aTensor)
+    integer,intent(IN) :: WhichIndex(:),Partition
+    class(tensor3),intent(IN) :: this
+    type(tensor4) :: aTensor
+    integer :: i,NewDims(4),OrigDims(3),error
+
+     if(.not.(this%Initialized)) then
+        call ThrowException('SplitIndexOfTensor3','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+    OrigDims=shape(this%data)
+
+    !Ugly notation with (1) follows because select case needs numbers
+
+    !First check for error in multiple
+    select case (WhichIndex(1))
+      case (first(1))
+        error=mod( OrigDims(1),Partition )
+      case (second(1))
+        error=mod( OrigDims(2),Partition )
+      case (third(1))
+        error=mod( OrigDims(3),Partition )
+      case default
+        call ThrowException('SplitIndexOfTensor3','Index is inappropriate',WhichIndex(1),CriticalError)
+        return
+    end select
+    if(error.ne.0.or.Partition.le.0.or.Partition.gt.maxval(OrigDims)) then
+        call ThrowException('SplitIndexOfTensor3','Requested partition seems incorrect',Partition,CriticalError)
+        return
+     endif
+
+    !Now for real, I need to repeat this code or I have to repeat the error checking
+    select case (WhichIndex(1))
+      case (first(1))
+        NewDims=[ Partition, OrigDims(1)/Partition, OrigDims(2), OrigDims(3) ]
+      case (second(1))
+        NewDims=[ OrigDims(1), Partition, OrigDims(2)/Partition, OrigDims(3)]
+      case (third(1))
+        NewDims=[ OrigDims(1), OrigDims(2), Partition, OrigDims(3)/Partition]
+    end select
+
+    aTensor=new_Tensor(reshape(this%data,NewDims))
+
+end function SplitIndexOfTensor3
+
+!##################################################################
 
 function Pad_Tensor2(this,newDims) result(reshapedTensor)
     class(Tensor2),intent(IN) :: this

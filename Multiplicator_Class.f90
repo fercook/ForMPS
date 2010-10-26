@@ -338,7 +338,6 @@ contains
         class(Multiplicator_With_MPO),intent(INOUT) :: this
         integer,intent(IN) :: site
         type(MPSTensor) :: Mult_LeftAtSite
-        type(MPOTensor) :: TempMPOTensor
 
         if(this%Initialized) then
             Mult_LeftAtSite=SplitSpinFromBond(Multiplicator_Left(this,site),SECOND,this%MPO_Center%GetBond(site,RIGHT) )

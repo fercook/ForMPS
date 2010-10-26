@@ -47,7 +47,7 @@ module MPOTensor_Class
   end interface
 
   interface operator (.applyTo.)
-     module procedure Apply_MPO_to_MPS_Tensor
+     module procedure Apply_MPO_to_MPS_Tensor,Apply_MPS_to_MPO_Tensor
   end interface
 
 contains
@@ -229,5 +229,14 @@ contains
         this=new_MPSTensor(CompactBelow(anMPS,THIRD,anMPO,THIRD,FOURTH))
 
     end function Apply_MPO_to_MPS_Tensor
+
+    function Apply_MPS_to_MPO_Tensor(anMPS,anMPO) result(this)
+        class(MPSTensor),intent(IN) :: anMPS
+        class(MPOTensor),intent(IN) :: anMPO
+        type(MPSTensor) :: this
+
+        this=new_MPSTensor(CompactBelow(anMPS,THIRD,anMPO,FOURTH,THIRD))
+
+    end function Apply_MPS_to_MPO_Tensor
 
 end module MPOTensor_Class

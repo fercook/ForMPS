@@ -27,9 +27,13 @@ module Multiplicator2D_Class
   use MPO_Class
   use Multiplicator_Class
   use MPSAlgorithms_Class
+  use PEPSTensor_Class
+  use PEPOTensor_Class
+  use PEPS_Class
+  use PEPO_Class
 
-    implicit none
-    !private
+  implicit none
+  !private
 
     type, public :: Multiplicator2D
         private
@@ -45,36 +49,36 @@ module Multiplicator2D_Class
         type(PEPO),pointer :: PEPO_Center => null()
         logical :: IsPEPOUsed=.false.
     contains
-        procedure,public :: LeftAt => Multiplicator_Left
-        procedure,public :: RightAt => Multiplicator_Right
-        procedure,public :: AboveAt => Multiplicator_Above
-        procedure,public :: BelowAt => Multiplicator_Below
-        procedure,private :: LowerMPSAtRow => Multiplicator_RowAsLowerMPS
-        procedure,private :: UpperMPSAtRow => Multiplicator_RowAsUpperMPS
+        procedure,public :: LeftAt => Multiplicator2D_Left
+        procedure,public :: RightAt => Multiplicator2D_Right
+        procedure,public :: AboveAt => Multiplicator2D_Above
+        procedure,public :: BelowAt => Multiplicator2D_Below
+        procedure,private :: LowerMPSAtRow => Multiplicator2D_RowAsLowerMPS
+        procedure,private :: UpperMPSAtRow => Multiplicator2D_RowAsUpperMPS
         procedure,private :: SetCurrentRow => SetCurrentRowasMPO
-        procedure,private :: SplitUpperandLowerBonds => Split_MPSTensor_IntoTensor4
-        procedure,public :: Reset => Reset_Multiplicator
-        procedure,public :: Delete => Delete_Multiplicator
+        procedure,private :: SplitSpinIntoUpperandLowerBonds => Split_MPSTensor_IntoTensor4
+        procedure,public :: Reset => Reset_Multiplicator2D
+        procedure,public :: Delete => Delete_Multiplicator2D
     end type Multiplicator2D
 
     interface new_Multiplicator2D
         module procedure new_Multiplicator2D_WithPEPSandPEPO
     end interface
 
-    interface LeftAtSite
-        module procedure Multiplicator_Left
+    interface LeftAtSite2D
+        module procedure Multiplicator2D_Left
     end interface
 
-    interface RightAtSite
-        module procedure Multiplicator_Right
+    interface RightAtSite2D
+        module procedure Multiplicator2D_Right
     end interface
 
-    interface BelowAtSite
-        module procedure Multiplicator_Below
+    interface BelowAtSite2D
+        module procedure Multiplicator2D_Below
     end interface
 
-    interface AboveAtSite
-        module procedure Multiplicator_Above
+    interface AboveAtSite2D
+        module procedure Multiplicator2D_Above
     end interface
 
 !##################################################################
@@ -117,14 +121,14 @@ contains
         if( present(PEPO_C) ) then
             if (PEPO_C%IsInitialized()) then
                 this%PEPO_Center => PEPO_C
-                IsPEPOUsed=.true.
+                this%IsPEPOUsed=.true.
             else
                 call ThrowException('new_Multiplicator2d','PEPS_B not initialized',NoErrorCode,CriticalError)
                 return
             endif
         else
             this%PEPO_Center => null()
-            IsPEPOUsed=.true.
+            this%IsPEPOUsed=.false.
         endif
         this%Xlength = Xlength
         this%Ylength = Ylength
@@ -136,7 +140,7 @@ contains
   end function new_Multiplicator2D_WithPEPSandPEPO
 
 
-  subroutine Delete_Multiplicator(this)
+  subroutine Delete_Multiplicator2D(this)
     class(Multiplicator2D),intent(INOUT) :: this
     integer :: n,error=0
 
@@ -148,19 +152,19 @@ contains
             if(this%MPS_Above(n)%IsInitialized()) error=this%MPS_Above(n)%Delete()
             if(this%MPS_Below(n)%IsInitialized()) error=this%MPS_Below(n)%Delete()
         enddo
-        error=RowMultiplicator%Delete()
+        call this%RowMultiplicator%Delete()
         this%CurrentRow = UNDEFINED
         this%Initialized=.false.
     else
         call ThrowException('Delete_Multiplicator','Multiplicator2D is already deleted',NoErrorCode,Warning)
     endif
-  end subroutine Delete_Multiplicator
+  end subroutine Delete_Multiplicator2D
 
 !##################################################################
 
-  subroutine Reset_Multiplicator(this,aDirection)
-    class(Multiplicator),intent(INOUT) :: this
-    type(Direction),intent(IN) :: aDirection
+  subroutine Reset_Multiplicator2D(this,aDirection)
+    class(Multiplicator2D),intent(INOUT) :: this
+    integer,intent(IN) :: aDirection
     integer :: n,error=0
 
     if(this%Initialized) then
@@ -174,16 +178,16 @@ contains
                     if(this%MPS_Below(n)%IsInitialized()) error=this%MPS_Below(n)%Delete()
                 enddo
             case(LEFT)
-                error=this%RowMultiplicator%Reset(LEFT)
+                call this%RowMultiplicator%Reset(LEFT)
             case(RIGHT)
-                error=this%RowMultiplicator%Reset(RIGHT)
+                call this%RowMultiplicator%Reset(RIGHT)
             case default
-                call ThrowException('Reset_Multiplicator','Direction must be LEFT, RIGHT, UP or DOWN',Direction,CriticalError)
+                call ThrowException('Reset_Multiplicator','Direction must be LEFT, RIGHT, UP or DOWN',aDirection,CriticalError)
         end select
     else
         call ThrowException('Reset_Multiplicator','Multiplicator is not initialized',NoErrorCode,CriticalError)
     endif
-  end subroutine Reset_Multiplicator
+  end subroutine Reset_Multiplicator2D
 
 
 !##################################################################
@@ -195,7 +199,7 @@ contains
     type(MPOTensor) :: TempMPO
 
         if(this%Initialized) then
-            CurrentRowAsMPO=new_MPO(this%XLength)
+            this%CurrentRowAsMPO=new_MPO(this%XLength)
             do siteX=1,this%XLength
                 if (this%IsPEPOUsed) then
                     TempPEPS = this%PEPO_Center%GetTensorAt(siteX,row) .applyTo. this%PEPS_Above%GetTensorAt(siteX,row)
@@ -213,7 +217,7 @@ contains
 
 !##################################################################
 
-    function Multiplicator_Left(this,siteX,siteY) result(Mult_LeftAtSite)
+    function Multiplicator2D_Left(this,siteX,siteY) result(Mult_LeftAtSite)
         class(Multiplicator2D),intent(INOUT) :: this
         integer,intent(IN) :: siteX,siteY
         type(Tensor4) :: Mult_LeftAtSite
@@ -221,18 +225,18 @@ contains
         if(this%Initialized) then
             if (this%CurrentRow.ne.siteY) then
                 call this%SetCurrentRow(siteY)
-                this%RowMultiplicator = new_Multiplicator(this%UpperMPSAtRow(siteY+1),this%LoweMPSAtRow(siteY-1),this%CurrentRowAsMPO,DONOTCONJUGATE)
+                this%RowMultiplicator = new_Multiplicator(this%UpperMPSAtRow(siteY+1),this%LowerMPSAtRow(siteY-1),this%CurrentRowAsMPO,DONOTCONJUGATE)
             endif
-            Mult_LeftAtSite=this%SplitUpperandLowerDims(this%RowMultiplicator%LeftAt(siteX) ,siteX,siteY, LEFT)
+            Mult_LeftAtSite=this%SplitSpinIntoUpperandLowerBonds(this%RowMultiplicator%MPSLeftAt(siteX) ,siteX,siteY, LEFT)
         else
             call ThrowException('Multiplicator_Left','Multiplicator not initialized',NoErrorCode,CriticalError)
         endif
-    end function Multiplicator_Left
+    end function Multiplicator2D_Left
 
 !##################################################################
 !##################################################################
 
-    function Multiplicator_Right(this,siteX,siteY) result(Mult_RightAtSite)
+    function Multiplicator2D_Right(this,siteX,siteY) result(Mult_RightAtSite)
         class(Multiplicator2D),intent(INOUT) :: this
         integer,intent(IN) :: siteX,siteY
         type(Tensor4) :: Mult_RightAtSite
@@ -242,39 +246,43 @@ contains
                 call this%SetCurrentRow(siteY)
                 this%RowMultiplicator = new_Multiplicator(this%UpperMPSAtRow(siteY+1),this%LowerMPSAtRow(siteY-1),this%CurrentRowAsMPO,DONOTCONJUGATE)
             endif
-            Mult_RightAtSite=this%SplitUpperandLowerDims(this%RowMultiplicator%RightAt(siteX), siteX,siteY,RIGHT)
+            Mult_RightAtSite=this%SplitSpinIntoUpperandLowerBonds(this%RowMultiplicator%MPSRightAt(siteX), siteX,siteY,RIGHT)
         else
             call ThrowException('Multiplicator_Right','Multiplicator not initialized',NoErrorCode,CriticalError)
         endif
-    end function Multiplicator_Right
+    end function Multiplicator2D_Right
 
 !##################################################################
 
-    function Multiplicator_Above(this,siteX,siteY) result(Mult_AboveAtSite)
+    function Multiplicator2D_Above(this,siteX,siteY) result(Mult_AboveAtSite)
         class(Multiplicator2D),intent(INOUT) :: this
         integer,intent(IN) :: siteX,siteY
         type(Tensor4) :: Mult_AboveAtSite
+        type(MPS),pointer :: UpperMPS
 
         if(this%Initialized) then
-                Mult_AboveAtSite=this%SplitUpperandLowerDims( this%UpperMPSAtRow(siteY)%GetTensorAt(siteX),siteX,siteY,UP )
+            UpperMPS => Multiplicator2D_RowAsLowerMPS(this,siteY)
+            Mult_AboveAtSite=this%SplitSpinIntoUpperandLowerBonds( UpperMPS%GetTensorAt(siteX),siteX,siteY,UP )
         else
             call ThrowException('Multiplicator_Above','Multiplicator not initialized',NoErrorCode,CriticalError)
         endif
-    end function Multiplicator_Above
+    end function Multiplicator2D_Above
 
 !##################################################################
 
-    function Multiplicator_Below(this,siteX,siteY) result(Mult_BelowAtSite)
+    function Multiplicator2D_Below(this,siteX,siteY) result(Mult_BelowAtSite)
         class(Multiplicator2D),intent(INOUT) :: this
         integer,intent(IN) :: siteX,siteY
         type(Tensor4) :: Mult_BelowAtSite
+        type(MPS),pointer :: LowerMPS
 
         if(this%Initialized) then
-                Mult_BelowAtSite=this%SplitUpperandLowerDims( this%LowerMPSAtRow(siteY)%GetTensorAt(siteX) ,siteX,siteY,DOWN )
+            LowerMPS => Multiplicator2D_RowAsUpperMPS(this,siteY)
+            Mult_BelowAtSite=this%SplitSpinIntoUpperandLowerBonds( LowerMPS%GetTensorAt(siteX) ,siteX,siteY,DOWN )
         else
             call ThrowException('Multiplicator_Above','Multiplicator not initialized',NoErrorCode,CriticalError)
         endif
-    end function Multiplicator_Below
+    end function Multiplicator2D_Below
 
 !##################################################################
 
@@ -282,19 +290,27 @@ contains
         class(Multiplicator2D),intent(IN) :: this
         class(MPSTensor),intent(IN) :: anMPSTensor
         integer,intent(IN) :: siteX,siteY
-        type(Direction) :: aDirection
+        integer :: aDirection,oppositeDirection
         integer :: UpperBondDimension,LowerBondDimension
         type(Tensor4) :: aTensor4
 
         if(this%Initialized) then
             select case (aDirection)
                 case (LEFT)
-                    LowerBondDimension=this%PEPS_B%GetBondAt(siteX,siteY)
+                    oppositeDirection=RIGHT
                 case (RIGHT)
+                    oppositeDirection=LEFT
                 case (UP)
+                    oppositeDirection=UP
                 case (DOWN)
+                    oppositeDirection=DOWN
             end select
-            aTensor4=anMPSTensor%SplitSpin
+            LowerBondDimension=this%PEPS_Below%GetBondAt(siteX,siteY,oppositeDirection)
+            UpperBondDimension=this%PEPS_Above%GetBondAt(siteX,siteY,oppositeDirection)
+            if (this%IsPEPOUsed) then
+                UpperBondDimension=UpperBondDimension*this%PEPO_Center%GetBondAt(siteX,siteY,oppositeDirection)
+            endif
+            aTensor4=anMPSTensor%SplitSpinDimension(UpperBondDimension,LowerBondDimension)
         else
             call ThrowException('Split_MPSTensor_IntoTensor4','Multiplicator not initialized',NoErrorCode,CriticalError)
         endif
@@ -303,13 +319,41 @@ contains
 
 !##################################################################
 
-    recursive function Multiplicator_RowAsLowerMPS(this,row) result (aRowAsMPSBelow)
-        class(Multiplicator2D),intent(INOUT)  :: this
+    recursive function Multiplicator2D_RowAsLowerMPS(this,row) result (aRowAsMPSBelow)
+        class(Multiplicator2D),intent(INOUT),target  :: this
         integer,intent(IN) :: row
-        type(MPS) :: aRowAsMPSBelow
+        type(MPS),pointer :: aRowAsMPSBelow
 
+        if(this%Initialized) then
+            if (.not. this%MPS_Below(row)%IsInitialized() ) then
+                call this%SetCurrentRow(row)
+                this%MPS_Below(row) = this%CurrentRowAsMPO .applyMPOTo. this%LowerMPSAtRow(row-1)
+            endif
+            aRowAsMPSBelow => this%MPS_Below(row)
+        else
+            call ThrowException('Multiplicator_RowAsLowerMPS','Multiplicator not initialized',NoErrorCode,CriticalError)
+        endif
 
-    end function Multiplicator_RowAsLowerMPS
+    end function Multiplicator2D_RowAsLowerMPS
+
+!##################################################################
+
+    recursive function Multiplicator2D_RowAsUpperMPS(this,row) result (aRowAsMPSAbove)
+        class(Multiplicator2D),intent(INOUT),target  :: this
+        integer,intent(IN) :: row
+        type(MPS),pointer :: aRowAsMPSAbove
+
+        if(this%Initialized) then
+            if (.not. this%MPS_Above(row)%IsInitialized() ) then
+                call this%SetCurrentRow(row)
+                this%MPS_Above(row) = this%UpperMPSAtRow(row+1) .applyMPOTo. this%CurrentRowAsMPO
+            endif
+            aRowAsMPSAbove => this%MPS_Below(row)
+        else
+            call ThrowException('Multiplicator_RowAsUpperMPS','Multiplicator not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function Multiplicator2D_RowAsUpperMPS
 
 !##################################################################
 !##################################################################gd2nv `q1    `

@@ -31,7 +31,7 @@ Module PEPS_Class
   type,public :: PEPS
      private
      integer :: XLength,YLength,spin,bond
-     integer, allocatable :: bondList(:,:)
+     integer, allocatable :: bondList(:,:,:)
      type(PEPSTensor), allocatable :: TensorCollection(:,:)
      logical :: Initialized=.false.
    contains
@@ -41,7 +41,8 @@ Module PEPS_Class
      procedure,public :: delete => delete_PEPS
      procedure,public :: GetSize => GetPEPSSize
      procedure,public :: GetSpin => GetPEPSSpin
-     procedure,public :: GetBond => GetPEPSBond
+     procedure,public :: GetBond => GetMaxPEPSBond
+     procedure,public :: GetBondAt => GetPEPSBond
      procedure,public :: IsInitialized => Is_PEPS_Initialized
   end type PEPS
 
@@ -91,41 +92,50 @@ Module PEPS_Class
     integer :: n,m
 
     allocate(this%TensorCollection(0:XLength+1,0:YLength+1))
+    Allocate(this%BondList(0:XLength+1,0:YLength+1,LEFT:DOWN))
+
     !Outside of boundary terms are unit tensors
     this%TensorCollection(0,:)=new_PEPSTensor(spin,integerONE,integerONE,integerONE,integerONE,ONE)
+    this%bondList(0,:,:)=integerONE
     this%TensorCollection(XLength+1,:)=new_PEPSTensor(spin,integerONE,integerONE,integerONE,integerONE,ONE)
+    this%bondList(XLength+1,:,:)=integerONE
     this%TensorCollection(:,0)=new_PEPSTensor(spin,integerONE,integerONE,integerONE,integerONE,ONE)
+    this%bondList(:,0,:)=integerONE
     this%TensorCollection(:,YLength+1)=new_PEPSTensor(spin,integerONE,integerONE,integerONE,integerONE,ONE)
+    this%bondList(:,YLength+1,:)=integerONE
     !Corner tensors have two bonds equal to one
     this%TensorCollection(1,1)=new_PEPSTensor(spin,integerONE,bond,bond,integerONE)
+    this%bondList(1,1,:)= [ integerONE, bond, bond, integerONE ]
     this%TensorCollection(XLength,1)=new_PEPSTensor(spin,bond,integerONE,bond,integerONE)
+    this%bondList(XLength,1,:)= [ bond,integerONE,bond,integerONE ]
     this%TensorCollection(1,YLength)=new_PEPSTensor(spin,integerONE,bond,integerONE,bond)
+    this%bondList(1,YLength,:)= [ integerONE,bond,integerONE,bond ]
     this%TensorCollection(XLength,YLength)=new_PEPSTensor(spin,bond,integerONE,integerONE,bond)
+    this%bondList(XLength,YLength,:)= [ bond,integerONE,integerONE,bond ]
     !Boundary terms have one bond of dimension one
     do n=2,XLength-1
         this%TensorCollection(n,1)=new_PEPSTensor(spin,bond,bond,bond,integerONE)
+        this%bondList(n,1,:)= [ bond,bond,bond,integerONE ]
         this%TensorCollection(n,Ylength)=new_PEPSTensor(spin,bond,bond,integerONE,bond)
+        this%bondList(n,YLength,:)= [ bond,bond,integerONE,bond ]
     enddo
     do n=2,YLength-1
         this%TensorCollection(1,n)=new_PEPSTensor(spin,integerONE,bond,bond,bond)
+        this%bondList(1,n,:)= [ integerONE,bond,bond,bond ]
         this%TensorCollection(Xlength,n)=new_PEPSTensor(spin,bond,integerONE,bond,bond)
+        this%bondList(Xlength,n,:)= [ bond,integerONE,bond,bond ]
     enddo
     !Bulk terms are proper PEPS Tensors
     do m=2,YLength-1
         do n=2,Xlength-1
             this%TensorCollection(n,m)=new_PEPSTensor(spin,bond,bond,bond,bond)
+            this%bondList(n,m,:)= [ bond,bond,bond,bond ]
         enddo
     enddo
     this%XLength=Xlength
     this%YLength=Ylength
     this%Spin=spin
     this%bond=bond
-    Allocate(this%BondList(0:XLength+1,0:YLength+1))
-    this%bondList(1:XLength,1:YLength)=bond
-    this%bondList(0,:)=1
-    this%bondList(XLength+1,:)=1
-    this%bondList(:,0)=1
-    this%bondList(:,YLength+1)=1
     this%Initialized=.true.
 
   end function new_PEPS_Random
@@ -155,7 +165,7 @@ Module PEPS_Class
      this%YLength=Ylength
      this%Spin=spin
      this%Bond=bond
-     allocate(this%BondList(0:XLength+1,0:YLength+1))
+     allocate(this%BondList(0:XLength+1,0:YLength+1,LEFT:DOWN))
      this%BondList=aPEPS%BondList
      this%initialized=.true.
 
@@ -184,7 +194,7 @@ Module PEPS_Class
      lhs%YLength=Ylength
      lhs%Spin=spin
      lhs%Bond=bond
-     allocate(lhs%BondList(0:XLength+1,0:YLength+1))
+     allocate(lhs%BondList(0:XLength+1,0:YLength+1,LEFT:DOWN))
      lhs%BondList=rhs%BondList
      lhs%initialized=.true.
 
@@ -273,8 +283,8 @@ Module PEPS_Class
         if(Xposition.ge.1 .and. Xposition.le.thisPEPS%Xlength .and. Yposition.ge.1 .and. Yposition.le.thisPEPS%Ylength ) then
              thisPEPS%TensorCollection(Xposition,Yposition)=aPEPSTensor
              !Now update Bond list
-             thisPEPS%BondList(Xposition,Yposition)=aPEPSTensor%GetMaxBondDimension()
-             thisPEPS%bond=max(thisPEPS%bond,thisPEPS%BondList(Xposition,Yposition))
+             thisPEPS%BondList(Xposition,Yposition,:)=[ aPEPSTensor%getDLeft(), aPEPSTensor%getDRight(), aPEPSTensor%getDUp(), aPEPSTensor%getDDown() ]
+             thisPEPS%bond=max(thisPEPS%bond,maxval(thisPEPS%BondList(Xposition,Yposition,:)) )
         else
              call ThrowException('SetPEPSTensorAtSite','Site is wrong index',Xposition,CriticalError)
         endif
@@ -304,15 +314,25 @@ Module PEPS_Class
      endif
    end function GetPEPSSpin
 
-   integer function GetPEPSBond(aPEPS) result(bond)
+   integer function GetMAXPEPSBond(aPEPS) result(bond)
      class(PEPS),intent(IN) :: aPEPS
      if(aPEPS%Initialized) then
          bond = aPEPS%bond
      else
          call ThrowException('GetPEPSBond','PEPS not initialized',NoErrorCode,CriticalError)
      endif
-   end function GetPEPSBond
+   end function GetMaxPEPSBond
 
+   integer function GetPEPSBond(aPEPS,siteX,siteY,aDirection) result(bond)
+     class(PEPS),intent(IN) :: aPEPS
+     integer,intent(IN) :: siteX,siteY,aDirection
+
+     if(aPEPS%Initialized) then
+         bond = aPEPS%BondList(siteX,siteY,aDirection)
+     else
+         call ThrowException('GetPEPSBond','PEPS not initialized',NoErrorCode,CriticalError)
+     endif
+   end function GetPEPSBond
 
  end module PEPS_Class
 

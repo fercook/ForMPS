@@ -34,7 +34,7 @@ Module PEPO_Class
   type,public :: PEPO
      private
      integer :: XLength,YLength,spin,bond
-     integer, allocatable :: bondList(:,:)
+     integer, allocatable :: bondList(:,:,:)
       type(PEPOTensor), allocatable :: TensorCollection(:,:)
      logical :: Initialized=.false.
    contains
@@ -43,7 +43,8 @@ Module PEPO_Class
      procedure,public :: delete => delete_PEPO
      procedure,public :: GetSize => GetPEPOSize
      procedure,public :: GetSpin => GetPEPOSpin
-     procedure,public :: GetBond => GetPEPOBond
+     procedure,public :: GetMaxBond => GetMaxPEPOBond
+     procedure,public :: GetBondAt => GetPEPOBond
      procedure,public :: IsInitialized => Is_PEPO_Initialized
   end type PEPO
 
@@ -68,41 +69,49 @@ Module PEPO_Class
     integer :: n,m
 
     allocate(this%TensorCollection(0:Xlength+1,0:Ylength+1))
+    Allocate(this%BondList(0:XLength+1,0:YLength+1,LEFT:DOWN) )
     !Outside of boundary terms are unit tensors
     this%TensorCollection(0,:)=new_PEPOTensor(spin,integerONE,integerONE,integerONE,integerONE,ONE)
     this%TensorCollection(XLength+1,:)=new_PEPOTensor(spin,integerONE,integerONE,integerONE,integerONE,ONE)
     this%TensorCollection(:,0)=new_PEPOTensor(spin,integerONE,integerONE,integerONE,integerONE,ONE)
     this%TensorCollection(:,YLength+1)=new_PEPOTensor(spin,integerONE,integerONE,integerONE,integerONE,ONE)
+    this%bondList(0,:,:)=integerONE
+    this%bondList(XLength+1,:,:)=integerONE
+    this%bondList(:,0,:)=integerONE
+    this%bondList(:,YLength+1,:)=integerONE
     !Corner tensors have two bonds equal to one
-     this%TensorCollection(1,1)=new_PEPOTensor(spin,integerONE,bond,bond,integerONE)
-     this%TensorCollection(XLength,1)=new_PEPOTensor(spin,bond,integerONE,bond,integerONE)
-     this%TensorCollection(1,YLength)=new_PEPOTensor(spin,integerONE,bond,integerONE,bond)
-     this%TensorCollection(XLength,YLength)=new_PEPOTensor(spin,bond,integerONE,integerONE,bond)
+    this%TensorCollection(1,1)=new_PEPOTensor(spin,integerONE,bond,bond,integerONE)
+    this%TensorCollection(XLength,1)=new_PEPOTensor(spin,bond,integerONE,bond,integerONE)
+    this%TensorCollection(1,YLength)=new_PEPOTensor(spin,integerONE,bond,integerONE,bond)
+    this%TensorCollection(XLength,YLength)=new_PEPOTensor(spin,bond,integerONE,integerONE,bond)
+    this%bondList(1,1,:)= [ integerONE, bond, bond, integerONE ]
+    this%bondList(XLength,1,:)= [ bond,integerONE,bond,integerONE ]
+    this%bondList(1,YLength,:)= [ integerONE,bond,integerONE,bond ]
+    this%bondList(XLength,YLength,:)= [ bond,integerONE,integerONE,bond ]
     !Boundary terms have one bond of dimension one
     do n=2,XLength-1
-         this%TensorCollection(n,1)=new_PEPOTensor(spin,bond,bond,bond,integerONE)
-         this%TensorCollection(n,Ylength)=new_PEPOTensor(spin,bond,bond,integerONE,bond)
+        this%TensorCollection(n,1)=new_PEPOTensor(spin,bond,bond,bond,integerONE)
+        this%bondList(n,1,:)= [ bond,bond,bond,integerONE ]
+        this%TensorCollection(n,Ylength)=new_PEPOTensor(spin,bond,bond,integerONE,bond)
+        this%bondList(n,YLength,:)= [ bond,bond,integerONE,bond ]
     enddo
     do m=2,YLength-1
-         this%TensorCollection(1,m)=new_PEPOTensor(spin,integerONE,bond,bond,bond)
-         this%TensorCollection(Xlength,m)=new_PEPOTensor(spin,bond,integerONE,bond,bond)
+        this%TensorCollection(1,m)=new_PEPOTensor(spin,integerONE,bond,bond,bond)
+        this%bondList(1,n,:)= [ integerONE,bond,bond,bond ]
+        this%TensorCollection(Xlength,m)=new_PEPOTensor(spin,bond,integerONE,bond,bond)
+        this%bondList(Xlength,n,:)= [ bond,integerONE,bond,bond ]
     enddo
     !Bulk terms are proper PEPO Tensors
     do n=2,Xlength-1
         do m=2,YLength-1
-             this%TensorCollection(n,m)=new_PEPOTensor(spin,bond,bond,bond,bond)
+            this%TensorCollection(n,m)=new_PEPOTensor(spin,bond,bond,bond,bond)
+            this%bondList(n,m,:)= [ bond,bond,bond,bond ]
         enddo
     enddo
     this%XLength=Xlength
     this%YLength=Ylength
     this%Spin=spin
     this%bond=bond
-    Allocate(this%BondList(0:XLength+1,0:YLength+1))
-    this%bondList(1:XLength,1:YLength)=bond
-    this%bondList(0,:)=1
-    this%bondList(XLength+1,:)=1
-    this%bondList(:,0)=1
-    this%bondList(:,YLength+1)=1
     this%Initialized=.true.
 
   end function new_PEPO_Random
@@ -131,7 +140,7 @@ Module PEPO_Class
      this%YLength=Ylength
      this%Spin=spin
      this%Bond=bond
-     allocate(this%BondList(0:XLength+1,0:YLength+1))
+     allocate(this%BondList(0:XLength+1,0:YLength+1,LEFT:DOWN))
      this%BondList=aPEPO%BondList
      this%initialized=.true.
 
@@ -160,7 +169,7 @@ Module PEPO_Class
      lhs%YLength=Ylength
      lhs%Spin=spin
      lhs%Bond=bond
-     allocate(lhs%BondList(0:XLength+1,0:YLength+1))
+     allocate(lhs%BondList(0:XLength+1,0:YLength+1,LEFT:DOWN))
      lhs%BondList=rhs%BondList
      lhs%initialized=.true.
 
@@ -257,14 +266,25 @@ Module PEPO_Class
      endif
    end function GetPEPOSpin
 
-   integer function GetPEPOBond(aPEPO) result(bond)
+   integer function GetMaxPEPOBond(aPEPO) result(bond)
      class(PEPO),intent(IN) :: aPEPO
      if(aPEPO%Initialized) then
          bond = aPEPO%bond
      else
+         call ThrowException('GetMaxPEPOBond','PEPO not initialized',NoErrorCode,CriticalError)
+     endif
+   end function GetMaxPEPOBond
+
+   integer function GetPEPOBond(aPEPO,siteX,siteY,aDirection) result(bond)
+     class(PEPO),intent(IN) :: aPEPO
+     integer :: siteX,siteY,aDirection
+     if(aPEPO%Initialized) then
+         bond = aPEPO%bondList(siteX,siteY,aDirection)
+     else
          call ThrowException('GetPEPOBond','PEPO not initialized',NoErrorCode,CriticalError)
      endif
    end function GetPEPOBond
+
 !
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
