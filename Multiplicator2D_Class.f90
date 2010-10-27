@@ -35,9 +35,12 @@ module Multiplicator2D_Class
   implicit none
   !private
 
+  integer,parameter :: DefaultApproximationBond=40
+
     type, public :: Multiplicator2D
         private
         integer :: XLength,YLength
+        integer :: MaximumApproximationBond = DefaultApproximationBond
         logical :: Initialized=.false.
         type(MPS),allocatable :: MPS_Above(:)
         type(MPS),allocatable :: MPS_Below(:)
@@ -53,6 +56,7 @@ module Multiplicator2D_Class
         procedure,public :: RightAt => Multiplicator2D_Right
         procedure,public :: AboveAt => Multiplicator2D_Above
         procedure,public :: BelowAt => Multiplicator2D_Below
+        procedure,public :: SetMaxApproxBond => Set_MaximumApproximationBond
         procedure,private :: LowerMPSAtRow => Multiplicator2D_RowAsLowerMPS
         procedure,private :: UpperMPSAtRow => Multiplicator2D_RowAsUpperMPS
         procedure,private :: SetCurrentRow => SetCurrentRowasMPO
@@ -328,6 +332,8 @@ contains
             if (.not. this%MPS_Below(row)%IsInitialized() ) then
                 call this%SetCurrentRow(row)
                 this%MPS_Below(row) = this%CurrentRowAsMPO .applyMPOTo. this%LowerMPSAtRow(row-1)
+                call  this%MPS_Below(row)%Canonize()
+                this%MPS_Below(row) = Approximate(this%MPS_Below(row), this%MaximumApproximationBond)
             endif
             aRowAsMPSBelow => this%MPS_Below(row)
         else
@@ -347,6 +353,9 @@ contains
             if (.not. this%MPS_Above(row)%IsInitialized() ) then
                 call this%SetCurrentRow(row)
                 this%MPS_Above(row) = this%UpperMPSAtRow(row+1) .applyMPOTo. this%CurrentRowAsMPO
+                call this%MPS_Above(row)%Canonize()
+                this%MPS_Above(row) = Approximate(this%MPS_Above(row), this%MaximumApproximationBond)
+
             endif
             aRowAsMPSAbove => this%MPS_Below(row)
         else
@@ -356,6 +365,20 @@ contains
     end function Multiplicator2D_RowAsUpperMPS
 
 !##################################################################
+
+    subroutine Set_MaximumApproximationBond(this,newMaxBond)
+        class(Multiplicator2D),intent(INOUT) :: this
+        integer :: newMaxBond
+        if(this%Initialized) then
+            this%MaximumApproximationBond=newMaxBond
+        else
+            call ThrowException('Set_MaximumApproximationBond','Multiplicator not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end subroutine Set_MaximumApproximationBond
+
+
+
 !##################################################################gd2nv `q1    `
 
 end module Multiplicator2D_Class

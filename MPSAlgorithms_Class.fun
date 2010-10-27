@@ -38,6 +38,7 @@ test OverlapAlgorithm
   assert_false(abs(overlap12)**2.eq.1.0d0)
 
   call anMPS%Canonize()
+  call anMPS%SetNorm(ONE)
   overlap12 = Overlap(anMPS,anMPS)
   assert_equal_within(abs(overlap12)**2,1.0d0,1.0e-8)
 
@@ -53,13 +54,14 @@ test ApproximationAlgorithm
 
   bigMPS=new_MPS(length,spin,bondBig)
   call bigMPS%Canonize()
+  call bigMPS%SetNorm(ONE)
 
   smallMPS=Approximate(bigMPS,bondSmall,overlap12)
   assert_equal_within(overlap12,1.0d0,1.0D-5)
 
   print *,'Approximated overlap :',overlap12
   print *,'Big bond:',bondBig
-  print *,'Small bond: ',smallMPS%GetBond()
+  print *,'Small bond: ',smallMPS%GetMaxBond()
 
   do site=1,smallMPS%GetSize()
     localTensor=smallMPS.TensorAt.site

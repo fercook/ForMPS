@@ -43,6 +43,7 @@ module MPSAlgorithms_Class
     if(mps1%IsInitialized().and.mps2%IsInitialized()) then
         aMultiplicator = new_Multiplicator(mps1,mps2)
         Overlap=(LeftAtSite(aMultiplicator,0)).xx.(RightAtSite(aMultiplicator,1))
+        Overlap=Overlap*(mps1%GetNorm())*(mps2%GetNorm())
     else
         call ThrowException('Overlap algorithm','MPS not initialized',NoErrorCode,CriticalError)
     endif
@@ -70,7 +71,7 @@ module MPSAlgorithms_Class
 
         MPSLength=bigMPS%GetSize()
         MPSSpin=bigMPS%GetSpin()
-        if (newBondDimension.ge.bigMPS%GetBond() ) then
+        if (newBondDimension.ge.bigMPS%GetMaxBond() ) then
             smallMPS = new_MPS(bigMPS)
             return
         else

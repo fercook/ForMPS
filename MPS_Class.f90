@@ -34,20 +34,23 @@ Module MPS_Class
   type,public :: MPS
      private
      integer :: length,spin,bond
-     integer, allocatable :: bondList(:)
+     complex(8) :: Norm=ONE
+     integer, allocatable :: bondList(:,:)
      type(MPSTensor), allocatable :: TensorCollection(:)
      logical :: Initialized=.false.
    contains
      procedure,public :: LeftCanonizeAtSite => LeftCanonizeMPS_AtSite
      procedure,public :: RightCanonizeAtSite => RightCanonizeMPS_AtSite
      procedure,public :: Canonize => CanonizeMPS
-     procedure,public :: ScaleBy => ScaleMPSByFactor
+     procedure,public :: SetNorm => setMPSNorm
+     procedure,public :: GetNorm => GetMPSNorm
      procedure,public :: GetTensorAt => GetMPSTensorAtSite
      procedure,public :: SetTensorAt => SetMPSTensorAtSite
      procedure,public :: delete => delete_MPS
      procedure,public :: GetSize => GetMPSLength
      procedure,public :: GetSpin => GetMPSSpin
-     procedure,public :: GetBond => GetMPSBond
+     procedure,public :: GetBondAt => GetMPSBond
+     procedure,public :: GetMaxBond => GetMaxMPSBond
      procedure,public :: IsInitialized => Is_MPS_Initialized
   end type MPS
 
@@ -72,20 +75,22 @@ Module MPS_Class
     integer :: n
 
     allocate(this%TensorCollection(0:length+1))
+    Allocate(this%BondList(0:Length+1,LEFT:RIGHT))
     this%TensorCollection(0)=new_MPSTensor(spin,integerONE,integerONE,ONE)
+    this%bondList(0,:)=integerONE
+    this%bondList(Length+1,:)=integerONE
     this%TensorCollection(length+1)=new_MPSTensor(spin,integerONE,integerONE,ONE)
     this%TensorCollection(1)=new_MPSTensor(spin,integerONE,bond)
+    this%bondList(1,:)=[ integerONE, bond ]
     this%TensorCollection(length)=new_MPSTensor(spin,bond,integerONE)
+    this%bondList(length,:)=[ bond,integerONE ]
     do n=2,length-1
         this%TensorCollection(n)=new_MPSTensor(spin,bond,bond)
     enddo
+    this%bondList(2:Length-1,:)=bond
     this%Length=length
     this%Spin=spin
     this%bond=bond
-    Allocate(this%BondList(0:Length+1))
-    this%bondList(1:Length)=bond
-    this%bondList(0)=1
-    this%bondList(Length+1)=1
     this%Initialized=.true.
 
   end function new_MPS_Random
@@ -104,7 +109,7 @@ Module MPS_Class
     this%Length=length
     this%Spin=spin
     this%bond=integerONE
-    Allocate(this%BondList(0:Length+1))
+    Allocate(this%BondList(0:Length+1,LEFT:RIGHT))
     this%bondList=integerONE
     this%Initialized=.true.
 
@@ -130,7 +135,7 @@ Module MPS_Class
      this%Length=length
      this%Spin=spin
      this%Bond=bond
-     allocate(this%BondList(0:Length+1))
+     allocate(this%BondList(0:Length+1,LEFT:RIGHT))
      this%BondList=aMPS%BondList
      this%initialized=.true.
 
@@ -155,7 +160,7 @@ Module MPS_Class
      lhs%Length=length
      lhs%Spin=spin
      lhs%Bond=bond
-     allocate(lhs%BondList(0:Length+1))
+     allocate(lhs%BondList(0:Length+1,LEFT:RIGHT))
      lhs%BondList=rhs%BondList
      lhs%initialized=.true.
 
@@ -206,11 +211,16 @@ Module MPS_Class
         call ThrowException('LeftCanonizeMPS_AtSite','1<=Site<=Lenght',site,CriticalError)
     endif
     canonizingMatrix=LeftCanonize(aMPS%TensorCollection(site))
-    aMPS%TensorCollection(site-1)=MPSTensor_times_matrix(aMPS%TensorCollection(site-1),canonizingMatrix)
+    if (1.eq.site) then
+        call aMPS%SetNorm(aMPS%Norm*(canonizingMatrix%Norm()))
+!        aMPS%TensorCollection(0) = new_MPSTensor(aMPS%spin,integerONE,integerONE,ONE)
+    else
+        aMPS%TensorCollection(site-1)=MPSTensor_times_matrix(aMPS%TensorCollection(site-1),canonizingMatrix)
+    endif
     !Now fix the bond list
-    aMPS%BondList(site)=aMPS%TensorCollection(site)%GetMaxBondDimension()
-    aMPS%BondList(site-1)=aMPS%TensorCollection(site-1)%GetMaxBondDimension()
-    aMPS%bond=max(aMPS%bond,aMPS%BondList(site),aMPS%BondList(site-1))
+    aMPS%BondList(site,:)=[ aMPS%TensorCollection(site)%getDLeft(), aMPS%TensorCollection(site)%getDRight() ]
+    aMPS%BondList(site-1,:)=[ aMPS%TensorCollection(site-1)%getDLeft(), aMPS%TensorCollection(site-1)%getDRight() ]
+    aMPS%bond=max(aMPS%bond,maxval(aMPS%BondList(site,:)),maxval(aMPS%BondList(site-1,:)))
   end subroutine LeftCanonizeMPS_AtSite
 
   subroutine RightCanonizeMPS_AtSite(aMPS,site)
@@ -225,11 +235,16 @@ Module MPS_Class
         call ThrowException('RightCanonizeMPS_AtSite','1<=Site<=Lenght',site,CriticalError)
     endif
     canonizingMatrix=RightCanonize(aMPS%TensorCollection(site))
-    aMPS%TensorCollection(site+1)=matrix_times_MPSTensor(canonizingMatrix,aMPS%TensorCollection(site+1))
+    if (aMPS%length.eq.site) then
+        call aMPS%SetNorm(aMPS%Norm*(canonizingMatrix%Norm()))
+!        aMPS%TensorCollection(aMPS%length+1) = new_MPSTensor(aMPS%spin,integerONE,integerONE,ONE)
+    else
+        aMPS%TensorCollection(site+1)=matrix_times_MPSTensor(canonizingMatrix,aMPS%TensorCollection(site+1))
+    endif
     !now fix bond list
-    aMPS%BondList(site)=aMPS%TensorCollection(site)%GetMaxBondDimension()
-    aMPS%BondList(site+1)=aMPS%TensorCollection(site+1)%GetMaxBondDimension()
-    aMPS%bond=max(aMPS%bond,aMPS%BondList(site),aMPS%BondList(site+1))
+    aMPS%BondList(site,:)=[ aMPS%TensorCollection(site)%getDLeft(), aMPS%TensorCollection(site)%getDRight() ]
+    aMPS%BondList(site+1,:)=[ aMPS%TensorCollection(site+1)%getDLeft(), aMPS%TensorCollection(site+1)%getDRight() ]
+    aMPS%bond=max(aMPS%bond,maxval(aMPS%BondList(site,:)),maxval(aMPS%BondList(site+1,:)))
   end subroutine RightCanonizeMPS_AtSite
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
@@ -253,20 +268,26 @@ Module MPS_Class
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-  subroutine ScaleMPSByFactor(aMPS,factor)
+  subroutine SetMPSNorm(aMPS,newNorm)
     class(MPS),intent(INOUT) :: aMPS
-    complex(8), intent(IN) :: factor
-    integer :: n
+    complex(8), intent(IN) :: newNorm
 
     if(aMPS%Initialized) then
-        do n=1,aMPS%length
-            aMPS%TensorCollection(n)=factor*(aMPS%TensorCollection(n))
-        enddo
+        aMPS%Norm=newNorm
     else
-        call ThrowException('ScaleMPSByFactor','MPS not initialized',NoErrorCode,CriticalError)
+        call ThrowException('SetMPSNorm','MPS not initialized',NoErrorCode,CriticalError)
     endif
-  end subroutine ScaleMPSByFactor
+  end subroutine SetMPSNorm
 
+  function GetMPSNorm(aMPS)
+    class(MPS),intent(INOUT) :: aMPS
+    complex(8) :: GetMPSNorm
+    if(aMPS%Initialized) then
+        GetMPSNorm=aMPS%Norm
+    else
+        call ThrowException('GetMPSNorm','MPS not initialized',NoErrorCode,CriticalError)
+    endif
+  end function GetMPSNorm
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
    function GetMPSTensorAtSite(aMPS,site) result(aMPSTensor)
@@ -294,8 +315,8 @@ Module MPS_Class
         if(site.ge.1 .and. site.le.thisMPS%length) then
              thisMPS%TensorCollection(site)=aMPSTensor
              !Now update Bond list
-             thisMPS%BondList(site)=aMPSTensor%GetMaxBondDimension()
-             thisMPS%bond=max(thisMPS%bond,thisMPS%BondList(site))
+             thisMPS%BondList(site,:)=[ thisMPS%TensorCollection(site)%getDLeft(), thisMPS%TensorCollection(site)%getDRight() ]
+             thisMPS%bond=max(thisMPS%bond,maxval(thisMPS%BondList(site,:)))
         else
              call ThrowException('SetMPSTensorAtSite','Site is wrong index',site,CriticalError)
         endif
@@ -323,16 +344,26 @@ Module MPS_Class
      endif
    end function GetMPSSpin
 
-   integer function GetMPSBond(aMPS) result(bond)
+   integer function GetMaxMPSBond(aMPS) result(bond)
      class(MPS),intent(IN) :: aMPS
      if(aMPS%Initialized) then
         !next line should be (aMPS%TensorCollection(1))%GetSpin()
          bond = aMPS%bond
      else
+         call ThrowException('GetMaxMPSBond','MPS not initialized',NoErrorCode,CriticalError)
+     endif
+   end function GetMaxMPSBond
+
+   integer function GetMPSBond(aMPS,site,aDirection) result(bond)
+     class(MPS),intent(IN) :: aMPS
+     integer,intent(IN) :: site,aDirection
+     if(aMPS%Initialized) then
+        !next line should be (aMPS%TensorCollection(1))%GetSpin()
+         bond = aMPS%BondList(site,aDirection)
+     else
          call ThrowException('GetMPSBond','MPS not initialized',NoErrorCode,CriticalError)
      endif
    end function GetMPSBond
-
 
  end module MPS_Class
 
