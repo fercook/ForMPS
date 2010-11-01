@@ -38,6 +38,15 @@ test MPO_creation_deletion
    assert_equal(anMPO%delete(),Normal)
 end test
 
+test MPO_rewrital !Tests for bug in assignment
+   type(MPO) :: anMPO
+   anMPO=new_MPO(10,2,10)
+   anMPO=new_MPO(25)
+   assert_false(WasThereError())
+   assert_equal(anMPO%delete(),Normal)
+end test
+
+
 test MPO_applied_to_MPS
     type(MPO) :: anMPO
     type(MPS) :: anMPS,anotherMPS

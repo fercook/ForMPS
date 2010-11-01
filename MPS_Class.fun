@@ -50,6 +50,27 @@ test MPS_canonicalForm
    assert_equal(anMPS%delete(),Normal)
 end test
 
+test MPS_template
+   type(MPS) :: anMPS
+   type(MPSTensor) :: aTensor
+
+   anMPS=new_MPS(10)
+   aTensor=anMPS%GetTensorAt(3)
+   call aTensor%PrintDimensions('MPS dims')
+   assert_true(aTensor%GetDimensions().equalvector.[1,1,1])
+   assert_equal_within(aTensor%Norm(),1.0d0,1.0d-10)
+   assert_false(WasThereError())
+   assert_equal(anMPS%delete(),Normal)
+end test
+
+test MPS_rewrital !Tests for bug in assignment
+   type(MPS) :: anMPS
+   anMPS=new_MPS(10,2,10)
+   anMPS=new_MPS(25)
+   assert_false(WasThereError())
+   assert_equal(anMPS%delete(),Normal)
+end test
+
 
 test MPS_memory_usage
    type(MPS) :: anMPS

@@ -32,7 +32,7 @@ module MPSTensor_Class
 !  private
 
   public :: new_MPSTensor,LeftCanonize,RightCanonize
-  public :: MPSTensor_times_matrix, matrix_times_MPSTensor !operator(.times.)
+  public :: MPSTensor_times_matrix, matrix_times_MPSTensor , MPSTensor_times_MPSTensor
 
 !###############################
 !#####  The class main object
@@ -49,6 +49,7 @@ module MPSTensor_Class
      procedure,public :: PrintDimensions => Print_MPSTensor_Dimensions
      procedure,public :: ApplyOperator => Apply_Operator_To_Spin_Dimension
      procedure,public :: SplitSpinDimension => Split_SpinDimension_ToObtainTensor4
+     procedure,public :: BondTrace => MPSTraceBonds
   end type MPSTensor
 
 !###############################
@@ -65,7 +66,11 @@ module MPSTensor_Class
   end interface
 
   interface operator (.times.)
-     module procedure MPSTensor_times_matrix, matrix_times_MPSTensor
+     module procedure MPSTensor_times_matrix, matrix_times_MPSTensor, MPSTensor_times_MPSTensor
+  end interface
+
+  interface operator (.xplus.)
+     module procedure MPSTensor_times_matrix, matrix_times_MPSTensor, MPSTensor_times_MPSTensor
   end interface
 
   interface operator (.apply.)
@@ -347,6 +352,33 @@ module MPSTensor_Class
 
     end function matrix_times_MPSTensor
 
+!##################################################################
+
+    function MPSTensor_times_MPSTensor(tensorA,tensorB) result(theResult)
+        class(MPSTensor),intent(IN) :: tensorA,tensorB
+        type(MPSTensor) :: theResult
+        integer :: newDims(3)
+
+        theResult=TensorTranspose( TensorTranspose(tensorA,[1,3,2]).xplus.TensorTranspose(tensorB,[1,3,2]), [1,3,2])
+
+        newDims=theResult%GetDimensions()
+
+        theResult%spin=newDims(3)
+        theResult%DLeft=newDims(1)
+        theResult%DRight=newDims(2)
+
+    end function MPSTensor_times_MPSTensor
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+    function MPSTraceBonds(aTensor) result(aVector)
+        class(MPSTensor),intent(IN) :: aTensor
+        type(Tensor1) :: aVector
+
+        aVector=aTensor%PartialTrace(THIRD)
+
+    end function MPSTraceBonds
+
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
    function LeftProductTwoMPS(LeftTensor,upMPSTensor,downMPSTensor,ShouldConjugate) result(theResult)
@@ -467,6 +499,8 @@ module MPSTensor_Class
         type(Tensor4) :: splitTensor
 
         if(this%IsInitialized()) then
+            print *,'dims reqstd=',firstDimension,secondDimension
+            print *,'this spin',this%spin
             if (firstDimension*secondDimension.eq.this%spin) then
                 splitTensor= this%SplitIndex(THIRD,firstDimension)
             else

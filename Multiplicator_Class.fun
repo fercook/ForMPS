@@ -105,6 +105,7 @@ test MultiplicatorMPOMPS
     overlapCombined=NormalMult%LeftAt(0).xx.NormalMult%RightAt(1)
     overlapWithMPO=MPOMult%MPSLeftAt(0).xxx.MPOMult%MPSRightAt(1)
     assert_equal_within(abs(overlapCombined),abs(overlapWithMPO),1E-8)
+    tempMPS=MPOMult%MPSLeftAt(3)
     assert_false(WasThereError())
 
 end test

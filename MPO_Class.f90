@@ -33,7 +33,7 @@ Module MPO_Class
 !###############################
   type,public :: MPO
      private
-     integer :: length,spin
+     integer :: length,spinUP,spinDOWN
      integer, allocatable :: BondList(:,:)
      type(MPOTensor), allocatable :: TensorCollection(:)
      logical :: Initialized=.false.
@@ -42,7 +42,8 @@ Module MPO_Class
      procedure,public :: SetTensorAt => SetMPOTensorAtSite
      procedure,public :: delete => delete_MPO
      procedure,public :: GetSize => GetMPOLength
-     procedure,public :: GetSpin => GetMPOSpin
+     procedure,public :: GetSpinUp => GetMPOSpinUP
+     procedure,public :: GetSpinDown => GetMPOSpinDOWN
      procedure,public :: GetBond => GetMPOBond
      procedure,public :: IsInitialized => Is_MPO_Initialized
   end type MPO
@@ -80,7 +81,8 @@ Module MPO_Class
         this%TensorCollection(n)=new_MPOTensor(spin,bond,bond)
     enddo
     this%Length=length
-    this%Spin=spin
+    this%SpinUP=spin
+    this%SpinDOWN=spin
     allocate(this%BondList(0:length+1,LEFT:RIGHT))
     do n=0,length+1
         this%BondList(n,LEFT)=this%TensorCollection(n)%GetDLeft()
@@ -99,15 +101,13 @@ Module MPO_Class
 
     allocate(this%TensorCollection(0:length+1))
     do n=0,length+1
-        this%TensorCollection(n)=new_MPOTensor(spin,bond,bond)
+        this%TensorCollection(n)=new_MPOTensor(spin,bond,bond,ONE)
     enddo
     this%Length=length
-    this%Spin=spin
+    this%SpinUP=spin
+    this%SpinDOWN=spin
     allocate(this%BondList(0:length+1,LEFT:RIGHT))
-    do n=0,length+1
-        this%BondList(n,LEFT)=this%TensorCollection(n)%GetDLeft()
-        this%BondList(n,RIGHT)=this%TensorCollection(n)%GetDRight()
-    enddo
+    this%BondList=bond
     this%Initialized=.true.
 
   end function new_MPO_Template
@@ -115,20 +115,22 @@ Module MPO_Class
    function new_MPO_fromMPO (aMPO) result (this)
      class(MPO),intent(in) :: aMPO
      type(MPO) :: this
-     integer  :: n,error,length,spin,bond
+     integer  :: n,error,length,spinUP,spinDOWN,bond
 
      if(.not.aMPO%Initialized) then
          call ThrowException('new_MPO_fromMPO','MPO not initialized',NoErrorCode,CriticalError)
      endif
      length=aMPO%length
-     spin=aMPO%spin
+     spinUP=aMPO%spinUP
+     spinDOWN=aMPO%spinDOWN
      if (this%Initialized) error=this%delete()
      allocate(this%TensorCollection(0:length+1))
      do n=0,length+1
          this%TensorCollection(n)=new_MPOTensor(aMPO%TensorCollection(n))
      enddo
      this%Length=length
-     this%Spin=spin
+     this%SpinUP=spinUP
+     this%spinDOWN=spinDOWN
      allocate(this%BondList(0:length+1,LEFT:RIGHT))
      this%BondList=aMPO%BondList
      this%initialized=.true.
@@ -138,20 +140,22 @@ Module MPO_Class
    subroutine new_MPO_fromAssignment(lhs,rhs)
      class(MPO),intent(out) :: lhs
      type(MPO),intent(in) :: rhs
-     integer  :: n,error,length,spin,bond
+     integer  :: n,error,length,spinUP,SPINDOWN,bond
 
      if(.not.rhs%initialized) then
          call ThrowException('new_MPO_fromAssignment','MPO not initialized',NoErrorCode,CriticalError)
      endif
      length=rhs%length
-     spin=rhs%spin
+     spinUP=rhs%spinUP
+     spinDOWN=rhs%spinDOWN
      if (lhs%initialized) error=lhs%delete()
      allocate(lhs%TensorCollection(0:length+1))
      do n=0,length+1
          lhs%TensorCollection(n)=new_MPOTensor(rhs%TensorCollection(n))
      enddo
      lhs%Length=length
-     lhs%Spin=spin
+     lhs%SpinUP=spinUP
+     lhs%SpinDOWN=spinDOWN
      allocate(lhs%BondList(0:length+1,LEFT:RIGHT))
      lhs%BondList=rhs%BondList
      lhs%initialized=.true.
@@ -176,6 +180,7 @@ Module MPO_Class
      if (error.ne.Normal) then
          call ThrowException('delete_MPO','Some error while deleting tensors !',error,CriticalError)
      endif
+     deallocate(this%TensorCollection)
      deallocate(this%BondList)
      this%length=0
      this%Initialized=.false.
@@ -217,6 +222,11 @@ Module MPO_Class
      if(thisMPO%Initialized.and.aMPOTensor%IsInitialized()) then
         if(site.ge.1.or.site.le.thisMPO%length) then
              thisMPO%TensorCollection(site)=aMPOTensor
+             thisMPO%BondList(site,:)=[ aMPOTensor%getDLeft(), aMPOTensor%getDRight() ]
+             print *,'NEW BOND AT ',site,' = ',thisMPO%BondList(site,:)
+             call aMPOTensor%PrintDimensions('         CORRECT   IS   ')
+             thisMPO%spinUP=max(thisMPO%spinUP,aMPOTensor%GetSpinUP() )
+             thisMPO%spinDOWN=max(thisMPO%spinDOWN,aMPOTensor%GetSpinDOWN() )
         else
              call ThrowException('SetMPOTensorAtSite','Site is wrong index',site,CriticalError)
         endif
@@ -236,14 +246,23 @@ Module MPO_Class
    end function GetMPOLength
 
 
-   integer function GetMPOSpin(aMPO) result(spin)
+   integer function GetMPOSpinUP(aMPO) result(spin)
      class(MPO),intent(IN) :: aMPO
      if(aMPO%Initialized) then
-         spin = aMPO%spin
+         spin = aMPO%spinUP
      else
          call ThrowException('GetMPOSpin','MPO not initialized',NoErrorCode,CriticalError)
      endif
-   end function GetMPOSpin
+   end function GetMPOSpinUP
+
+   integer function GetMPOSpinDOWN(aMPO) result(spin)
+     class(MPO),intent(IN) :: aMPO
+     if(aMPO%Initialized) then
+         spin = aMPO%spinDOWN
+     else
+         call ThrowException('GetMPOSpin','MPO not initialized',NoErrorCode,CriticalError)
+     endif
+   end function GetMPOSpinDOWN
 
    integer function GetMPOBond(aMPO,site,aDirection) result(bond)
      class(MPO),intent(IN) :: aMPO
@@ -251,6 +270,9 @@ Module MPO_Class
      integer :: aDirection
      if(aMPO%Initialized) then
         !next line should be (aMPO%TensorCollection(1))%GetSpin()
+         print *,'FROM INSIDE MPO _____________'
+         print *,ampo%BondList
+         print *,'++++++++++++++++++++++++++++++'
          bond = aMPO%BondList(site,aDirection)
      else
          call ThrowException('GetMPOBond','MPO not initialized',NoErrorCode,CriticalError)

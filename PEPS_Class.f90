@@ -34,6 +34,7 @@ Module PEPS_Class
      integer, allocatable :: bondList(:,:,:)
      type(PEPSTensor), allocatable :: TensorCollection(:,:)
      logical :: Initialized=.false.
+     logical, public, allocatable :: HasTensorChangedAt(:,:)
    contains
      procedure,public :: ScaleBy => ScalePEPSByFactor
      procedure,public :: GetTensorAt => GetPEPSTensorAtSite
@@ -41,9 +42,10 @@ Module PEPS_Class
      procedure,public :: delete => delete_PEPS
      procedure,public :: GetSize => GetPEPSSize
      procedure,public :: GetSpin => GetPEPSSpin
-     procedure,public :: GetBond => GetMaxPEPSBond
+     procedure,public :: GetMaxBond => GetMaxPEPSBond
      procedure,public :: GetBondAt => GetPEPSBond
      procedure,public :: IsInitialized => Is_PEPS_Initialized
+     procedure,public :: CheckPointState => SetTensorsToUnchanged
   end type PEPS
 
   interface new_PEPS
@@ -93,6 +95,7 @@ Module PEPS_Class
 
     allocate(this%TensorCollection(0:XLength+1,0:YLength+1))
     Allocate(this%BondList(0:XLength+1,0:YLength+1,LEFT:DOWN))
+    allocate(this%HasTensorChangedAt(0:XLength+1,0:YLength+1))
 
     !Outside of boundary terms are unit tensors
     this%TensorCollection(0,:)=new_PEPSTensor(spin,integerONE,integerONE,integerONE,integerONE,ONE)
@@ -136,6 +139,7 @@ Module PEPS_Class
     this%YLength=Ylength
     this%Spin=spin
     this%bond=bond
+    this%HasTensorChangedAt=.true.
     this%Initialized=.true.
 
   end function new_PEPS_Random
@@ -167,6 +171,8 @@ Module PEPS_Class
      this%Bond=bond
      allocate(this%BondList(0:XLength+1,0:YLength+1,LEFT:DOWN))
      this%BondList=aPEPS%BondList
+     allocate(this%HasTensorChangedAt(0:XLength+1,0:YLength+1))
+     this%HasTensorChangedAt=.true.
      this%initialized=.true.
 
    end function new_PEPS_fromPEPS
@@ -196,6 +202,8 @@ Module PEPS_Class
      lhs%Bond=bond
      allocate(lhs%BondList(0:XLength+1,0:YLength+1,LEFT:DOWN))
      lhs%BondList=rhs%BondList
+     allocate(lhs%HasTensorChangedAt(0:XLength+1,0:YLength+1))
+     lhs%HasTensorChangedAt=.true.
      lhs%initialized=.true.
 
    end subroutine new_PEPS_fromAssignment
@@ -221,6 +229,8 @@ Module PEPS_Class
      this%Xlength=0
      this%Ylength=0
      deallocate(this%BondList)
+     deallocate(this%HasTensorChangedAt)
+
      this%Initialized=.false.
 
     end function delete_PEPS
@@ -285,6 +295,7 @@ Module PEPS_Class
              !Now update Bond list
              thisPEPS%BondList(Xposition,Yposition,:)=[ aPEPSTensor%getDLeft(), aPEPSTensor%getDRight(), aPEPSTensor%getDUp(), aPEPSTensor%getDDown() ]
              thisPEPS%bond=max(thisPEPS%bond,maxval(thisPEPS%BondList(Xposition,Yposition,:)) )
+             thisPEPS%HasTensorChangedAt(Xposition,Yposition)=.true.
         else
              call ThrowException('SetPEPSTensorAtSite','Site is wrong index',Xposition,CriticalError)
         endif
@@ -333,6 +344,24 @@ Module PEPS_Class
          call ThrowException('GetPEPSBond','PEPS not initialized',NoErrorCode,CriticalError)
      endif
    end function GetPEPSBond
+
+   subroutine SetTensorsToUnchanged(this,Xpos,Ypos)
+      class(PEPS),intent(INOUT) :: this
+      integer,intent(IN) :: Xpos
+      integer,intent(IN),optional :: Ypos
+
+     if(this%Initialized) then
+        if(Xpos.eq.ALLTENSORS) then
+           this%HasTensorChangedAt=.false.
+        else if (present(Ypos) ) then
+           this%HasTensorChangedAt(Xpos,Ypos)=.false.
+        else !Xpos is interpreted as a row...quite lame
+           this%HasTensorChangedAt(:,Xpos)=.false.
+        endif
+     else
+         call ThrowException('SetTensorsToUnchanged','PEPS not initialized',NoErrorCode,CriticalError)
+     endif
+   end subroutine SetTensorsToUnchanged
 
  end module PEPS_Class
 

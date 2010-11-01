@@ -455,4 +455,20 @@ test Matrices_times_tensor3s
 
 end test
 
+test tensor5JoinandSplit
+
+  type(tensor5) :: t5, newT5
+  type(tensor2) :: t2
+  integer :: dims(5)
+
+  dims = [3,2,4,5,2]
+  t5=new_Tensor(dims(1), dims(2), dims(3), dims(4), dims(5) )
+  t2=t5%JoinIndices()
+  newT5=SplitIndexOf(t2,dims)
+  assert_equal_within(t5.absdiff.newT5, 0.0d0, 1.0e-10)
+  assert_false(WasThereError())
+
+end test
+
+
 end test_suite

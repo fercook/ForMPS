@@ -62,6 +62,7 @@ module Constants
   integer,parameter :: Yes = 1
   integer,parameter :: DONOTCONJUGATE=NO
   integer,parameter :: UNDEFINED = -999
+  integer,parameter :: ALLTENSORS = 1313789
   
   logical,parameter :: Verbose = .true.
 

@@ -100,11 +100,11 @@ Module MPS_Class
   function new_MPS_Template(length) result (this)
     integer,intent(IN) :: length
     type(MPS) :: this
-    integer :: n,spin=1
+    integer :: n,spin=integerONE
 
     allocate(this%TensorCollection(0:length+1))
     do n=0,length+1
-        this%TensorCollection(0)=new_MPSTensor(spin,integerONE,integerONE,ONE)
+        this%TensorCollection(n)=new_MPSTensor(spin,integerONE,integerONE,ONE)
     enddo
     this%Length=length
     this%Spin=spin
@@ -185,6 +185,7 @@ Module MPS_Class
          call ThrowException('delete_MPS','Some error while deleting tensors !',error,CriticalError)
      endif
      this%length=0
+     deallocate(this%TensorCollection)
      deallocate(this%BondList)
      this%Initialized=.false.
 
@@ -317,6 +318,7 @@ Module MPS_Class
              !Now update Bond list
              thisMPS%BondList(site,:)=[ thisMPS%TensorCollection(site)%getDLeft(), thisMPS%TensorCollection(site)%getDRight() ]
              thisMPS%bond=max(thisMPS%bond,maxval(thisMPS%BondList(site,:)))
+             thisMPS%spin=max(thisMPS%spin,aMPSTensor%GetSpin() )
         else
              call ThrowException('SetMPSTensorAtSite','Site is wrong index',site,CriticalError)
         endif

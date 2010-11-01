@@ -20,12 +20,14 @@ module Tensor_Class
 
   use ErrorHandling
   use Constants
+!  use NNLSInverseCalculator
+!  use CACM66InverseCalculator
 
   implicit none
 ! Need to learn how to make operators public.
 !  private
   public :: new_Tensor
-  public :: operator(*),assignment(=),operator(.x.),operator(+),operator(-),operator(.xx.)
+  public :: operator(*),assignment(=),operator(.x.),operator(+),operator(-),operator(.xx.),operator(.xplus.)
   public :: operator(.diff.),operator(.absdiff.)
   public :: operator(.equaldims.),operator(.equaltype.)
   public :: Conjugate,TensorTranspose,ConjugateTranspose
@@ -71,8 +73,10 @@ module Tensor_Class
     procedure,public :: SplitIndex => SplitIndexOfTensor2
 !    procedure,public :: Pad => Pad_Tensor2
     procedure,public :: dagger => ConjugateTranspose2
+    procedure,public :: trace => Tensor2Trace
     procedure,public :: CompactFromLeft => Mirror_Compact_Left_With_Tensor3
     procedure,public :: CompactFromRight => Mirror_Compact_Right_With_Tensor3
+    procedure,public :: Split => SplitIndicesOfTensor2in5
   end type Tensor2
 
   type,public,extends(Tensor) :: Tensor3
@@ -83,6 +87,7 @@ module Tensor_Class
     procedure,public :: SplitIndex => SplitIndexOfTensor3
     procedure,public :: CompactFromBelow => Compact_From_Below_With_Tensor4
     procedure,public :: Slice => Take_Slice_Of_Tensor3
+    procedure,public :: PartialTrace => Tensor3Trace
   end type Tensor3
 
   type,public,extends(Tensor) :: Tensor4
@@ -91,6 +96,7 @@ module Tensor_Class
   contains
     procedure,public :: JoinIndices => JoinIndicesOfTensor4
     procedure,public :: Slice => Take_Slice_Of_Tensor4
+    procedure,public :: PartialTrace => Tensor4Trace
   end type Tensor4
 
   type,public,extends(Tensor) :: Tensor5
@@ -99,6 +105,7 @@ module Tensor_Class
   contains
      procedure,public :: CompactFromBelow => CompactTensor5_From_Below_With_Tensor6
      procedure,public :: MirrorCompact => Mirror_Compact_Tensor5
+     procedure,public :: JoinIndices => JoinIndicesOfTensor5
   end type Tensor5
 
   type,public,extends(Tensor) :: Tensor6
@@ -154,7 +161,8 @@ module Tensor_Class
 
   interface operator (.xplus.)
      module procedure &
-     &   MultAndCollapse_Tensor3_Tensor4, MultAndCollapse_Tensor5_Tensor5
+     &   MultAndCollapse_Tensor3_Tensor4, MultAndCollapse_Tensor5_Tensor5, MultAndCollapse_Tensor3_Tensor3, &
+     &   MultAndCollapse_Tensor4_Tensor4
   end interface
 
   interface operator (+)
@@ -167,7 +175,7 @@ module Tensor_Class
 
   interface MultAndCollapse
     module procedure MultAndCollapse_Tensor3_Tensor4, MultAndCollapse_Tensor5_Tensor6, &
-        & MultAndCollapse_Tensor5_Tensor5
+        & MultAndCollapse_Tensor5_Tensor5, MultAndCollapse_Tensor3_Tensor3, MultAndCollapse_Tensor4_Tensor4
   end interface
 
   interface assignment (=)
@@ -196,7 +204,7 @@ module Tensor_Class
   end interface
 
   interface SplitIndexOf
-    module procedure SplitIndexOfTensor2,SplitIndexOfTensor3
+    module procedure SplitIndexOfTensor2,SplitIndexOfTensor3,SplitIndicesOfTensor2in5
   end interface
 
   interface TensorPad
@@ -216,7 +224,7 @@ module Tensor_Class
   end interface
 
   interface TensorTrace
-    module procedure Tensor2Trace
+    module procedure Tensor2Trace,Tensor3Trace,Tensor4Trace
   end interface
 
   interface CompactLeft
@@ -234,6 +242,11 @@ module Tensor_Class
 
   interface MirrorCompact
     module procedure Mirror_Compact_Tensor5
+  end interface
+
+  interface SolveLinearProblem
+    module procedure SolveLinearProblem_LAPACK_matrix, SolveLinearProblem_LAPACK_vector
+    !SolveLinearProblem_Netlib,SolveLinearProblem_NNLSNasa,SolveLinearProblem_CACM66
   end interface
 
 !######################################################################################
@@ -586,7 +599,7 @@ module Tensor_Class
      type(Tensor2) this
 
      if(dim1*dim2.gt.Max_Combined_Dimension) then
-        call ThrowException('new_Tensor2_withConstant','Dimensions are larger than maximum',NoErrorCode,CriticalError)
+        call ThrowException('new_Tensor2_withConstant','Dimensions are larger than maximum',dim1*dim2,CriticalError)
         return
      endif
      if(dim1.lt.1.or.dim2.lt.1) then
@@ -2017,6 +2030,100 @@ integer function InitializationCheck(this) result(error)
     end function MultAndCollapse_Tensor3_Tensor4
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
+   function MultAndCollapse_Tensor3_Tensor3(TensorA,TensorB) result(this)
+    class(tensor3),intent(IN) :: TensorA,TensorB
+    type(Tensor3) :: this
+    integer :: dims_Of_A(3),dims_Of_B(3),new_dims(3)
+    integer :: sumIndex,a,b,beta,gama,newIndex
+    complex(8) :: ctemp
+
+    if(.not.(TensorA%Initialized).or..not.(TensorB%Initialized)) then
+        call ThrowException('MultAndCollapse33','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+    endif
+
+    dims_Of_A=shape(TensorA%data)
+    dims_Of_B=shape(TensorB%data)
+
+    if(dims_Of_A(3).ne.dims_Of_B(1)) then
+        call ThrowException('MultAndCollapse33','Contracted index is not equal on tensors', &
+           & dims_Of_A(3)-dims_Of_B(1),CriticalError)
+        return
+    endif
+
+    new_dims(1)=dims_Of_A(1)
+    new_dims(2)=dims_Of_A(2)*dims_Of_B(2)
+    new_dims(3)=dims_Of_B(3)
+    this=new_Tensor(new_dims(1),new_dims(2),new_dims(3),ZERO)
+
+    do gama=1,dims_Of_B(3)
+      do beta=1,dims_Of_B(2)
+        do sumIndex=1,dims_Of_B(1)
+          ctemp=tensorB%data(sumIndex,beta,gama)
+          do b=1,dims_Of_A(2)
+            newIndex=b+(beta-1)*dims_Of_A(2)
+            do a=1,dims_Of_A(1)
+              this%data(a,newIndex,gama)=this%data(a,newIndex,gama)+tensorA%data(a,b,sumIndex)*ctemp
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+
+    end function MultAndCollapse_Tensor3_Tensor3
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+   function MultAndCollapse_Tensor4_Tensor4 (TensorA,TensorB) result(this)
+    class(tensor4),intent(IN) :: TensorA,TensorB
+    type(Tensor4) :: this
+    integer :: dims_Of_A(4),dims_Of_B(4),new_dims(4)
+    integer :: sumIndex,a,b,c,d,alpha,beta,gama,delta,newIndex1,newIndex2
+    complex(8) :: ctemp
+
+    if(.not.(TensorA%Initialized).or..not.(TensorB%Initialized)) then
+        call ThrowException('MultAndCollapse44','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+    endif
+
+    dims_Of_A=shape(TensorA%data)
+    dims_Of_B=shape(TensorB%data)
+
+    if(dims_Of_A(2).ne.dims_Of_B(1)) then
+        call ThrowException('MultAndCollapse44','Contracted index is not equal on tensors', &
+           & dims_Of_A(2)-dims_Of_B(1),CriticalError)
+        return
+    endif
+
+    new_dims(1)=dims_Of_A(1)
+    new_dims(2)=dims_Of_B(2)
+    new_dims(3)=dims_Of_A(3)*dims_Of_B(3)
+    new_dims(4)=dims_Of_A(4)*dims_Of_B(4)
+    this=new_Tensor(new_dims(1),new_dims(2),new_dims(3),new_dims(4),ZERO)
+
+    do delta=1,dims_Of_B(4)
+     do gama=1,dims_Of_B(3)
+      do beta=1,dims_Of_B(2)
+          do d=1,dims_Of_A(4)
+           newIndex2=d+(delta-1)*dims_Of_A(4)
+           do c=1,dims_Of_A(3)
+             newIndex1=c+(gama-1)*dims_Of_A(3)
+             do sumIndex=1,dims_Of_A(2)
+               ctemp=tensorB%data(sumIndex,beta,gama,delta)
+               do a=1,dims_Of_A(1)
+                this%data(a,beta,newIndex1,newIndex2)=this%data(a,beta,newIndex1,newIndex2)+tensorA%data(a,sumIndex,c,d)*ctemp
+               enddo
+             enddo
+           enddo
+          enddo
+       enddo
+     enddo
+    enddo
+
+    end function MultAndCollapse_Tensor4_Tensor4
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
     function Mirror_Compact_Tensor5(upTensor,downTensor,boundIndex) result(theResult)
         class(Tensor5),intent(IN) :: upTensor,downTensor
         integer,intent(IN) :: boundIndex(1)
@@ -2485,6 +2592,39 @@ end function JoinIndicesOfTensor4
 
 !##################################################################
 
+    function JoinIndicesOfTensor5(this) result(aMatrix)
+        class(Tensor5),intent(IN) :: this
+        type(Tensor2) :: aMatrix
+        integer :: dims(5)
+
+        if(this%Initialized) then
+            dims=shape(this%data)
+            aMatrix=new_Tensor( product(dims(1:4)), dims(5) , ZERO )
+            aMatrix%data=reshape(this%data, [product(dims(1:4)), dims(5)])
+        else
+            call ThrowException('JoinIndicesOfTensor5','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function JoinIndicesOfTensor5
+
+!##################################################################
+
+    function SplitIndicesOfTensor2in5(this,dims) result(aTensor)
+        class(Tensor2),intent(IN) :: this
+        type(Tensor5) :: aTensor
+        integer,intent(IN) :: dims(5)
+
+        if(this%Initialized) then
+            aTensor=new_Tensor( dims(1), dims(2), dims(3), dims(4), dims(5) , ZERO )
+            aTensor%data=reshape(this%data, dims )
+        else
+            call ThrowException('SplitIndicesOfTensor5','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function SplitIndicesOfTensor2in5
+
+!##################################################################
+
 function Take_Slice_Of_Tensor4(this,whichIndex,whatValue) result (aTensor)
     integer,intent(IN) :: whichIndex(1),whatValue
     class(tensor4),intent(IN) :: this
@@ -2926,6 +3066,152 @@ complex(8) function Tensor2Trace(this) result(theTrace)
 end function Tensor2Trace
 
 !##################################################################
+
+ function Tensor3Trace(this,survivingDimension) result(TracedTensor)
+    class(Tensor3),intent(IN) :: this
+    type(Tensor1) :: TracedTensor
+    integer, intent(IN) :: survivingDimension(1)
+    integer :: sumIndex,survivingIndex
+    integer :: dims(3)
+
+    if(this%Initialized) then
+        dims=shape(this%data)
+        select case (survivingDimension(1))
+          case (FIRST(1))
+             TracedTensor=new_Tensor(dims(1),ZERO)
+             do sumIndex=1,min(dims(2),dims(3))
+              do survivingIndex=1,dims(1)
+                TracedTensor%data(survivingIndex)=TracedTensor%data(survivingIndex)+this%data(survivingIndex,sumIndex,sumIndex)
+              enddo
+             enddo
+          case (SECOND(1))
+             TracedTensor=new_Tensor(dims(2),ZERO)
+             do sumIndex=1,min(dims(1),dims(3))
+              do survivingIndex=1,dims(2)
+                TracedTensor%data(survivingIndex)=TracedTensor%data(survivingIndex)+this%data(sumIndex,survivingIndex,sumIndex)
+              enddo
+             enddo
+          case (THIRD(1))
+             TracedTensor=new_Tensor(dims(3),ZERO)
+             do survivingIndex=1,dims(3)
+              do sumIndex=1,min(dims(2),dims(1))
+                TracedTensor%data(survivingIndex)=TracedTensor%data(survivingIndex)+this%data(sumIndex,sumIndex,survivingIndex)
+              enddo
+             enddo
+          case default
+           call ThrowException('Tensor3Trace','Index is inappropriate',survivingDimension(1),CriticalError)
+           return
+         end select
+      else
+        call ThrowException('Tensor3Trace','Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+end function Tensor3Trace
+
+!##################################################################
+
+ function Tensor4Trace(this,survivingDimensions) result(TracedTensor)
+    class(Tensor4),intent(IN) :: this
+    type(Tensor2) :: TracedTensor
+    integer, intent(IN) :: survivingDimensions(2)
+    integer :: sumIndex,survivingIndex1,survivingIndex2
+    integer :: dims(4)
+
+    if(this%Initialized) then
+        dims=shape(this%data)
+        select case (survivingDimensions(1))
+          case (FIRST(1))
+             select case (survivingDimensions(2))
+               case(SECOND(1))
+	             TracedTensor=new_Tensor(dims(1),dims(2),ZERO)
+	             do sumIndex=1,min(dims(3),dims(4))
+	              do survivingIndex2=1,dims(2)
+	              do survivingIndex1=1,dims(1)
+	                TracedTensor%data(survivingIndex1,survivingIndex2)=TracedTensor%data(survivingIndex1,survivingIndex2)+ &
+	                  & this%data(survivingIndex1,survivingIndex2,sumIndex,sumIndex)
+	              enddo
+	              enddo
+	             enddo
+               case(THIRD(1))
+                 TracedTensor=new_Tensor(dims(1),dims(3),ZERO)
+                 do sumIndex=1,min(dims(2),dims(4))
+                  do survivingIndex2=1,dims(3)
+                  do survivingIndex1=1,dims(1)
+                    TracedTensor%data(survivingIndex1,survivingIndex2)=TracedTensor%data(survivingIndex1,survivingIndex2)+ &
+                      & this%data(survivingIndex1,sumIndex,survivingIndex2,sumIndex)
+                  enddo
+                  enddo
+                 enddo
+               case(FOURTH(1))
+                 TracedTensor=new_Tensor(dims(1),dims(4),ZERO)
+                 do sumIndex=1,min(dims(2),dims(3))
+                  do survivingIndex2=1,dims(4)
+                  do survivingIndex1=1,dims(1)
+                    TracedTensor%data(survivingIndex1,survivingIndex2)=TracedTensor%data(survivingIndex1,survivingIndex2)+ &
+                      & this%data(survivingIndex1,sumIndex,sumIndex,survivingIndex2)
+                  enddo
+                  enddo
+                 enddo
+	         case default
+	           call ThrowException('Tensor4Trace','2nd Index is inappropriate',survivingDimensions(2),CriticalError)
+	           return
+             end select
+          case (SECOND(1))
+             select case (survivingDimensions(2))
+               case(THIRD(1))
+                 TracedTensor=new_Tensor(dims(2),dims(3),ZERO)
+                 do sumIndex=1,min(dims(1),dims(4))
+                  do survivingIndex2=1,dims(3)
+                  do survivingIndex1=1,dims(2)
+                    TracedTensor%data(survivingIndex1,survivingIndex2)=TracedTensor%data(survivingIndex1,survivingIndex2)+ &
+                      & this%data(sumIndex,survivingIndex1,survivingIndex2,sumIndex)
+                  enddo
+                  enddo
+                 enddo
+               case(FOURTH(1))
+                 TracedTensor=new_Tensor(dims(2),dims(4),ZERO)
+                 do sumIndex=1,min(dims(1),dims(3))
+                  do survivingIndex2=1,dims(4)
+                  do survivingIndex1=1,dims(2)
+                    TracedTensor%data(survivingIndex1,survivingIndex2)=TracedTensor%data(survivingIndex1,survivingIndex2)+ &
+                      & this%data(sumIndex,survivingIndex1,sumIndex,survivingIndex2)
+                  enddo
+                  enddo
+                 enddo
+             case default
+                call ThrowException('Tensor4Trace','2nd Index is inappropriate',survivingDimensions(2),CriticalError)
+                return
+             end select
+          case (THIRD(1))
+             select case (survivingDimensions(2))
+               case(FOURTH(1))
+                 TracedTensor=new_Tensor(dims(3),dims(4),ZERO)
+                 do sumIndex=1,min(dims(1),dims(2))
+                  do survivingIndex2=1,dims(4)
+                  do survivingIndex1=1,dims(3)
+                    TracedTensor%data(survivingIndex1,survivingIndex2)=TracedTensor%data(survivingIndex1,survivingIndex2)+ &
+                      & this%data(sumIndex,sumIndex,survivingIndex1,survivingIndex2)
+                  enddo
+                  enddo
+                 enddo
+             case default
+               call ThrowException('Tensor4Trace','2nd Index is inappropriate',survivingDimensions(2),CriticalError)
+               return
+             end select
+          case default
+           call ThrowException('Tensor4Trace','1st Index is inappropriate',survivingDimensions(1),CriticalError)
+           return
+         end select
+      else
+        call ThrowException('Tensor4Trace','Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+end function Tensor4Trace
+
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
 !##################################################################
 
   subroutine SingularValueDecomposition(this,U,Sigma,vTransposed,ErrorCode)
@@ -3004,5 +3290,36 @@ end function Tensor2Trace
 
    end subroutine SingularValueDecomposition
 
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+!##################################################################
+
+   function SolveLinearProblem_LAPACK_vector(theMatrix,theVector, LS_Tolerance) result(theSolution)
+    class(Tensor2),intent(IN) :: theMatrix
+    class(Tensor1),intent(IN) :: theVector
+    real(8),intent(IN) :: LS_Tolerance
+    type(Tensor1) :: theSolution
+
+    theSolution = theVector
+
+    call ZGELSD( theMatrix%data, theSolution%data, LS_Tolerance )
+
+   end function SolveLinearProblem_LAPACK_vector
+
+
+   function SolveLinearProblem_LAPACK_matrix(theMatrix,theVectorAsMatrix, LS_Tolerance) result(theSolution)
+    class(Tensor2),intent(IN) :: theMatrix
+    class(Tensor2),intent(IN) :: theVectorAsMatrix
+    real(8),intent(IN) :: LS_Tolerance
+    type(Tensor2) :: theSolution
+
+    theSolution = theVectorAsMatrix
+
+    call ZGELSD( theMatrix%data, theSolution%data, LS_Tolerance )
+
+   end function SolveLinearProblem_LAPACK_matrix
 
 end module Tensor_Class

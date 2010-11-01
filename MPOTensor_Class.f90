@@ -28,18 +28,19 @@ module MPOTensor_Class
 
   type,public,extends(Tensor4) :: MPOTensor
      private
-     integer :: spin,DLeft,DRight
+     integer :: spinUp,spinDown,DLeft,DRight
    contains
      procedure,public :: getDRight => DRight_MPOTensor
      procedure,public :: getDLeft => DLeft_MPOTensor
      procedure,public :: getMaxBondDimension => Get_MaxBondDimensionMPOTensor
-     procedure,public :: getSpin => Spin_MPOTensor
+     procedure,public :: getSpinUp => SpinUp_MPOTensor
+     procedure,public :: getSpinDown => SpinDown_MPOTensor
      procedure,public :: PrintDimensions => Print_MPOTensor_Dimensions
   end type MPOTensor
 
   interface new_MPOTensor
      module procedure new_MPOTensor_Random,new_MPOTensor_fromMPOTensor, &
-          & new_MPOTensor_fromSplitData, new_MPOTensor_fromTensor4_Transposed
+          & new_MPOTensor_fromSplitData, new_MPOTensor_fromTensor4_Transposed,new_MPOTensor_Constant
   end interface
 
   interface assignment (=)
@@ -58,12 +59,28 @@ contains
 
      this=new_Tensor(DLeft,DRight,spin,spin)
      !initialize internal variables
-     this%spin=spin
+     this%spinUP=spin
+     this%spinDOWN=spin
      this%DLeft=DLeft
      this%DRight=DRight
 
    end function new_MPOTensor_Random
 
+!##################################################################
+
+   function new_MPOTensor_Constant (spin,DLeft,DRight,constant) result (this)
+     integer,intent(in) :: spin,DLeft,DRight
+     type(MPOTensor) :: this
+     complex(8) :: constant
+
+     this=new_Tensor(DLeft,DRight,spin,spin,constant)
+     !initialize internal variables
+     this%spinUP=spin
+     this%spinDOWN=spin
+     this%DLeft=DLeft
+     this%DRight=DRight
+
+   end function new_MPOTensor_Constant
 !##################################################################
    function new_MPOTensor_fromSplitData (originalData) result (this)
      complex(8),intent(in) :: originalData(:,:,:,:)
@@ -84,7 +101,8 @@ contains
 
         this=new_Tensor(JoinedData)
         !initialize internal variables
-        this%spin=dims(1)
+        this%spinUP=dims(1)
+        this%spinDOWN=dims(2)
         this%DLeft=dims(3)
         this%DRight=dims(4)
 
@@ -101,7 +119,8 @@ contains
 
      this=new_Tensor(tensor)
      !initialize internal variables
-     this%spin=tensor%spin
+     this%spinUP=tensor%spinUP
+     this%spinDOWN=tensor%spinDOWN
      this%DLeft=tensor%DLeft
      this%DRight=tensor%DRight
 
@@ -114,7 +133,8 @@ contains
 
      lhs=new_Tensor(rhs)
 
-     lhs%spin=rhs%spin
+     lhs%spinUP=rhs%spinUP
+     lhs%spinDOWN=rhs%spinDOWN
      lhs%DLeft=rhs%DLeft
      lhs%DRight=rhs%DRight
 
@@ -136,7 +156,8 @@ contains
         this=TensorTranspose(tensor,newDims)
         !initialize internal variables
         newDims=this%GetDimensions()
-        this%spin=newDims(3)
+        this%spinUP=newDims(3)
+        this%spinDOWN=newDims(4)
         this%DLeft=newDims(1)
         this%DRight=newDims(2)
      else
@@ -148,51 +169,73 @@ contains
 !##################################################################
 !###########       Accessor methods
 !##################################################################
-   integer function spin_MPOTensor(this) result(s)
+   integer function spinUP_MPOTensor(this) result(s)
      class(MPOTensor),intent(IN) :: this  !!<<TYPE>>!!
+     integer :: dims(4)
 
     if(.not.(this%IsInitialized())) then
         call ThrowException('Spin','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        s=this%spin
+	     dims=this%GetDimensions()
+	     s=dims(3)
      endif
 
-   end function spin_MPOTensor
-!##################################################################
+   end function spinUP_MPOTensor
+
+   integer function spinDOWN_MPOTensor(this) result(s)
+     class(MPOTensor),intent(IN) :: this  !!<<TYPE>>!!
+     integer :: dims(4)
+
+    if(.not.(this%IsInitialized())) then
+        call ThrowException('Spin','Tensor not initialized',NoErrorCode,Warning)
+        return
+     else
+	     dims=this%GetDimensions()
+	     s=dims(4)
+     endif
+
+   end function spinDOWN_MPOTensor
+   !##################################################################
 
    integer function DLeft_MPOTensor(this) result(DL)
      class(MPOTensor),intent(IN) :: this   !!<<TYPE>>!!
+     integer :: dims(4)
 
      if(.not.(this%IsInitialized())) then
         call ThrowException('DLeft','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        DL=this%DLeft
+        dims=this%GetDimensions()
+        DL=dims(1)
      endif
 
    end function DLeft_MPOTensor
 !##################################################################
    integer function DRight_MPOTensor(this) result(DR)
      class(MPOTensor),intent(IN) :: this   !!<<TYPE>>!!
+     integer :: dims(4)
 
      if(.not.(this%IsInitialized())) then
         call ThrowException('DRight','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        DR=this%DRight
+        dims=this%GetDimensions()
+        DR=dims(2)
      endif
 
    end function DRight_MPOTensor
 
    integer function Get_MaxBondDimensionMPOTensor(this) result(maxDimension)
      class(MPOTensor),intent(IN) :: this   !!<<TYPE>>!!
+     integer :: dims(4)
 
      if(.not.(this%IsInitialized())) then
         call ThrowException('Get_MaxBondDimensionMPOTensor','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        maxDimension=max(this%DRight,this%DLeft)
+        dims=this%GetDimensions()
+        maxDimension=maxval(dims(1:2))
      endif
 
    end function Get_MaxBondDimensionMPOTensor
@@ -204,11 +247,8 @@ contains
 
         if((this%IsInitialized())) then
             dims=this%GetDimensions()
-            if (present(message) ) then
-                write(*,'(A,", Spin: ",I3,", DLeft: ",I3,", DRight: ",I3)') ,message,dims(3),dims(1),dims(2)
-            else
-                write(*,'("Spin: ",I3,", DLeft: ",I3,", DRight: ",I3)') ,dims(3),dims(1),dims(2)
-            endif
+            if (present(message) ) print *,message
+            write(*,'("Spin-up: ",I3,", Spin-down: ",I3,", DLeft: ",I3,", DRight: ",I3)') ,dims(3),dims(4),dims(1),dims(2)
         else
             call ThrowException('Print_MPOTensor_Dimensions','Tensor not initialized',NoErrorCode,Warning)
             return
@@ -225,7 +265,6 @@ contains
         class(MPOTensor),intent(IN) :: anMPO
         class(MPSTensor),intent(IN) :: anMPS
         type(MPSTensor) :: this
-
         this=new_MPSTensor(CompactBelow(anMPS,THIRD,anMPO,THIRD,FOURTH))
 
     end function Apply_MPO_to_MPS_Tensor
@@ -234,7 +273,6 @@ contains
         class(MPSTensor),intent(IN) :: anMPS
         class(MPOTensor),intent(IN) :: anMPO
         type(MPSTensor) :: this
-
         this=new_MPSTensor(CompactBelow(anMPS,THIRD,anMPO,FOURTH,THIRD))
 
     end function Apply_MPS_to_MPO_Tensor

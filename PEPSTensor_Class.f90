@@ -42,6 +42,7 @@ module PEPSTensor_Class
      procedure,public :: PrintDimensions => Print_PEPSTensor_Dimensions
      procedure,public :: ApplyOperator => Apply_Operator_To_PEPS_Spin_Dimension
      procedure,public :: Collapse => Collapse_PEPS_Into_Tensor4
+     procedure,public :: CompactBonds => CompactPEPSBondDimensions
   end type PEPSTensor
 
 !###############################
@@ -293,7 +294,7 @@ module PEPSTensor_Class
 
    end function Get_MaxBondDimensionPEPSTensor
 
-    subroutine Print_PEPSTensor_Dimensions(this,message)
+       subroutine Print_PEPSTensor_Dimensions(this,message)
         class(PEPSTensor) :: this
         character*(*),optional :: message
         integer :: dims(5)
@@ -353,9 +354,9 @@ module PEPSTensor_Class
 
         if(this%IsInitialized()) then
             if(present(anOperator)) then
-                aTensor=MirrorCompact(this, this.apply.anOperator, FIFTH)
+                aTensor= MirrorCompact(this, this.apply.anOperator, FIFTH)
             else
-                aTensor=MirrorCompact(this, this, FIFTH)
+                aTensor= MirrorCompact(this, this, FIFTH)
             endif
         else
             call ThrowException('Collapse_PEPS_Into_Tensor4','Tensor not initialized',NoErrorCode,CriticalError)
@@ -372,9 +373,9 @@ module PEPSTensor_Class
 
         if(upPEPS%IsInitialized().and.downPEPS%IsInitialized()) then
             if(present(anOperator)) then
-                aTensor=MirrorCompact(upPEPS.apply.anOperator, downPEPS, FIFTH)
+                aTensor= MirrorCompact(upPEPS.apply.anOperator, downPEPS, FIFTH)
             else
-                aTensor=MirrorCompact(upPEPS, downPEPS, FIFTH)
+                aTensor= MirrorCompact(upPEPS, downPEPS, FIFTH)
             endif
         else
             call ThrowException('Collapse_Two_PEPS_into_Tensor4','Tensor not initialized',NoErrorCode,CriticalError)
@@ -383,9 +384,20 @@ module PEPSTensor_Class
     end function Collapse_Two_PEPS_into_Tensor4
 
 !##################################################################
+
+    function CompactPEPSBondDimensions(aPEPS) result(aMatrix)
+        class(PEPSTensor),intent(IN) :: aPEPS
+        type(Tensor2) :: aMatrix
+
+        if(aPEPS%Isinitialized()) then
+            aMatrix=aPEPS%JoinIndices()
+        else
+            call ThrowException('CompactPEPSBondDimensions','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function CompactPEPSBondDimensions
+
 !##################################################################
-
-
 
 
 end module PEPSTensor_Class
