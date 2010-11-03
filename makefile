@@ -30,7 +30,7 @@ endif
 
 BINARIES=_$(SYS)
 BASICSOURCES = constants.f90 error.f90 Tensor_Class.f90 Operator_Class.f90
-MPSSOURCES = MPSTensor_Class.f90 MPOTensor_Class.f90 MPS_Class.f90 MPO_CLass.f90 Multiplicator_Class.f90 MPSAlgorithms_Class.f90
+MPSSOURCES = MPSTensor_Class.f90 MPOTensor_Class.f90 MPS_Class.f90 MPO_Class.f90 Multiplicator_Class.f90 MPSAlgorithms_Class.f90
 PEPSSOURCES = PEPSTensor_Class.f90 PEPOTensor_Class.f90 PEPS_Class.f90 PEPO_Class.f90  Multiplicator2D_Class.f90 PEPSAlgorithms_Class.f90
 SOURCES = $(BASICSOURCES) $(MPSSOURCES) $(PEPSSOURCES)
 OBJS = $(SOURCES:.f90=.o)
