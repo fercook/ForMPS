@@ -1,0 +1,32 @@
+Requirements for Tensor Network in One Dimension (ForMPS)
+
+* The program should deal with Matrix Product State simulations and algorithms.
+	In particular, it must allow to
+	* 	Create MPS and read out basic properties like normalization
+	*	Compute expectation values of any observable, also overlaps (fidelity)
+	*	Approximate an MPS by another with smaller dimension
+	*	read and save MPS from disk in a pseudo-proprietary format (ASCII+gzip)
+	*	Provide wrappers for ground state estimation with
+		*	Imaginary time evolution
+		*	DMRG like minimization
+	*	Apply an MPO to an MPS (+ approximate the new MPS)
+	*	All these activities must be controllable so that there must be a
+		precision threshold adjustable by the user.
+*	The program should allow to define a Hamiltonian easily, look at ALPS style of model files.
+*	Hamiltonians should be more general objects so they can be generalized to 2D without problems (see future of program)
+* 	The interface to MPS must allow it to be used from future PEPS programs, allowing operations like
+	*	Create MPS from PEPS edge row
+	*	Create MPO from PEPS row
+	*	Approximate
+* 	Tolerance of everything must be easy to set
+*	Algorithm parameters also must be easy to change (a la ALPS?)
+*	Observables to measure must also be defined in input files
+*	Parallelization must be considered so that it is easy to implement in the future (flexible architecture)
+
+
+Future requirements
+*	In the future, PEPS should be a natural extension of the language of MPS, more or less
+	same algorithms
+*	One day TEBD algorithms should be accepted as another natural choice of algorithm.
+	(even if internal representation is different)
+*	Infinite algorithms: iTEBD, iPEPS, and iMPS should be implemented
