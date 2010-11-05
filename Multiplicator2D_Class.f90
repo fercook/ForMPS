@@ -58,6 +58,7 @@ module Multiplicator2D_Class
         procedure,public :: BelowAt => Multiplicator2D_Below
         procedure,public :: FullContraction => Overlap_PEPSAboveBelow
         procedure,public :: SetMaxApproxBond => Set_MaximumApproximationBond
+        procedure,public :: GetMaxApproxBond => Get_MaximumApproximationBond
         procedure,private :: LowerMPSAtRow => Multiplicator2D_RowAsLowerMPS
         procedure,private :: UpperMPSAtRow => Multiplicator2D_RowAsUpperMPS
         procedure :: PrepareRowAsMPO => PrepareRowAsMPOLazyEvaluation
@@ -207,13 +208,9 @@ contains
         type(Tensor4) :: Mult_LeftAtSite
 
         if(this%Initialized) then
-            print *,'------------------------ Entering'
             call this%PrepareRowAsMPO(siteY)
-            print *,'------------------------ Prepared'
             this%RowMultiplicator = new_Multiplicator(this%UpperMPSAtRow(siteY+1),this%LowerMPSAtRow(siteY-1),this%RowsAsMPO(siteY),DONOTCONJUGATE)
-            print *,'------------------------ RowMult set up'
             Mult_LeftAtSite=this%SplitSpinIntoUpperandLowerBonds(this%RowMultiplicator%MPSLeftAt(siteX),siteX,siteY, LEFT)
-            print *,'------------------------ Divided spin'
         else
             call ThrowException('Multiplicator_Left','Multiplicator not initialized',NoErrorCode,CriticalError)
         endif
@@ -360,6 +357,15 @@ contains
 
     end subroutine Set_MaximumApproximationBond
 
+    integer function Get_MaximumApproximationBond(this)
+        class(Multiplicator2D),intent(INOUT) :: this
+        if(this%Initialized) then
+            Get_MaximumApproximationBond=this%MaximumApproximationBond
+        else
+            call ThrowException('Get_MaximumApproximationBond','Multiplicator not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function Get_MaximumApproximationBond
 !##################################################################
 
     function Overlap_PEPSAboveBelow(this) result(theOverlap)

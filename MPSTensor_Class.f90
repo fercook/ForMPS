@@ -39,10 +39,12 @@ module MPSTensor_Class
 !###############################
   type,public,extends(Tensor3) :: MPSTensor
      private
-     integer :: spin,DLeft,DRight
    contains
      procedure,public :: getDRight => DRight_MPSTensor
      procedure,public :: getDLeft => DLeft_MPSTensor
+     procedure,private :: DLeft => DLeft_MPSTensor
+     procedure,private :: DRight => DRight_MPSTensor
+     procedure,private :: spin => Spin_MPSTensor
      procedure,public :: getMaxBondDimension => Get_MaxBondDimensionMPSTensor
      procedure,public :: getSpin => Spin_MPSTensor
      procedure,public :: CollapseSpinWithBond => Collapse_Spin_With_Bond_Dimension
@@ -115,10 +117,6 @@ module MPSTensor_Class
      type(MPSTensor) :: this
 
      this=new_Tensor(DLeft,DRight,spin)
-     !initialize internal variables
-     this%spin=spin
-     this%DLeft=DLeft
-     this%DRight=DRight
 
    end function new_MPSTensor_Random
 
@@ -138,10 +136,6 @@ module MPSTensor_Class
         JoinedData(:,:,2)=originalDataDOWN
 
         this=new_Tensor(JoinedData)
-        !initialize internal variables
-        this%spin=2
-        this%DLeft=size(originalDataUP,1)
-        this%DRight=size(originalDataUP,2)
 
       else
         call ThrowException('new_MPSTensor_with_SplitData','Up and down data have different size',upDims(1)-downDims(2),CriticalError)
@@ -155,10 +149,6 @@ module MPSTensor_Class
      type(MPSTensor) :: this
 
      this=new_Tensor(DLeft,DRight,spin,constant)
-     !initialize internal variables
-     this%spin=spin
-     this%DLeft=DLeft
-     this%DRight=DRight
 
    end function new_MPSTensor_withConstant
 
@@ -168,10 +158,6 @@ module MPSTensor_Class
      type(MPSTensor) this
 
      this=new_Tensor(tensor)
-     !initialize internal variables
-     this%spin=tensor%spin
-     this%DLeft=tensor%DLeft
-     this%DRight=tensor%DRight
 
    end function new_MPSTensor_fromMPSTensor
 
@@ -182,10 +168,6 @@ module MPSTensor_Class
 
      lhs=new_Tensor(rhs)
 
-     lhs%spin=rhs%spin
-     lhs%DLeft=rhs%DLeft
-     lhs%DRight=rhs%DRight
-
    end subroutine new_MPSTensor_fromAssignment
 
 !##################################################################
@@ -195,11 +177,6 @@ module MPSTensor_Class
      integer :: dims(3)
 
      this=new_Tensor(tensor)
-     dims=tensor%GetDimensions()
-     !initialize internal variables
-     this%spin=dims(3)
-     this%DLeft=dims(1)
-     this%DRight=dims(2)
 
    end function new_MPSTensor_fromTensor3
 
@@ -214,11 +191,6 @@ module MPSTensor_Class
      newDims(whichDimIsRight)=2
      newDims(whichDimIsSpin)=3
      this=TensorTranspose(tensor,newDims)
-     newDims=tensor%GetDimensions()
-     !initialize internal variables
-     this%spin=newDims(3)
-     this%DLeft=newDims(1)
-     this%DRight=newDims(2)
 
    end function new_MPSTensor_fromTensor3_Transposed
 
@@ -227,12 +199,14 @@ module MPSTensor_Class
 !##################################################################
    integer function spin_MPSTensor(this) result(s)
      class(MPSTensor),intent(IN) :: this
- 
+     integer :: dims(3)
+
     if(.not.(this%IsInitialized())) then
         call ThrowException('Spin','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        s=this%spin
+        dims=this%GetDimensions()
+        s=dims(3)
      endif
 
    end function spin_MPSTensor
@@ -240,24 +214,28 @@ module MPSTensor_Class
 
    integer function DLeft_MPSTensor(this) result(DL)
      class(MPSTensor),intent(IN) :: this
+     integer :: dims(3)
 
      if(.not.(this%IsInitialized())) then
         call ThrowException('DLeft','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        DL=this%DLeft
+        dims=this%GetDimensions()
+        DL=dims(1)
      endif
 
    end function DLeft_MPSTensor
 !##################################################################
    integer function DRight_MPSTensor(this) result(DR)
      class(MPSTensor),intent(IN) :: this
+     integer :: dims(3)
 
      if(.not.(this%IsInitialized())) then
         call ThrowException('DRight','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        DR=this%DRight
+        dims=this%GetDimensions()
+        DR=dims(2)
      endif
 
    end function DRight_MPSTensor
@@ -269,7 +247,7 @@ module MPSTensor_Class
         call ThrowException('Get_MaxBondDimensionMPSTensor','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        maxDimension=max(this%DRight,this%DLeft)
+        maxDimension=max(this%DRight(),this%DLeft())
      endif
 
    end function Get_MaxBondDimensionMPSTensor
@@ -306,12 +284,8 @@ module MPSTensor_Class
 
      opDims=anOperator%GetDimensions()
      if(this%IsInitialized()) then
-        if(opDims(1).eq.this%spin.and.opDims(2).eq.this%spin) then
+        if(opDims(1).eq.this%spin().and.opDims(2).eq.this%spin()) then
            aTensor = new_Tensor(this*anOperator)
-           tensorDims=aTensor%GetDimensions()
-           aTensor%spin=tensorDims(3)
-           aTensor%DLeft=tensorDims(1)
-           aTensor%DRight=tensorDims(2)
         else
            call ThrowException('Apply_Operator_To_Spin_Dimension','Operator is not of the right size',opDims(1)-opDims(2),CriticalError)
         endif
@@ -326,14 +300,8 @@ module MPSTensor_Class
         class(MPSTensor),intent(IN) :: aTensor
         class(Tensor2),intent(IN) :: aMatrix
         type(MPSTensor) :: theResult
-        integer :: newDims(3)
 
         theResult=TensorTranspose( TensorTranspose(aTensor,[1,3,2])*aMatrix , [1,3,2] )
-        newDims=theResult%GetDimensions()
-
-        theResult%spin=newDims(3)
-        theResult%DLeft=newDims(1)
-        theResult%DRight=newDims(2)
 
     end function MPSTensor_times_matrix
 !##################################################################
@@ -341,14 +309,8 @@ module MPSTensor_Class
         class(MPSTensor),intent(IN) :: aTensor
         class(Tensor2),intent(IN) :: aMatrix
         type(MPSTensor) :: theResult
-        integer :: newDims(3)
 
         theResult=aMatrix*aTensor
-        newDims=theResult%GetDimensions()
-
-        theResult%spin=newDims(3)
-        theResult%DLeft=newDims(1)
-        theResult%DRight=newDims(2)
 
     end function matrix_times_MPSTensor
 
@@ -360,12 +322,6 @@ module MPSTensor_Class
         integer :: newDims(3)
 
         theResult=TensorTranspose( TensorTranspose(tensorA,[1,3,2]).xplus.TensorTranspose(tensorB,[1,3,2]), [1,3,2])
-
-        newDims=theResult%GetDimensions()
-
-        theResult%spin=newDims(3)
-        theResult%DLeft=newDims(1)
-        theResult%DRight=newDims(2)
 
     end function MPSTensor_times_MPSTensor
 
@@ -471,16 +427,8 @@ module MPSTensor_Class
             select case (whichDimension(1))
                 case (FIRST(1))
                     splitTensor=TensorTranspose( SplitIndexOf(this,FIRST,spinSize), [3,1,2] )
-                    newDims=splitTensor%GetDimensions()
-                    splitTensor%spin=newDims(3)
-                    splitTensor%DLeft=newDims(1)
-                    splitTensor%DRight=newDims(2)
                 case (SECOND(1))
                     splitTensor=TensorTranspose( SplitIndexOf(this,SECOND,spinSize), [1,3,2] )
-                    newDims=splitTensor%GetDimensions()
-                    splitTensor%spin=newDims(3)
-                    splitTensor%DLeft=newDims(1)
-                    splitTensor%DRight=newDims(2)
                 case default
                     call ThrowException('Split_Spin_From_Bond_Dimension','Dimension must be FIRST or SECOND',whichDimension(1),CriticalError)
             end select
@@ -499,13 +447,11 @@ module MPSTensor_Class
         type(Tensor4) :: splitTensor
 
         if(this%IsInitialized()) then
-            print *,'dims reqstd=',firstDimension,secondDimension
-            print *,'this spin',this%spin
-            if (firstDimension*secondDimension.eq.this%spin) then
+            if (firstDimension*secondDimension.eq.this%spin()) then
                 splitTensor= this%SplitIndex(THIRD,firstDimension)
             else
                 call ThrowException('Split_SpinDimension_ToObtainTensor4','Requested partition does not match spin dimension', &
-                    & firstDimension*secondDimension-this%spin,CriticalError)
+                    & firstDimension*secondDimension-this%spin(),CriticalError)
             endif
         else
             call ThrowException('Split_Spin_From_Bond_Dimension','Tensor not initialized',NoErrorCode,CriticalError)
@@ -547,9 +493,9 @@ module MPSTensor_Class
     endif
 
     !We need to trim the matrix to get rid of useless dimensions
-    newUDims=[ this%spin*this%DLeft, min(this%spin * this%DLeft, this%Dright)]
-    oldDRight=this%DRight
-    this=SplitSpinFromBond( TensorPad(U,newUDims), FIRST, this%spin )
+    newUDims=[ this%spin()*this%DLeft(), min(this%spin() * this%DLeft(), this%DRight())]
+    oldDRight=this%DRight()
+    this=SplitSpinFromBond( TensorPad(U,newUDims), FIRST, this%spin() )
     matrix=TensorPad(sigma*V, [ newUDims(2), oldDRight ] )
 
   end function Right_Canonize_MPSTensor
@@ -584,11 +530,11 @@ module MPSTensor_Class
        return
     endif
 
-    newVDims=[ min(this%spin * this%DRight, this%DLeft), this%spin*this%DRight]
-    oldDLeft=this%Dleft
+    newVDims=[ min(this%spin() * this%DRight(), this%DLeft()), this%spin()*this%DRight()]
+    oldDLeft=this%DLeft()
 
     !matrix is reshaped to fit the product with the tensor on the right
-    this=SplitSpinFromBond( TensorPad(V,newVDims), SECOND, this%spin )
+    this=SplitSpinFromBond( TensorPad(V,newVDims), SECOND, this%spin() )
 
     !matrix is reshaped to fit the product with the tensor on the right
     matrix=TensorPad( U*sigma, [ oldDLeft, newVDims(1) ] )

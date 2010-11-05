@@ -223,8 +223,6 @@ Module MPO_Class
         if(site.ge.1.or.site.le.thisMPO%length) then
              thisMPO%TensorCollection(site)=aMPOTensor
              thisMPO%BondList(site,:)=[ aMPOTensor%getDLeft(), aMPOTensor%getDRight() ]
-             print *,'NEW BOND AT ',site,' = ',thisMPO%BondList(site,:)
-             call aMPOTensor%PrintDimensions('         CORRECT   IS   ')
              thisMPO%spinUP=max(thisMPO%spinUP,aMPOTensor%GetSpinUP() )
              thisMPO%spinDOWN=max(thisMPO%spinDOWN,aMPOTensor%GetSpinDOWN() )
         else
@@ -270,9 +268,6 @@ Module MPO_Class
      integer :: aDirection
      if(aMPO%Initialized) then
         !next line should be (aMPO%TensorCollection(1))%GetSpin()
-         print *,'FROM INSIDE MPO _____________'
-         print *,ampo%BondList
-         print *,'++++++++++++++++++++++++++++++'
          bond = aMPO%BondList(site,aDirection)
      else
          call ThrowException('GetMPOBond','MPO not initialized',NoErrorCode,CriticalError)

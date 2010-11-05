@@ -338,15 +338,8 @@ contains
         class(Multiplicator_With_MPO),intent(INOUT) :: this
         integer,intent(IN) :: site
         type(MPSTensor) :: Mult_LeftAtSite
-        type(tensor2) ::aTensor
-        type(MPOTensor) :: aMPO
 
         if(this%Initialized) then
-            !print *,'Trying to split :',site,this%MPO_Center%GetBond(site,RIGHT)
-            aMPO= this%MPO_Center%GetTensorAt(site)
-            call aMPO%PrintDimensions('Inside of MPO tensor at site')
-            atensor= Multiplicator_Left(this,site)
-            call aTensor%PrintDimensions('   from second dim of  :')
             Mult_LeftAtSite=SplitSpinFromBond(Multiplicator_Left(this,site),SECOND,this%MPO_Center%GetBond(site,RIGHT) )
         else
             call ThrowException('MultiplicatorMPO_Left','Multiplicator not initialized',NoErrorCode,CriticalError)
@@ -362,8 +355,8 @@ contains
         type(MPSTensor) :: Mult_RightAtSite
 
         if(this%Initialized) then
-            Mult_RightAtSite=TensorTranspose( &
-              & SplitSpinFromBond(Multiplicator_Right(this,site),FIRST,this%MPO_Center%GetBond(site,LEFT) ), [3,2,1] )
+            Mult_RightAtSite= &
+              & SplitSpinFromBond(Multiplicator_Right(this,site),FIRST,this%MPO_Center%GetBond(site,LEFT) )
         else
             call ThrowException('MultiplicatorMPO_Right','Multiplicator not initialized',NoErrorCode,CriticalError)
         endif
