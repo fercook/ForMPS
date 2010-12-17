@@ -35,7 +35,7 @@ module PEPSAlgorithms_Class
 
   implicit none
 
-    real(8) :: PSEUDOINVERSETOLERANCE = 1.0d-5
+    real(8) :: PSEUDOINVERSETOLERANCE = 1.0d-4
 
     interface Approximate
         module procedure Approximate_PEPS
@@ -81,21 +81,30 @@ module PEPSAlgorithms_Class
 	                print *,'Optimizing site ',siteX,',',siteY
 	                localTensor = smallPEPS%GetTensorAt(siteX,siteY)
 	                localPEPSDims = localTensor%GetDimensions()
+	                call localTensor%Print('Previous tensor data')
 	                aTempTensor=smallMultiplicator%LeftAt(siteX-1,siteY)
+	                call aTempTensor%Print('Left environment data')
 	                call aTempTensor%PrintDimensions('xxxxxxxx-------   0,1 dims LEFT small')
 	                aTempTensor=smallMultiplicator%RightAt(siteX+1,siteY)
+	                call aTempTensor%Print('Right environment data')
 	                call aTempTensor%PrintDimensions('xxxxxxxx-------   2,1 dims RIGHT small')
                     aTempTensor= smallMultiplicator%AboveAt(siteX,siteY+1)
+                    call aTempTensor%Print('Above environment data')
                     call aTempTensor%PrintDimensions('xxxxxxxx-------   1,2 dims ABOVE small')
                     aTempTensor=smallMultiplicator%BelowAt(siteX,siteY-1)
+                    call aTempTensor%Print('Below environment data')
                     call aTempTensor%PrintDimensions('xxxxxxxx-------   1,0 dims BELOW small')
                     aTempTensor=bigMultiplicator%LeftAt(siteX-1,siteY)
+                    call aTempTensor%Print('BIG Left environment data')
                     call aTempTensor%PrintDimensions('xxxxxxxx-------   0,1 dims LEFT BIG')
                     aTempTensor=bigMultiplicator%RightAt(siteX+1,siteY)
+                    call aTempTensor%Print('BIG Right environment data')
                     call aTempTensor%PrintDimensions('xxxxxxxx-------   2,1 dims RIGHT BIG')
                     aTempTensor=bigMultiplicator%AboveAt(siteX,siteY+1)
+                    call aTempTensor%Print('BIG Above environment data')
                     call aTempTensor%PrintDimensions('xxxxxxxx-------   1,2 dims ABOVE BIG')
                     aTempTensor=bigMultiplicator%BelowAt(siteX,siteY-1)
+                    call aTempTensor%Print('BIG Below environment data')
                     call aTempTensor%PrintDimensions('xxxxxxxx-------   1,0 dims BELOW BIG')
 
                     localTensor = ComputePEPSOptimum ( smallMultiplicator%LeftAt(siteX-1,siteY), smallMultiplicator%RightAt(siteX+1,siteY), &
@@ -104,6 +113,7 @@ module PEPSAlgorithms_Class
                         & bigMultiplicator%AboveAt(siteX,siteY+1), bigMultiplicator%BelowAt(siteX,siteY-1), &
                         & bigPEPS%GetTensorAt(siteX,siteY), localPEPSDims )
                         call smallPEPS%SetTensorAt(siteX,siteY,localTensor)
+                    call localTensor%Print('NEW Tensor data')
                 enddo
                 call smallMultiplicator%Reset(RIGHT)
                 call bigMultiplicator%Reset(RIGHT)
@@ -161,20 +171,13 @@ module PEPSAlgorithms_Class
 
     print *,'About to contract 4 environments'
     smallMatrix=TensorTranspose( TensorTrace(  &
-                & ((smallE_left.xplus.smallE_Up).xplus.smallE_Right).xplus.smallE_Down, &
+                & ((smallE_left.xplus.smallE_Up).xplus.smallE_Right).xplus. TensorTranspose(smallE_Down, [2,1,3,4] ), &
                 &                           THIRDANDFOURTH )      )
 
     call smallMatrix%PrintDimensions('Small environment dims:')
 
-    aTempMatrix=aPEPSTensor%CompactBonds()
-    call aTempMatrix%PrintDimensions('PEPS Compacted dimensions:')
-
-    aTempMatrix=TensorTranspose( TensorTrace( &
-                & ((bigE_left.xplus.bigE_Up).xplus.bigE_Right).xplus.bigE_Down, &
-                                            THIRDANDFOURTH )      )
-    call aTempMatrix%PrintDimensions('Big Environment dimensions:')
     bigMatrixTimesVector=TensorTranspose( TensorTrace( &
-                & ((bigE_left.xplus.bigE_Up).xplus.bigE_Right).xplus.bigE_Down, &
+                & ((bigE_left.xplus.bigE_Up).xplus.bigE_Right).xplus. TensorTranspose( bigE_Down, [2,1,3,4] ), &
                                             THIRDANDFOURTH )      ) .x. aPEPSTensor%CompactBonds()
 
     print *,'Environments computed'
@@ -188,7 +191,7 @@ module PEPSAlgorithms_Class
        & SplitIndexOf(   &
        & SolveLinearProblem(smallMatrix, bigMatrixTimesVector, PSEUDOINVERSETOLERANCE ), newDims )  &
        &                      )
-
+        call newTensor%Print('New Tensor data:')
   end function ComputePEPSOptimum
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

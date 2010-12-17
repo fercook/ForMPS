@@ -35,7 +35,7 @@ module Tensor_Class
   public :: JoinIndicesOf,SplitIndexOf,TensorPad
   public :: CompactLeft,CompactRight,CompactBelow,SingularValueDecomposition
 
-  integer,parameter :: Max_Combined_Dimension = 100000
+  integer,parameter :: Max_Combined_Dimension = 1000000
 
 !> \class Tensor (virtual)
 !! \brief
@@ -642,7 +642,7 @@ module Tensor_Class
      type(Tensor4) this
 
      if(dim1*dim2*dim3*dim4.gt.Max_Combined_Dimension) then
-        call ThrowException('new_Tensor4_withConstant','Dimensions are larger than maximum',NoErrorCode,CriticalError)
+        call ThrowException('new_Tensor4_withConstant','Dimensions are larger than maximum',dim1*dim2*dim3*dim4,CriticalError)
         return
      endif
      if(dim1.lt.1.or.dim2.lt.1.or.dim3.lt.1.or.dim4.lt.1) then
@@ -3219,7 +3219,7 @@ end function Tensor4Trace
      class(Tensor2),intent(IN) :: this
      type(Tensor2),intent(OUT) :: U,Sigma,vTransposed
      integer,intent(OUT),optional :: ErrorCode
-     complex(8),allocatable :: CopyOfInput(:,:) !This is here because ZGESDD destroys the input matrix
+     complex(8),allocatable :: CopyOfInput(:,:) !This extra copy is here because ZGESDD destroys the input matrix
      real(8),allocatable :: DiagonalPart(:)
      integer :: LeftDimension,RightDimension
      integer :: Error=Normal
@@ -3236,7 +3236,7 @@ end function Tensor4Trace
      Sigma=new_Tensor(LeftDimension,RightDimension,ZERO)
      vTransposed=new_Tensor(RightDimension,RightDimension,ZERO)
      allocate(DiagonalPart(min(LeftDimension,RightDimension)))
-     !This is here because ZGESDD destroys the input matrix
+     !This doubling of memory allocation is because ZGESDD destroys the input matrix
      allocate (CopyOfInput(LeftDimension,RightDimension))
      CopyOfInput=this%data
 
@@ -3279,7 +3279,7 @@ end function Tensor4Trace
          Sigma%data(idx,idx)=DiagonalPart(idx)
      enddo
 
-     !Clean up
+     !Clean up: manually remove memory otherwise compiler gives warnings
      deallocate(Work,RWork,IWork,DiagonalPart,STAT=Error)
      If (Error.ne.Normal) then
         call ThrowException('SingularValueDecomposition','Problems in deallocation',Error,CriticalError)

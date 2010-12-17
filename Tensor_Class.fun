@@ -227,22 +227,27 @@ end test
 
 
 test Singular_Value_Decomposition
-   integer,parameter :: DLeft=6,DRight=8
+   integer,parameter :: LeftDimension=6,RightDimension=8
    type(Tensor2) :: aMatrix,theU,theVt
    type(Tensor2) :: theSigma
-   complex(8) :: data(DLeft,DRight)
+   complex(8) :: data(LeftDimension,RightDimension)
    integer :: i,j,k
 
-   forall (i=1:Dleft ,j=1:Dright) &
-      & data(i,j)=one*(exp(II*i*Pi/DLeft)+(j-1)*Dleft)
+   !Input value is somewhat regular, perhaps try with random data at some point
+   forall (i=1:LeftDimension ,j=1:RightDimension) &
+      & data(i,j)=one*(exp(II*i*Pi/LeftDimension)+(j-1)*LeftDimension)
+      !Input value is somewhat regular, perhaps try with random data at some point
+
     aMatrix=new_Tensor(data)
 
    call aMatrix%SVD(theU,theSigma,theVt)
-
+   !Now test if the three output matrices form the original one
    assert_equal_within(aMatrix.absdiff.(theU*(theSigma*theVt)), 0.0d0, 1.0e-10)
    assert_false(WasThereError())
 
 end test
+
+
 
 test Right_Compactification
 

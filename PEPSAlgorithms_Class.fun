@@ -45,7 +45,7 @@ end test
 
 test  ApproximationAlgorithm
   type(PEPS) :: aPEPS, aBigPEPS
-  integer :: length=4,width=4,spin=2,bondSmall=2,bondBig=3, error
+  integer :: length=4,width=4,spin=2,bondSmall=1,bondBig=2, error
   real(8) :: overlap12
 
   aBigPEPS=new_PEPS(width,length,spin,bondBig)
