@@ -45,7 +45,7 @@ module PEPSAlgorithms_Class
 
 !*****************************************************************************
   function Approximate_PEPS(bigPEPS, newBondDimension, returnOverlap) result(smallPEPS)
-    type(PEPS), intent(IN) :: bigPEPS
+    type(PEPS), intent(INOUT) :: bigPEPS
     integer,intent(IN) :: newBondDimension
     real(8),optional,intent(OUT) :: returnOverlap
     type(PEPS) :: smallPEPS
