@@ -54,6 +54,7 @@ module PEPSAlgorithms_Class
     integer :: PEPSSize(2),localPEPSDims(5),PEPSSpin
     real(8) :: overlap
     integer :: siteX,siteY,sweep
+    type(Tensor4) :: aTempTensor
 
     if(bigPEPS%IsInitialized()) then
 
@@ -71,18 +72,36 @@ module PEPSAlgorithms_Class
 
         sweep=0
         !Start sweeping
-        overlap=Abs(bigMultiplicator%FullContraction())**2
+        !overlap=Abs(bigMultiplicator%FullContraction())**2
         do while (sweep .le. MaxSweeps ) !.and. (1.d0-overlap).gt.ApproximationTolerance )
             sweep=sweep+1
             !Sweep from 1,1 first to the right and then up
             do siteY=1,PEPSSize(2)
 	            do siteX=1,PEPSSize(1)
+	                print *,'Optimizing site ',siteX,',',siteY
 	                localTensor = smallPEPS%GetTensorAt(siteX,siteY)
 	                localPEPSDims = localTensor%GetDimensions()
+	                aTempTensor=smallMultiplicator%LeftAt(siteX-1,siteY)
+	                call aTempTensor%PrintDimensions('xxxxxxxx-------   0,1 dims LEFT small')
+	                aTempTensor=smallMultiplicator%RightAt(siteX+1,siteY)
+	                call aTempTensor%PrintDimensions('xxxxxxxx-------   2,1 dims RIGHT small')
+                    aTempTensor= smallMultiplicator%AboveAt(siteX,siteY+1)
+                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,2 dims ABOVE small')
+                    aTempTensor=smallMultiplicator%BelowAt(siteX,siteY-1)
+                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,0 dims BELOW small')
+                    aTempTensor=bigMultiplicator%LeftAt(siteX-1,siteY)
+                    call aTempTensor%PrintDimensions('xxxxxxxx-------   0,1 dims LEFT BIG')
+                    aTempTensor=bigMultiplicator%RightAt(siteX+1,siteY)
+                    call aTempTensor%PrintDimensions('xxxxxxxx-------   2,1 dims RIGHT BIG')
+                    aTempTensor=bigMultiplicator%AboveAt(siteX,siteY+1)
+                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,2 dims ABOVE BIG')
+                    aTempTensor=bigMultiplicator%BelowAt(siteX,siteY-1)
+                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,0 dims BELOW BIG')
+
                     localTensor = ComputePEPSOptimum ( smallMultiplicator%LeftAt(siteX-1,siteY), smallMultiplicator%RightAt(siteX+1,siteY), &
                         & smallMultiplicator%AboveAt(siteX,siteY+1), smallMultiplicator%BelowAt(siteX,siteY-1), &
                         & bigMultiplicator%LeftAt(siteX-1,siteY), bigMultiplicator%RightAt(siteX+1,siteY), &
-                        & bigMultiplicator%AboveAt(siteX,siteY-1), bigMultiplicator%BelowAt(siteX,siteY+1), &
+                        & bigMultiplicator%AboveAt(siteX,siteY+1), bigMultiplicator%BelowAt(siteX,siteY-1), &
                         & bigPEPS%GetTensorAt(siteX,siteY), localPEPSDims )
                         call smallPEPS%SetTensorAt(siteX,siteY,localTensor)
                 enddo
@@ -100,7 +119,7 @@ module PEPSAlgorithms_Class
                     localTensor = ComputePEPSOptimum ( smallMultiplicator%LeftAt(siteX-1,siteY), smallMultiplicator%RightAt(siteX+1,siteY), &
                         & smallMultiplicator%AboveAt(siteX,siteY+1), smallMultiplicator%BelowAt(siteX,siteY-1), &
                         & bigMultiplicator%LeftAt(siteX-1,siteY), bigMultiplicator%RightAt(siteX+1,siteY), &
-                        & bigMultiplicator%AboveAt(siteX,siteY-1), bigMultiplicator%BelowAt(siteX,siteY+1), &
+                        & bigMultiplicator%AboveAt(siteX,siteY+1), bigMultiplicator%BelowAt(siteX,siteY-1), &
                         & bigPEPS%GetTensorAt(siteX,siteY) , localPEPSDims)
                         call smallPEPS%SetTensorAt(siteX,siteY,localTensor)
                 enddo
@@ -110,14 +129,15 @@ module PEPSAlgorithms_Class
             !At the end of the sweep, the multiplicators are reset
             call smallMultiplicator%Reset(DOWN)
             call bigMultiplicator%Reset(DOWN)
-            overlap=Abs(bigMultiplicator%FullContraction())**2
+            !overlap=Abs(bigMultiplicator%FullContraction())**2
         enddo
+        print *,'---------------- Out of big loop ------------'
         call smallMultiplicator%Delete()
         call bigMultiplicator%Delete()
         if (present(returnOverlap)) then
             returnOverlap=overlap
         endif
-        If (Verbose) print *,'Total sweeps performed: ',sweep
+        If (Verbose) print *,'PEPS-Approximate/Total sweeps performed: ',sweep
     else
         call ThrowException('Overlap algorithm','PEPS not initialized',NoErrorCode,CriticalError)
     endif
@@ -137,14 +157,32 @@ module PEPSAlgorithms_Class
     type(PEPSTensor),intent(IN) :: aPEPSTensor
     integer,intent(IN) :: newDims(5)
     type(PEPSTensor) :: newTensor
-    type(Tensor2) :: smallMatrix,bigMatrixTimesVector
+    type(Tensor2) :: smallMatrix,bigMatrixTimesVector,aTempMatrix
 
+    print *,'About to contract 4 environments'
     smallMatrix=TensorTranspose( TensorTrace(  &
-                & ((smallE_left.xplus.smallE_Right).xplus.smallE_Up).xplus.smallE_Down, &
-                &                           FIRSTANDSECOND )      )
+                & ((smallE_left.xplus.smallE_Up).xplus.smallE_Right).xplus.smallE_Down, &
+                &                           THIRDANDFOURTH )      )
+
+    call smallMatrix%PrintDimensions('Small environment dims:')
+
+    aTempMatrix=aPEPSTensor%CompactBonds()
+    call aTempMatrix%PrintDimensions('PEPS Compacted dimensions:')
+
+    aTempMatrix=TensorTranspose( TensorTrace( &
+                & ((bigE_left.xplus.bigE_Up).xplus.bigE_Right).xplus.bigE_Down, &
+                                            THIRDANDFOURTH )      )
+    call aTempMatrix%PrintDimensions('Big Environment dimensions:')
     bigMatrixTimesVector=TensorTranspose( TensorTrace( &
-                & ((bigE_left.xplus.bigE_Right).xplus.bigE_Up).xplus.bigE_Down, &
-                                            FIRSTANDSECOND )      ) .x. aPEPSTensor%CompactBonds()
+                & ((bigE_left.xplus.bigE_Up).xplus.bigE_Right).xplus.bigE_Down, &
+                                            THIRDANDFOURTH )      ) .x. aPEPSTensor%CompactBonds()
+
+    print *,'Environments computed'
+
+    call bigMatrixTimesVector%PrintDimensions('Big environment dims:')
+
+    call smallMatrix%Print('Small matrix data:')
+    call bigMatrixTimesVector%Print('Big matrix*vector data:')
 
     newTensor= new_PEPSTensor(  &
        & SplitIndexOf(   &

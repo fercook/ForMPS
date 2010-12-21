@@ -113,7 +113,7 @@ test UpperlowerMPSCreation
 
 end test
 
-test lateralEnvironments
+test lateralEnvironments     !DIMENSIONAL ONLY TESTING OF LEFT AND RIGHT
   type(PEPS) :: aPEPS
   type(Multiplicator2D) :: theEnvironment
   integer :: length=4,width=4,spin=2,bond=2
@@ -125,30 +125,65 @@ test lateralEnvironments
 
   aPEPS=new_PEPS(width,length,spin,bond)
   theEnvironment=new_Multiplicator2D(aPEPS)
-!  aTensor = theEnvironment%LeftAt(1,1)
 
   call theEnvironment%PrepareRowAsMPO(1)
   anMPO=theEnvironment%RowsAsMPO(1)
-  print *,'--------------- Up to 4'
   aboveMPS=Multiplicator2D_RowAsUpperMPS(theEnvironment,4)
-  print *,'--------------- Up to 3'
   aboveMPS=Multiplicator2D_RowAsUpperMPS(theEnvironment,3)
-  print *,'--------------- Up to 2'
   aboveMPS=Multiplicator2D_RowAsUpperMPS(theEnvironment,2)
-  print *,'And here'
   belowMPS=Multiplicator2D_RowAsLowerMPS(theEnvironment,0)
-  print *,'Now continuing'
   anMPOTensor = anMPO%GetTensorAt(1)
   aboveMPSTensor = aboveMPS%GetTensorAt(1)
   belowMPSTensor = belowMPS%GetTensorAt(1)
-  call anMPOTensor%PrintDimensions('MPO dims')
-  call aboveMPSTensor%PrintDimensions('MPS above dims')
-  call belowMPSTensor%PrintDimensions('MPS below dims')
-
-    print *,LEFT,' to ',RIGHT
+  assert_true(anMPOTensor%GetDimensions().equalvector.[1,bond**2,bond**2,1])
+  assert_true(aboveMPSTensor%GetDimensions().equalvector.[1,bond**2,bond**2])
+  assert_true(belowMPSTensor%GetDimensions().equalvector.[1,1,1])
 
   aTensor= theEnvironment%LeftAt(2,3)
-  call aTensor%PrintDimensions()
+  assert_true(aTensor%GetDimensions().equalvector.[bond**4,bond**2,bond,bond])
+  aTensor= theEnvironment%RightAt(3,3)
+  assert_true(aTensor%GetDimensions().equalvector.[bond**2,bond**4,bond,bond])
+
+  aTensor= theEnvironment%LeftAt(2,2)
+  assert_true(aTensor%GetDimensions().equalvector.[bond**2,bond**4,bond,bond])
+  aTensor= theEnvironment%RightAt(3,2)
+  assert_true(aTensor%GetDimensions().equalvector.[bond**4,bond**2,bond,bond])
+
+  aTensor= theEnvironment%LeftAt(2,1)
+  assert_true(aTensor%GetDimensions().equalvector.[1,bond**4,bond,bond])
+  aTensor= theEnvironment%RightAt(3,1)
+  assert_true(aTensor%GetDimensions().equalvector.[bond**4,1,bond,bond])
+
+end test
+
+test Multip_With2_PEPS
+  type(PEPS) :: aPEPS, aBigPEPS
+  integer :: height=4,width=4,spin=2,bondSmall=2,bondBig=3, error
+  real(8) :: overlap12
+  type(Multiplicator2D) :: theEnvironment
+  type(Tensor4) :: aTensor
+
+  aPEPS=new_PEPS(width,height,spin,bondSmall)
+  aBigPEPS=new_PEPS(width,height,spin,bondBig)
+  theEnvironment = new_Multiplicator2D(aBigPEPS,aPEPS)
+
+  aTensor= theEnvironment%LeftAt(1,1)
+  call aTensor%PrintDimensions('1-1 Left Dimensions')
+  aTensor= theEnvironment%LeftAt(0,1)
+  call aTensor%PrintDimensions('0-1 Left Dimensions')
+  aTensor= theEnvironment%BelowAt(1,0)
+  call aTensor%PrintDimensions('1-0 Below Dimensions')
+  aTensor= theEnvironment%RightAt(2,1)
+  call aTensor%PrintDimensions('2-1 Right Dimensions')
+
+  aTensor= theEnvironment%LeftAt(2,2)
+  call aTensor%PrintDimensions('Left Dimensions')
+  assert_true(aTensor%GetDimensions().equalvector.[bondSMall*BondBig,min((bondSMall*BondBig)**2,theEnvironment%GetMaxApproxBond()),bondBig,bondSmall])
+  aTensor= theEnvironment%RightAt(3,2)
+  call aTensor%PrintDimensions('Right Dimensions')
+  assert_true(aTensor%GetDimensions().equalvector.[min((bondSMall*BondBig)**2,theEnvironment%GetMaxApproxBond()),bondSMall*BondBig,bondBig,bondSmall])
+
+  assert_false(WasThereError())
 
 end test
 

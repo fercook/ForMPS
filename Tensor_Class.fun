@@ -470,5 +470,99 @@ test tensor5JoinandSplit
 
 end test
 
+test xplusWithTensor4
+
+    type(tensor4) :: aT4,anotherT4,newT4,correctT4
+    integer,parameter :: lft=4,rgt=5,ump=2,dwn=3
+    real(8) :: data1R(lft,rgt),data1I(lft,rgt),data2R(rgt,lft),data2I(rgt,lft)
+    complex(8) :: fulltensor1(lft,rgt,ump,dwn), fulltensor2(rgt,lft,ump,dwn),correctTensor(lft,lft,ump*ump,dwn*dwn)
+    integer :: i,j,k,l
+
+    do i=1,ump
+      do j=1,dwn
+        call random_number(data1R)
+        call random_number(data1I)
+        call random_number(data2R)
+        call random_number(data2I)
+        fulltensor1(:,:,i,j)=data1R+II*data1I
+        fulltensor2(:,:,i,j)=data2R+II*data2I
+      enddo
+    enddo
+    correctTensor=ZERO
+    do i=1,ump
+    do j=1,ump
+      do k=1,dwn
+      do l=1,dwn
+        correctTensor(:,:,(j-1)*ump+i,(l-1)*dwn+k)=matmul(fulltensor1(:,:,i,k),fulltensor2(:,:,j,l))
+      enddo
+      enddo
+    enddo
+    enddo
+
+    correctT4=new_Tensor(correctTensor)
+    aT4=new_Tensor(fulltensor1)
+    anotherT4=new_Tensor(fulltensor2)
+    newT4=aT4.xplus.anotherT4
+
+    assert_equal_within(newT4.absdiff.correctT4,0.0d0,1.0e-10)
+
+end test
+
+test TensorTraceWithTensor4
+
+    type(tensor4) :: aT4
+    type(tensor2) :: aT2,correctT2
+    integer,parameter :: lft=5,rgt=5,ump=2,dwn=3
+    real(8) :: dataR(lft,rgt),dataI(lft,rgt)
+    complex(8) :: fulltensor(lft,rgt,ump,dwn), correctTensor(ump,dwn)
+    integer :: i,j,k,l
+
+    do i=1,ump
+      do j=1,dwn
+        call random_number(dataR)
+        call random_number(dataI)
+        fulltensor(:,:,i,j)=dataR+II*dataI
+      enddo
+    enddo
+    correctTensor=ZERO
+    do i=1,ump
+      do j=1,dwn
+        do k=1,lft
+            correctTensor(i,j)=correctTensor(i,j)+ (fulltensor(k,k,i,j))
+        enddo
+      enddo
+    enddo
+
+    correctT2=new_Tensor(correctTensor)
+    aT4=new_Tensor(fulltensor)
+    aT2=TensorTrace(aT4,THIRDANDFOURTH)
+    assert_true(aT2%GetDimensions().equalvector.[ump,dwn])
+    assert_equal_within(aT2.absdiff.correctT2,0.0d0,1.0e-10)
+
+end test
+
+test LinearSolver
+    integer,parameter :: lft=5,rgt=2
+    real(8) :: tempR(lft,lft),tempI(lft,lft),vecR(lft,rgt),vecI(lft,rgt)
+    complex(8) :: thedata(lft,lft),vectordata(lft,rgt)
+    type(tensor2) :: matrix,vector,solution,originalMatrix
+    integer :: errorpoint
+
+    call random_number(tempR)
+    call random_number(tempI)
+    thedata=tempR+II*tempI
+    call random_number(vecR)
+    call random_number(vecI)
+    vectordata=vecR+II*vecI
+
+    vector=new_Tensor(vectorData)
+    matrix=new_Tensor(thedata)
+    originalMatrix=new_Tensor(matrix)
+    solution=SolveLinearProblem(matrix, vector, 1.0d-8 )
+    assert_equal_within( matrix * solution.absdiff.vector,0.0d0,1.0d-8)
+
+    !call ZGELSD( thedata, vectordata, 1.0d-8 )
+
+end test
 
 end test_suite

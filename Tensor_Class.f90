@@ -20,6 +20,7 @@ module Tensor_Class
 
   use ErrorHandling
   use Constants
+!  use lapack95
 !  use NNLSInverseCalculator
 !  use CACM66InverseCalculator
 
@@ -3315,11 +3316,39 @@ end function Tensor4Trace
     class(Tensor2),intent(IN) :: theVectorAsMatrix
     real(8),intent(IN) :: LS_Tolerance
     type(Tensor2) :: theSolution
+    type(Tensor2) :: CopyOfMatrix
+    integer :: matrixSize(2),vectorSize(2)
+    !These variables are for LAPACK F77 Interface
+    real(8),allocatable :: GELOutputS(:)
+    integer :: rank,info,tempDim
+    complex(8),allocatable :: work(:)
+    real(8),allocatable :: rwork(:)
+    integer,allocatable :: iwork(:)
+    integer :: lwork,lrwork,liwork
 
-    theSolution = theVectorAsMatrix
+    matrixSize=shape(theMatrix%data)
+    vectorSize=shape(theVectorAsMatrix%data)
+    theSolution=theVectorAsMatrix
+    CopyOfMatrix=theMatrix
 
-    call ZGELSD( theMatrix%data, theSolution%data, LS_Tolerance )
+    allocate(GELoutputS(minval(matrixSize)))
+    !Call MKL Lapack solver
+    tempDim=1
+    allocate (work(tempDim),rwork(tempDim),iwork(tempDim))
+    !Find out optimum lwork
+    lwork=-1
+    call ZGELSD ( matrixSize(1), matrixSize(2), vectorsize(2), CopyOfMatrix%data, matrixSize(1), theSolution%data, vectorsize(1), &
+        & GELOutputS, LS_Tolerance, rank, work, lwork, rwork, iwork, info)
+    lwork=int(work(1))
+    lrwork=int(rwork(1))
+    liwork=iwork(1)
+    deallocate(work,rwork,iwork)
+    allocate(work(lwork),rwork(lrwork),iwork(liwork))
+    !Now make final call
+    call ZGELSD ( matrixSize(1), matrixSize(2), vectorsize(2), CopyOfMatrix%data, matrixSize(1), theSolution%data, vectorsize(1), &
+        & GELOutputS, LS_Tolerance, rank, work, lwork, rwork, iwork, info)
 
    end function SolveLinearProblem_LAPACK_matrix
+
 
 end module Tensor_Class
