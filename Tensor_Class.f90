@@ -28,7 +28,7 @@ module Tensor_Class
 ! Need to learn how to make operators public.
 !  private
   public :: new_Tensor
-  public :: operator(*),assignment(=),operator(.x.),operator(+),operator(-),operator(.xx.),operator(.xplus.)
+  public :: operator(*),assignment(=),operator(.x.),operator(+),operator(-),operator(.xplus.)
   public :: operator(.diff.),operator(.absdiff.)
   public :: operator(.equaldims.),operator(.equaltype.)
   public :: Conjugate,TensorTranspose,ConjugateTranspose
@@ -134,7 +134,7 @@ module Tensor_Class
 
   interface operator (*)
      module procedure &
-     	  & number_times_Tensor1,number_times_Tensor2,number_times_Tensor3,number_times_Tensor4, &
+     	  & number_times_Tensor1,number_times_Tensor2,number_times_Tensor3,number_times_Tensor4,number_times_Tensor5, &
      	  & Tensor2_matmul_Tensor2, Tensor2_matmul_Tensor1, Tensor1_matmul_Tensor2, &
      	  & Tensor1_dotProduct_Tensor1, &
      	  & Tensor3_matmul_Tensor3, Tensor2_matmul_Tensor3, Tensor3_matmul_Tensor2, &
@@ -151,11 +151,6 @@ module Tensor_Class
           & Tensor2_matmul_Tensor2, Tensor2_matmul_Tensor1, Tensor1_matmul_Tensor2, &
           & Tensor1_dotProduct_Tensor1, Tensor3_matmul_Tensor3, Tensor2_matmul_Tensor3, &
           & Tensor5_matmul_Tensor2, Tensor3_matmul_Tensor2, Tensor2_matmul_Tensor5
-  end interface
-
-  interface operator (.xx.)
-     module procedure &
-     &   Tensor4_doubletimes_Tensor4,Tensor2_doubletimes_Tensor2
   end interface
 
   interface operator (.xxx.)
@@ -244,7 +239,7 @@ module Tensor_Class
   end interface
 
   interface CompactBelow
-    module procedure Compact_From_Below_With_Tensor4, & !Mirror_Compact_Tensor5, Compact_Tensor5, &
+    module procedure Compact_From_Below_With_Tensor4, &
                     & CompactTensor5_From_Below_With_Tensor6
   end interface
 

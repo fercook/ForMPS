@@ -144,10 +144,8 @@ module PEPSTensor_Class
    function new_PEPSTensor_fromTensor5 (tensor) result (this)
      type(Tensor5),intent(in) :: tensor
      type(PEPSTensor) this
-     integer :: dims(5)
 
      this=new_Tensor(tensor)
-     dims=tensor%GetDimensions()
 
    end function new_PEPSTensor_fromTensor5
 
