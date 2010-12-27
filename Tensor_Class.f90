@@ -141,10 +141,10 @@ module Tensor_Class
      	  & Tensor5_matmul_Tensor2,Tensor2_matmul_Tensor5
   end interface
 
-  interface operator (**)
-     module procedure &
-     &   Tensor4_doubletimes_Tensor4,Tensor2_doubletimes_Tensor2
-  end interface
+!  interface operator (**)
+!     module procedure &
+!     &   Tensor4_doubletimes_Tensor4,Tensor2_doubletimes_Tensor2
+!  end interface
 
   interface operator (.x.)
      module procedure &
@@ -245,6 +245,10 @@ module Tensor_Class
 
   interface MirrorCompact
     module procedure Mirror_Compact_Tensor5
+  end interface
+
+  interface nModeProduct
+    module procedure Matrix_Xn_Tensor3, Matrix_Xn_Tensor4, Matrix_Xn_Tensor5
   end interface
 
   interface SolveLinearProblem
@@ -1552,6 +1556,295 @@ integer function InitializationCheck(this) result(error)
     end function Tensor2_matmul_Tensor5
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+! n-Mode products
+    function Matrix_Xn_Tensor3(aMatrix,aTensor,summedIndex) result(this)
+        class(Tensor3),intent(IN) :: aTensor
+        class(Tensor2),intent(IN) :: aMatrix
+        integer,intent(IN) :: summedIndex(1)
+        type(Tensor3) :: this
+        integer :: dimsOfMatrix(2),dimsOfTensor(3),newDims(3)
+        integer :: sumIndex,freeIndex1,freeIndex2,matrixFreeIndex
+        complex(8) :: Ctemp
+
+        if(aTensor%Initialized.and.aMatrix%Initialized) then
+            dimsOfTensor=shape(aTensor%data)
+            dimsOfMatrix=shape(aMatrix%data)
+            if(dimsOfTensor(summedIndex(1)).eq.dimsOfMatrix(2)) then
+                newDims=dimsOfTensor
+                newDims(summedIndex(1))=dimsOfMatrix(1)
+                this=new_Tensor(newDims(1),newDims(2),newDims(3),ZERO)
+                !ALL LOOP STRUCTURES INSPIRED FROM BLAS3: Perhaps could be tuned in the future
+                select case(summedIndex(1))
+                    case(FIRST(1))
+                        do freeIndex2=1,newDims(3)
+                          do freeIndex1=1,newDims(2)
+                            do sumIndex=1,dimsOfMatrix(2)
+                              Ctemp=aTensor%data(sumIndex,freeIndex1,freeIndex2)
+                              do matrixFreeIndex=1,dimsOfMatrix(1)
+                                this%data(matrixFreeIndex,freeIndex1,freeIndex2) = this%data(matrixFreeIndex,freeIndex1,freeIndex2) &
+                                    & + Ctemp * aMatrix%data(matrixFreeIndex,sumIndex)
+                              enddo
+                            enddo
+                          enddo
+                        enddo
+                    case(SECOND(1))
+                        do freeIndex2=1,newDims(3)
+                          do matrixFreeIndex=1,dimsOfMatrix(1)
+                            do sumIndex=1,dimsOfMatrix(2)
+                              Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
+                              do freeIndex1=1,newDims(1)
+                                this%data(freeIndex1,matrixFreeIndex,freeIndex2) = this%data(freeIndex1,matrixFreeIndex,freeIndex2) &
+                                    & + Ctemp * aTensor%data(freeIndex1,sumIndex,freeIndex2)
+                              enddo
+                            enddo
+                          enddo
+                        enddo
+                    case(THIRD(1))
+                        do matrixFreeIndex=1,dimsOfMatrix(1)
+                          do sumIndex=1,dimsOfMatrix(2)
+                            Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
+                            do freeIndex2=1,newDims(2)
+                              do freeIndex1=1,newDims(1)
+                                this%data(freeIndex1,freeIndex2,matrixFreeIndex) = this%data(freeIndex1,freeIndex2,matrixFreeIndex) &
+                                    & + Ctemp * aTensor%data(freeIndex1,freeIndex2,sumIndex)
+                              enddo
+                            enddo
+                          enddo
+                        enddo
+                    case default
+                        call ThrowException('Matrix_Xn_Tensor3','Index must be FIRST to THIRD',summedIndex(1),CriticalError)
+                end select
+            else
+                call ThrowException('Matrix_Xn_Tensor3','Summed indexes are not equal',NoErrorCode,CriticalError)
+            endif
+        else
+            call ThrowException('Matrix_Xn_Tensor3','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+     end function Matrix_Xn_Tensor3
+
+
+
+
+
+
+
+    function Matrix_Xn_Tensor4(aMatrix,aTensor,summedIndex) result(this)
+        class(Tensor4),intent(IN) :: aTensor
+        class(Tensor2),intent(IN) :: aMatrix
+        integer,intent(IN) :: summedIndex(1)
+        type(Tensor4) :: this
+        integer :: dimsOfMatrix(2),dimsOfTensor(4),newDims(4)
+        integer :: sumIndex,freeIndex1,freeIndex2,freeIndex3,matrixFreeIndex
+        complex(8) :: Ctemp
+
+        if(aTensor%Initialized.and.aMatrix%Initialized) then
+            dimsOfTensor=shape(aTensor%data)
+            dimsOfMatrix=shape(aMatrix%data)
+            if(dimsOfTensor(summedIndex(1)).eq.dimsOfMatrix(2)) then
+                newDims=dimsOfTensor
+                newDims(summedIndex(1))=dimsOfMatrix(1)
+                this=new_Tensor(newDims(1),newDims(2),newDims(3),newDims(4),ZERO)
+                !ALL LOOP STRUCTURES INSPIRED FROM BLAS3: Perhaps could be tuned in the future
+                select case(summedIndex(1))
+                    case(FIRST(1))
+                        do freeIndex3=1,newDims(4)
+                          do freeIndex2=1,newDims(3)
+                            do freeIndex1=1,newDims(2)
+                              do sumIndex=1,dimsOfMatrix(2)
+                                Ctemp=aTensor%data(sumIndex,freeIndex1,freeIndex2,freeIndex3)
+                                do matrixFreeIndex=1,dimsOfMatrix(1)
+                                  this%data(matrixFreeIndex,freeIndex1,freeIndex2,freeIndex3) = this%data(matrixFreeIndex,freeIndex1,freeIndex2,freeIndex3) &
+                                      & + Ctemp * aMatrix%data(matrixFreeIndex,sumIndex)
+                                enddo
+                              enddo
+                            enddo
+                          enddo
+                        enddo
+                    case(SECOND(1))
+                      do freeIndex3=1,newDims(4)
+                        do freeIndex2=1,newDims(3)
+                          do matrixFreeIndex=1,dimsOfMatrix(1)
+                            do sumIndex=1,dimsOfMatrix(2)
+                              Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
+                              do freeIndex1=1,newDims(1)
+                                this%data(freeIndex1,matrixFreeIndex,freeIndex2,freeIndex3) = this%data(freeIndex1,matrixFreeIndex,freeIndex2,freeIndex3) &
+                                    & + Ctemp * aTensor%data(freeIndex1,sumIndex,freeIndex2,freeIndex3)
+                              enddo
+                            enddo
+                          enddo
+                        enddo
+                      enddo
+                    case(THIRD(1))
+                      do freeIndex3=1,newDims(4)
+                        do matrixFreeIndex=1,dimsOfMatrix(1)
+                          do sumIndex=1,dimsOfMatrix(2)
+                            Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
+                            do freeIndex2=1,newDims(2)
+                              do freeIndex1=1,newDims(1)
+                                this%data(freeIndex1,freeIndex2,matrixFreeIndex,freeIndex3) = this%data(freeIndex1,freeIndex2,matrixFreeIndex,freeIndex3) &
+                                   & + Ctemp * aTensor%data(freeIndex1,freeIndex2,sumIndex,freeIndex3)
+                              enddo
+                            enddo
+                          enddo
+                        enddo
+                      enddo
+                    case(FOURTH(1))
+                      do matrixFreeIndex=1,dimsOfMatrix(1)
+                        do sumIndex=1,dimsOfMatrix(2)
+                          Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
+                          do freeIndex3=1,newDims(3)
+                            do freeIndex2=1,newDims(2)
+                              do freeIndex1=1,newDims(1)
+                                this%data(freeIndex1,freeIndex2,freeIndex3,matrixFreeIndex) = this%data(freeIndex1,freeIndex2,freeIndex3,matrixFreeIndex) &
+                                    & + Ctemp * aTensor%data(freeIndex1,freeIndex2,freeIndex3,sumIndex)
+                              enddo
+                            enddo
+                          enddo
+                        enddo
+                      enddo
+                    case default
+                        call ThrowException('Matrix_Xn_Tensor4','Index must be FIRST to FOURTH',summedIndex(1),CriticalError)
+                end select
+            else
+                call ThrowException('Matrix_Xn_Tensor4','Summed indexes are not equal',NoErrorCode,CriticalError)
+            endif
+        else
+            call ThrowException('Matrix_Xn_Tensor4','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+     end function Matrix_Xn_Tensor4
+
+
+
+
+
+
+
+
+
+    function Matrix_Xn_Tensor5(aMatrix,aTensor,summedIndex) result(this)
+        class(Tensor5),intent(IN) :: aTensor
+        class(Tensor2),intent(IN) :: aMatrix
+        integer,intent(IN) :: summedIndex(1)
+        type(Tensor5) :: this
+        integer :: dimsOfMatrix(2),dimsOfTensor(5),newDims(5)
+        integer :: sumIndex,freeIndex1,freeIndex2,freeIndex3,freeIndex4,matrixFreeIndex
+        complex(8) :: Ctemp
+
+        if(aTensor%Initialized.and.aMatrix%Initialized) then
+            dimsOfTensor=shape(aTensor%data)
+            dimsOfMatrix=shape(aMatrix%data)
+            if(dimsOfTensor(summedIndex(1)).eq.dimsOfMatrix(2)) then
+                newDims=dimsOfTensor
+                newDims(summedIndex(1))=dimsOfMatrix(1)
+                this=new_Tensor(newDims(1),newDims(2),newDims(3),newDims(4),newDims(5),ZERO)
+                !ALL LOOP STRUCTURES INSPIRED FROM BLAS3: Perhaps could be tuned in the future
+                select case(summedIndex(1))
+                    case(FIRST(1))
+                      do freeIndex4=1,newDims(5)
+                        do freeIndex3=1,newDims(4)
+                          do freeIndex2=1,newDims(3)
+                            do freeIndex1=1,newDims(2)
+                              do sumIndex=1,dimsOfMatrix(2)
+                                Ctemp=aTensor%data(sumIndex,freeIndex1,freeIndex2,freeIndex3,freeIndex4)
+                                do matrixFreeIndex=1,dimsOfMatrix(1)
+                                  this%data(matrixFreeIndex,freeIndex1,freeIndex2,freeIndex3,freeIndex4) = this%data(matrixFreeIndex,freeIndex1,freeIndex2,freeIndex3,freeIndex4) &
+                                      & + Ctemp * aMatrix%data(matrixFreeIndex,sumIndex)
+                                enddo
+                              enddo
+                            enddo
+                          enddo
+                        enddo
+                      enddo
+                    case(SECOND(1))
+                      do freeIndex4=1,newDims(5)
+                        do freeIndex3=1,newDims(4)
+                          do freeIndex2=1,newDims(3)
+                            do matrixFreeIndex=1,dimsOfMatrix(1)
+                              do sumIndex=1,dimsOfMatrix(2)
+                                Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
+                                do freeIndex1=1,newDims(1)
+                                  this%data(freeIndex1,matrixFreeIndex,freeIndex2,freeIndex3,freeIndex4) = this%data(freeIndex1,matrixFreeIndex,freeIndex2,freeIndex3,freeIndex4) &
+                                      & + Ctemp * aTensor%data(freeIndex1,sumIndex,freeIndex2,freeIndex3,freeIndex4)
+                                enddo
+                              enddo
+                            enddo
+                          enddo
+                        enddo
+                      enddo
+                    case(THIRD(1))
+                      do freeIndex4=1,newDims(5)
+                        do freeIndex3=1,newDims(4)
+                          do matrixFreeIndex=1,dimsOfMatrix(1)
+                            do sumIndex=1,dimsOfMatrix(2)
+                              Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
+                              do freeIndex2=1,newDims(2)
+                                do freeIndex1=1,newDims(1)
+                                  this%data(freeIndex1,freeIndex2,matrixFreeIndex,freeIndex3,freeIndex4) = this%data(freeIndex1,freeIndex2,matrixFreeIndex,freeIndex3,freeIndex4) &
+                                     & + Ctemp * aTensor%data(freeIndex1,freeIndex2,sumIndex,freeIndex3,freeIndex4)
+                                enddo
+                              enddo
+                            enddo
+                          enddo
+                        enddo
+                      enddo
+                    case(FOURTH(1))
+                      do freeIndex4=1,newDims(5)
+                        do matrixFreeIndex=1,dimsOfMatrix(1)
+                          do sumIndex=1,dimsOfMatrix(2)
+                            Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
+                            do freeIndex3=1,newDims(3)
+                              do freeIndex2=1,newDims(2)
+                                do freeIndex1=1,newDims(1)
+                                  this%data(freeIndex1,freeIndex2,freeIndex3,matrixFreeIndex,freeIndex4) = this%data(freeIndex1,freeIndex2,freeIndex3,matrixFreeIndex,freeIndex4) &
+                                     & + Ctemp * aTensor%data(freeIndex1,freeIndex2,freeIndex3,sumIndex,freeIndex4)
+                                enddo
+                              enddo
+                            enddo
+                          enddo
+                        enddo
+                      enddo
+                    case(FIFTH(1))
+                      do matrixFreeIndex=1,dimsOfMatrix(1)
+                        do sumIndex=1,dimsOfMatrix(2)
+                          Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
+                          do freeIndex4=1,newDims(5)
+                            do freeIndex3=1,newDims(3)
+                              do freeIndex2=1,newDims(2)
+                                do freeIndex1=1,newDims(1)
+                                  this%data(freeIndex1,freeIndex2,freeIndex3,freeIndex4,matrixFreeIndex) = this%data(freeIndex1,freeIndex2,freeIndex3,freeIndex4,matrixFreeIndex) &
+                                      & + Ctemp * aTensor%data(freeIndex1,freeIndex2,freeIndex3,freeIndex4,sumIndex)
+                                enddo
+                              enddo
+                            enddo
+                          enddo
+                        enddo
+                      enddo
+                    case default
+                        call ThrowException('Matrix_Xn_Tensor5','Index must be FIRST to FIFTH',summedIndex(1),CriticalError)
+                end select
+            else
+                call ThrowException('Matrix_Xn_Tensor5','Summed indexes are not equal',NoErrorCode,CriticalError)
+            endif
+        else
+            call ThrowException('Matrix_Xn_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+     end function Matrix_Xn_Tensor5
+
+
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
     function Tensor4_doubletimes_Tensor4 ( tensorA,tensorB) result(this)
         class(Tensor4),intent(IN) :: tensorA,tensorB
         type(tensor4) :: this
