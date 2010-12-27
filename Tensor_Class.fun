@@ -205,6 +205,130 @@ test transpose_of_tensor4
 
 end test
 
+
+test unfoldings_of_tensor3
+    integer,parameter :: d1=2,d2=3,d3=4
+    type(Tensor3) :: aTensor
+    type(Tensor2) :: unfoldedTensor,CorrectTensor
+    complex(8) :: data(d1,d2,d3)
+    complex(8),allocatable :: matrixform(:,:)
+    integer :: i1,i2,i3
+
+    forall (i1=1:d1, i2=1:d2, i3=1:d3) data(i1,i2,i3)=one*(i1*100+i2*10+II*i3)
+    aTensor=new_Tensor(data)
+
+    unfoldedTensor=aTensor.unfold.1
+    allocate(matrixform( d1,d2*d3 ))
+    forall (i1=1:d1, i2=1:d2, i3=1:d3) matrixform (i1,(i3-1)*d2+i2)=one*(i1*100+i2*10+II*i3)
+    CorrectTensor=new_Tensor(matrixform)
+    assert_equal_within(unfoldedTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(matrixform)
+
+    unfoldedTensor=aTensor.unfold.2
+    allocate(matrixform( d2,d1*d3 ))
+    forall (i1=1:d1, i2=1:d2, i3=1:d3) matrixform (i2,(i3-1)*d1+i1)=one*(i1*100+i2*10+II*i3)
+    CorrectTensor=new_Tensor(matrixform)
+    assert_equal_within(unfoldedTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(matrixform)
+
+    unfoldedTensor=aTensor.unfold.3
+    allocate(matrixform( d3,d1*d2 ))
+    forall (i1=1:d1, i2=1:d2, i3=1:d3) matrixform (i3,(i1-1)*d2+i2)=one*(i1*100+i2*10+II*i3)
+    CorrectTensor=new_Tensor(matrixform)
+    assert_equal_within(unfoldedTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(matrixform)
+
+end test
+
+test unfoldings_of_tensor4
+    integer,parameter :: d1=2,d2=3,d3=4,d4=3
+    type(Tensor4) :: aTensor
+    type(Tensor2) :: unfoldedTensor,CorrectTensor
+    complex(8) :: data(d1,d2,d3,d4)
+    complex(8),allocatable :: matrixform(:,:)
+    integer :: i1,i2,i3,i4
+
+    forall (i1=1:d1, i2=1:d2, i3=1:d3, i4=1:d4) data(i1,i2,i3,i4)=one*(i1*1000+i2*100+II*10*i3+i4)
+    aTensor=new_Tensor(data)
+
+    unfoldedTensor=aTensor.unfold.1
+    allocate(matrixform( d1,d2*d3*d4 ))
+    forall (i1=1:d1, i2=1:d2, i3=1:d3,i4=1:d4) matrixform (i1,(i4-1)*d2*d3+(i3-1)*d2+i2)=one*(i1*1000+i2*100+II*10*i3+i4)
+    CorrectTensor=new_Tensor(matrixform)
+    assert_equal_within(unfoldedTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(matrixform)
+
+    unfoldedTensor=aTensor.unfold.2
+    allocate(matrixform( d2,d1*d3*d4 ))
+    forall (i1=1:d1, i2=1:d2, i3=1:d3,i4=1:d4) matrixform (i2,(i4-1)*d1*d3+(i3-1)*d1+i1)=one*(i1*1000+i2*100+II*10*i3+i4)
+    CorrectTensor=new_Tensor(matrixform)
+    assert_equal_within(unfoldedTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(matrixform)
+
+    unfoldedTensor=aTensor.unfold.3
+    allocate(matrixform( d3,d2*d1*d4 ))
+    forall (i1=1:d1, i2=1:d2, i3=1:d3,i4=1:d4) matrixform (i3,(i4-1)*d2*d1+(i1-1)*d2+i2)=one*(i1*1000+i2*100+II*10*i3+i4)
+    CorrectTensor=new_Tensor(matrixform)
+    assert_equal_within(unfoldedTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(matrixform)
+
+    unfoldedTensor=aTensor.unfold.4
+    allocate(matrixform( d4,d2*d3*d1 ))
+    forall (i1=1:d1, i2=1:d2, i3=1:d3,i4=1:d4) matrixform (i4,(i1-1)*d2*d3+(i3-1)*d2+i2)=one*(i1*1000+i2*100+II*10*i3+i4)
+    CorrectTensor=new_Tensor(matrixform)
+    assert_equal_within(unfoldedTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(matrixform)
+
+end test
+
+test unfoldings_of_tensor5
+    integer,parameter :: d1=2,d2=3,d3=4,d4=3,d5=2
+    type(Tensor5) :: aTensor
+    type(Tensor2) :: unfoldedTensor,CorrectTensor
+    complex(8) :: data(d1,d2,d3,d4,d5)
+    complex(8),allocatable :: matrixform(:,:)
+    integer :: i1,i2,i3,i4,i5
+
+    forall (i1=1:d1, i2=1:d2, i3=1:d3, i4=1:d4,i5=1:d5) data(i1,i2,i3,i4,i5)=one*(i1*1000+i2*100+II*10*i3+i4+II*i5)
+    aTensor=new_Tensor(data)
+
+    unfoldedTensor=aTensor.unfold.1
+    allocate(matrixform( d1,d2*d3*d4*d5 ))
+    forall (i1=1:d1, i2=1:d2, i3=1:d3,i4=1:d4,i5=1:d5) matrixform (i1,(i5-1)*d2*d3*d4+(i4-1)*d2*d3+(i3-1)*d2+i2)=one*(i1*1000+i2*100+II*10*i3+i4+II*i5)
+    CorrectTensor=new_Tensor(matrixform)
+    assert_equal_within(unfoldedTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(matrixform)
+
+    unfoldedTensor=aTensor.unfold.2
+    allocate(matrixform( d2,d1*d3*d4*d5 ))
+    forall (i1=1:d1, i2=1:d2, i3=1:d3,i4=1:d4,i5=1:d5) matrixform (i2,(i5-1)*d1*d3*d4+(i4-1)*d1*d3+(i3-1)*d1+i1)=one*(i1*1000+i2*100+II*10*i3+i4+II*i5)
+    CorrectTensor=new_Tensor(matrixform)
+    assert_equal_within(unfoldedTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(matrixform)
+
+    unfoldedTensor=aTensor.unfold.3
+    allocate(matrixform( d3,d2*d1*d4*d5 ))
+    forall (i1=1:d1, i2=1:d2, i3=1:d3,i4=1:d4,i5=1:d5) matrixform (i3,(i5-1)*d2*d1*d4+(i4-1)*d2*d1+(i1-1)*d2+i2)=one*(i1*1000+i2*100+II*10*i3+i4+II*i5)
+    CorrectTensor=new_Tensor(matrixform)
+    assert_equal_within(unfoldedTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(matrixform)
+
+    unfoldedTensor=aTensor.unfold.4
+    allocate(matrixform( d4,d2*d3*d1*d5 ))
+    forall (i1=1:d1, i2=1:d2, i3=1:d3,i4=1:d4,i5=1:d5) matrixform (i4,(i5-1)*d2*d3*d1+(i1-1)*d2*d3+(i3-1)*d2+i2)=one*(i1*1000+i2*100+II*10*i3+i4+II*i5)
+    CorrectTensor=new_Tensor(matrixform)
+    assert_equal_within(unfoldedTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(matrixform)
+
+    unfoldedTensor=aTensor.unfold.5
+    allocate(matrixform( d5,d2*d3*d1*d4 ))
+    forall (i1=1:d1, i2=1:d2, i3=1:d3,i4=1:d4,i5=1:d5) matrixform (i5,(i1-1)*d2*d3*d4+(i4-1)*d2*d3+(i3-1)*d2+i2)=one*(i1*1000+i2*100+II*10*i3+i4+II*i5)
+    CorrectTensor=new_Tensor(matrixform)
+    assert_equal_within(unfoldedTensor.absdiff.correctTensor, 0.0d0, 1.0e-8)
+    deallocate(matrixform)
+
+end test
+
 test matrix_product
     integer,parameter :: DLeft=6,DRight=8
     type(Tensor2) :: mat,mat1, mat2,correct
