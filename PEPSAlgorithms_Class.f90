@@ -41,6 +41,14 @@ module PEPSAlgorithms_Class
         module procedure Approximate_PEPS
     end interface
 
+    interface Normalize
+        module procedure Normalize_PEPS
+    end interface
+
+    interface Overlap
+        module procedure Overlap_PEPS
+    end interface
+
   contains
 
 !*****************************************************************************
@@ -196,5 +204,17 @@ module PEPSAlgorithms_Class
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+  function Overlap_PEPS(onePEPS, anotherPEPS) result(theOverlap)
+      class(PEPS),intent(INOUT) :: onePEPS, anotherPEPS
+      type(Multiplicator2D) :: theEnvironment
+      complex(8) :: theOverlap
+
+      theEnvironment=new_Multiplicator2D(onePEPS, anotherPEPS)
+      theOverlap = Overlap_PEPSAboveBelow(theEnvironment)
+
+  end function Overlap_PEPS
+
+  function Normalize_PEPS(aPEPS)
 
 end module PEPSAlgorithms_Class
