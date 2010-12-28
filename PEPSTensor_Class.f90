@@ -42,6 +42,7 @@ module PEPSTensor_Class
      procedure,public :: ApplyOperator => Apply_Operator_To_PEPS_Spin_Dimension
      procedure,public :: Collapse => Collapse_PEPS_Into_Tensor4
      procedure,public :: CompactBonds => CompactPEPSBondDimensions
+     procedure,public :: HOSVD => HighOrderSVDofPEPS
   end type PEPSTensor
 
 !###############################
@@ -357,6 +358,24 @@ module PEPSTensor_Class
     end function CompactPEPSBondDimensions
 
 !##################################################################
+
+    subroutine HighOrderSVDofPEPS(aPEPS,CoreTensor,UMatrices,newBondDim)
+        class(PEPSTensor),intent(IN) :: aPEPS
+        integer,intent(IN) :: newBondDim
+        type(Tensor2) ,intent(OUT):: UMatrices(4)
+        type(Tensor2) :: U(5)
+        type(PEPSTensor), intent(OUT) :: CoreTensor
+        type(Tensor2) :: SpinUMatrix
+
+        if(aPEPS%Isinitialized()) then
+            call SingularValueDecomposition(aPEPS,CoreTensor,U, newBondDim)
+            CoreTensor=nModeProduct(U(5),CoreTensor,FIFTH)
+            UMatrices=U(1:4)
+        else
+            call ThrowException('HighOrderSVDofPEPS','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end subroutine HighOrderSVDofPEPS
 
 
 end module PEPSTensor_Class

@@ -484,8 +484,9 @@ module MPSTensor_Class
        call ThrowException('Left_Canonize_MPSTensor','Could not collapse the tensor',NoErrorCode,CriticalError)
        return
     endif
+    error=Normal
 
-    call SingularValueDecomposition(CollapsedTensor,U,Sigma,V,error)
+    call SingularValueDecomposition(CollapsedTensor,U,Sigma,V)
 
     if (error.ne.Normal) then
        call ThrowException('Left_Canonize_MPSTensor','Could not split the matrix',NoErrorCode,CriticalError)
@@ -524,7 +525,8 @@ module MPSTensor_Class
        return
     endif
 
-    call SingularValueDecomposition(CollapsedTensor,U,Sigma,V,error)
+    error=Normal
+    call SingularValueDecomposition(CollapsedTensor,U,Sigma,V)
     if (error.ne.Normal) then
        call ThrowException('Left_Canonize_MPSTensor','Error in SVD',NoErrorCode,CriticalError)
        return

@@ -27,6 +27,7 @@ test_suite Tensor_Class
 setup
   !Set testing mode
   MaxErrorAllowed=CriticalError
+  CALL random_seed()
 end setup
 
 teardown
@@ -499,6 +500,72 @@ test Compact_From_Below_T3_T4
     result=CompactBelow(aT3,FIRST,aT4,THIRD,FOURTH)
 
     assert_equal_within(result.absdiff.correct, 0.0d0, 1.0e-8)
+
+end test
+
+
+test nModeProducts_3
+  type(Tensor3) :: T3_result,T3_Tensor,T3_Correct
+  type(Tensor2) :: T_Matrix
+  integer,parameter :: d1=2,d2=3,d3=4,dNew=5
+  real(8) :: matrixR(dNew,d2),t3R(d1,d2,d3)
+  real(8) :: matrixI(dNew,d2),t3I(d1,d2,d3)
+  complex(8) :: Correct3(d1,dNew,d3)
+
+  call random_number(matrixR)
+  call random_number(matrixI)
+  call random_number(t3R)
+  call random_number(t3I)
+
+  T_Matrix=new_Tensor(matrixR+II*MatrixI)
+  T3_Tensor=new_Tensor(t3R+II*t3I)
+
+  T3_Correct= TensorTranspose( T_Matrix * TensorTranspose(T3_Tensor,[2,1,3]) ,[2,1,3])
+  T3_Result=nModeProduct(T_matrix,T3_Tensor,SECOND)
+  assert_equal_within(T3_result.absdiff.T3_correct, 0.0d0, 1.0e-8)
+
+end test
+
+!test nModeProducts_4
+!  type(Tensor4) :: T4_result,T4_Tensor,T4_Correct
+!  type(Tensor2) :: T_Matrix
+!  integer,parameter :: d1=2,d2=3,d3=4,d4=2,dNew=5
+!  real(8) :: matrixR(dNew,d3),t4R(d1,d2,d3,d4)
+!  real(8) :: matrixI(dNew,d3),t4I(d1,d2,d3,d4)
+!  complex(8) :: Correct4(d1,d2,dNew,d4)
+!
+!  call random_number(matrixR)
+!  call random_number(matrixI)
+!  call random_number(t4R)
+!  call random_number(t4I)
+!
+!  T_Matrix=new_Tensor(matrixR+II*MatrixI)
+!  T4_Tensor=new_Tensor(t4R+II*t4I)
+!
+!  T4_Correct= TensorTranspose( T_Matrix * TensorTranspose(T4_Tensor,[3,2,1,4]) ,[3,2,1,4])
+!  T4_Result=nModeProduct(T_matrix,T4_Tensor,THIRD)
+!  assert_equal_within(T4_result.absdiff.T4_correct, 0.0d0, 1.0e-8)
+!
+!end test
+
+test nModeProducts_5
+  type(Tensor5) :: T5_result,T5_Tensor,T5_Correct
+  type(Tensor2) :: T_Matrix
+  integer,parameter :: d1=2,d2=3,d3=4,d4=2,d5=2,dNew=3
+  real(8) :: matrixR(dNew,d3),t5R(d1,d2,d3,d4,d5)
+  real(8) :: matrixI(dNew,d3),t5I(d1,d2,d3,d4,d5)
+
+  call random_number(matrixR)
+  call random_number(matrixI)
+  call random_number(t5R)
+  call random_number(t5I)
+
+  T_Matrix=new_Tensor(matrixR+II*MatrixI)
+  T5_Tensor=new_Tensor(t5R+II*t5I)
+
+  T5_Correct= TensorTranspose( T_Matrix * TensorTranspose(T5_Tensor,[3,2,1,4,5]) ,[3,2,1,4,5])
+  T5_Result=nModeProduct(T_matrix,T5_Tensor,THIRD)
+  assert_equal_within(T5_result.absdiff.T5_correct, 0.0d0, 1.0e-8)
 
 end test
 

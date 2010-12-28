@@ -64,15 +64,17 @@ module Tensor_Class
   type,public,extends(Tensor) :: Tensor1
   	private
   	complex(8),allocatable :: data(:)
+  contains
+    procedure,public :: Slice => Take_Slice_Of_Tensor1
   end type Tensor1
 
   type,public,extends(Tensor) :: Tensor2
   	private
   	complex(8),allocatable :: data(:,:)
   contains
-    procedure,public :: SVD => SingularValueDecomposition
+    procedure,public :: SVD => SingularValueDecompositionTensor2
     procedure,public :: SplitIndex => SplitIndexOfTensor2
-!    procedure,public :: Pad => Pad_Tensor2
+    procedure,public :: Slice => Take_Slice_Of_Tensor2
     procedure,public :: dagger => ConjugateTranspose2
     procedure,public :: trace => Tensor2Trace
     procedure,public :: CompactFromLeft => Mirror_Compact_Left_With_Tensor3
@@ -90,6 +92,7 @@ module Tensor_Class
     procedure,public :: Slice => Take_Slice_Of_Tensor3
     procedure,public :: PartialTrace => Tensor3Trace
     procedure,public :: Unfold => UnfoldTensor3
+    procedure,public :: SVD => SingularValueDecompositionTensor3
   end type Tensor3
 
   type,public,extends(Tensor) :: Tensor4
@@ -100,6 +103,7 @@ module Tensor_Class
     procedure,public :: Slice => Take_Slice_Of_Tensor4
     procedure,public :: PartialTrace => Tensor4Trace
     procedure,public :: Unfold => UnfoldTensor4
+    procedure,public :: SVD => SingularValueDecompositionTensor4
   end type Tensor4
 
   type,public,extends(Tensor) :: Tensor5
@@ -108,8 +112,10 @@ module Tensor_Class
   contains
      procedure,public :: CompactFromBelow => CompactTensor5_From_Below_With_Tensor6
      procedure,public :: MirrorCompact => Mirror_Compact_Tensor5
+     procedure,public :: Slice => Take_Slice_Of_Tensor5
      procedure,public :: JoinIndices => JoinIndicesOfTensor5
      procedure,public :: Unfold => UnfoldTensor5
+     procedure,public :: SVD => SingularValueDecompositionTensor5
   end type Tensor5
 
   type,public,extends(Tensor) :: Tensor6
@@ -141,7 +147,7 @@ module Tensor_Class
      	  & Tensor5_matmul_Tensor2,Tensor2_matmul_Tensor5
   end interface
 
-!  interface operator (**)
+!  interface operator ()
 !     module procedure &
 !     &   Tensor4_doubletimes_Tensor4,Tensor2_doubletimes_Tensor2
 !  end interface
@@ -202,6 +208,11 @@ module Tensor_Class
      module procedure UnfoldTensor3,UnfoldTensor4,UnfoldTensor5
   end interface
 
+  interface TensorSlice
+    module procedure Take_Slice_Of_Tensor1,Take_Slice_Of_Tensor2,Take_Slice_Of_Tensor3, &
+        & Take_Slice_Of_Tensor4, Take_Slice_Of_Tensor5
+  end interface
+
   interface JoinIndicesOf
   	module procedure JoinIndicesOfTensor3,JoinIndicesOfTensor4 !,JoinTwoIndicesOfTensor4
   end interface
@@ -249,6 +260,11 @@ module Tensor_Class
 
   interface nModeProduct
     module procedure Matrix_Xn_Tensor3, Matrix_Xn_Tensor4, Matrix_Xn_Tensor5
+  end interface
+
+  interface SingularValueDecomposition
+    module procedure SingularValueDecompositionTensor2, SingularValueDecompositionTensor3,&
+     & SingularValueDecompositionTensor4, SingularValueDecompositionTensor5
   end interface
 
   interface SolveLinearProblem
@@ -1057,7 +1073,7 @@ integer function InitializationCheck(this) result(error)
      return
    end function Norm_Of_Tensor
 
-!!************************
+!
 !! FUTURE POLYMORPHIC CODE
 !   function number_times_Tensor(constant, aTensor) result(this)
 !     complex(8),intent(IN) :: constant
@@ -1072,7 +1088,7 @@ integer function InitializationCheck(this) result(error)
 !	 return
 !
 !   end function Number_times_Tensor
-!!************************
+!
 
    function number_times_Tensor1(constant, aTensor) result(this)
      complex(8),intent(IN) :: constant
@@ -2921,33 +2937,19 @@ end function JoinIndicesOfTensor4
 
 !##################################################################
 
-function Take_Slice_Of_Tensor4(this,whichIndex,whatValue) result (aTensor)
-    integer,intent(IN) :: whichIndex(1),whatValue
+function Take_Slice_Of_Tensor4(this,range1,range2,range3,range4) result (aTensor)
+    integer,intent(IN) :: range1(2),range2(2),range3(2),range4(2)
     class(tensor4),intent(IN) :: this
-    type(tensor3) :: aTensor
+    type(tensor4) :: aTensor
     integer :: dims(4)
 
      if(this%Initialized) then
-	     if(whichIndex(1).le.FOURTH(1).and.whichIndex(1).ge.FIRST(1)) then
-	        dims=shape(this%data)
-	        if (whatValue.ge.1.and.whatValue.le.dims(whichIndex(1))) then
-		        select case (whichIndex(1))
-		          case (FIRST(1))
-			        aTensor=new_Tensor(this%data(whatValue,:,:,:))
-			      case (SECOND(1))
-			        aTensor=new_Tensor(this%data(:,whatValue,:,:))
-			      case (THIRD(1))
-			        aTensor=new_Tensor(this%data(:,:,whatValue,:))
-			      case (FOURTH(1))
-			        aTensor=new_Tensor(this%data(:,:,:,whatValue))
-			      case default
-			        call ThrowException('Take_Slice_Of_Tensor4','Unexpected Error',whichIndex(1),CriticalError)
-		  	    end select
-	        else
-	            call ThrowException('Take_Slice_Of_Tensor4','Position is not valid',whatValue,CriticalError)
-		  	endif
+        dims=shape(this%data)
+        if(range1(1).ge.1.and.range2(1).ge.1.and.range3(1).ge.1.and.range4(1).ge.1.and. &
+          & range1(2).le.dims(1).and.range2(2).le.dims(2).and.range3(2).le.dims(3).and.range4(2).le.dims(4) ) then
+            aTensor=new_Tensor(this%data(range1(1):range1(2),range2(1):range2(2),range3(1):range3(2),range4(1):range4(2)))
 	  	else
-	  	    call ThrowException('Take_Slice_Of_Tensor4','Index is inappropriate',whichIndex(1),CriticalError)
+	  	    call ThrowException('Take_Slice_Of_Tensor4','Index is inappropriate',noErrorCode,CriticalError)
 	  	endif
      else
         call ThrowException('Take_Slice_Of_Tensor4','Tensor not initialized',NoErrorCode,CriticalError)
@@ -2956,36 +2958,86 @@ end function Take_Slice_Of_Tensor4
 
 !##################################################################
 
-function Take_Slice_Of_Tensor3(this,whichIndex,whatValue) result (aTensor)
-    integer,intent(IN) :: whichIndex(1),whatValue
+function Take_Slice_Of_Tensor3(this,range1,range2,range3) result (aTensor)
+    integer,intent(IN) :: range1(2),range2(2),range3(2)
     class(tensor3),intent(IN) :: this
-    type(tensor2) :: aTensor
+    type(tensor3) :: aTensor
     integer :: dims(3)
 
      if(this%Initialized) then
-         if(whichIndex(1).le.THIRD(1).and.whichIndex(1).ge.FIRST(1)) then
-            dims=shape(this%data)
-            if (whatValue.ge.1.and.whatValue.le.dims(whichIndex(1))) then
-                select case (whichIndex(1))
-                  case (FIRST(1))
-                    aTensor=new_Tensor(this%data(whatValue,:,:))
-                  case (SECOND(1))
-                    aTensor=new_Tensor(this%data(:,whatValue,:))
-                  case (THIRD(1))
-                    aTensor=new_Tensor(this%data(:,:,whatValue))
-                  case default
-                    call ThrowException('Take_Slice_Of_Tensor3','Unexpected Error',whichIndex(1),CriticalError)
-                end select
-            else
-                call ThrowException('Take_Slice_Of_Tensor3','Position is not valid',whatValue,CriticalError)
-            endif
+         dims=shape(this%data)
+         if(range1(1).ge.1.and.range2(1).ge.1.and.range3(1).ge.1.and. &
+          & range1(2).le.dims(1).and.range2(2).le.dims(2).and.range3(2).le.dims(3)) then
+                aTensor=new_Tensor(this%data(range1(1):range1(2),range2(1):range2(2),range3(1):range3(2)))
         else
-            call ThrowException('Take_Slice_Of_Tensor3','Index is inappropriate',whichIndex(1),CriticalError)
+            call ThrowException('Take_Slice_Of_Tensor3','Index is inappropriate',NoErrorCode,CriticalError)
         endif
      else
         call ThrowException('Take_Slice_Of_Tensor3','Tensor not initialized',NoErrorCode,CriticalError)
      endif
 end function Take_Slice_Of_Tensor3
+
+!##################################################################
+
+function Take_Slice_Of_Tensor2(this,range1,range2) result (aTensor)
+    integer,intent(IN) :: range1(2),range2(2)
+    class(tensor2),intent(IN) :: this
+    type(tensor2) :: aTensor
+    integer :: dims(2)
+
+     if(this%Initialized) then
+         dims=shape(this%data)
+         if(range1(1).ge.1.and.range2(1).ge.1.and. &
+          & range1(2).le.dims(1).and.range2(2).le.dims(2)) then
+                aTensor=new_Tensor(this%data(range1(1):range1(2),range2(1):range2(2)))
+        else
+            call ThrowException('Take_Slice_Of_Tensor2','Index is inappropriate',NoErrorCode,CriticalError)
+        endif
+     else
+        call ThrowException('Take_Slice_Of_Tensor2','Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+end function Take_Slice_Of_Tensor2
+
+!##################################################################
+
+function Take_Slice_Of_Tensor1(this,range1) result (aTensor)
+    integer,intent(IN) :: range1(2)
+    class(tensor1),intent(IN) :: this
+    type(tensor1) :: aTensor
+    integer :: dims(1)
+
+     if(this%Initialized) then
+         dims=shape(this%data)
+         if(range1(1).ge.1.and.range1(2).le.dims(1)) then
+                aTensor=new_Tensor(this%data(range1(1):range1(2)))
+        else
+            call ThrowException('Take_Slice_Of_Tensor1','Index is inappropriate',NoErrorCode,CriticalError)
+        endif
+     else
+        call ThrowException('Take_Slice_Of_Tensor1','Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+end function Take_Slice_Of_Tensor1
+
+!##################################################################
+
+function Take_Slice_Of_Tensor5(this,range1,range2,range3,range4,range5) result (aTensor)
+    integer,intent(IN) :: range1(2),range2(2),range3(2),range4(2),range5(2)
+    class(tensor5),intent(IN) :: this
+    type(tensor5) :: aTensor
+    integer :: dims(5)
+
+     if(this%Initialized) then
+        dims=shape(this%data)
+        if(range1(1).ge.1.and.range2(1).ge.1.and.range3(1).ge.1.and.range4(1).ge.1.and.range5(1).ge.1.and. &
+          & range1(2).le.dims(1).and.range2(2).le.dims(2).and.range3(2).le.dims(3).and.range4(2).le.dims(4).and.range5(2).le.dims(5) ) then
+            aTensor=new_Tensor(this%data(range1(1):range1(2),range2(1):range2(2),range3(1):range3(2),range4(1):range4(2),range5(1):range5(2)))
+        else
+            call ThrowException('Take_Slice_Of_Tensor5','Index is inappropriate',noErrorCode,CriticalError)
+        endif
+     else
+        call ThrowException('Take_Slice_Of_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+end function Take_Slice_Of_Tensor5
 
 !##################################################################
 
@@ -3587,10 +3639,9 @@ end function Tensor4Trace
 !##################################################################
 !##################################################################
 
-  subroutine SingularValueDecomposition(this,U,Sigma,vTransposed,ErrorCode)
+  subroutine SingularValueDecompositionTensor2(this,U,Sigma,vTransposed)
      class(Tensor2),intent(IN) :: this
      type(Tensor2),intent(OUT) :: U,Sigma,vTransposed
-     integer,intent(OUT),optional :: ErrorCode
      complex(8),allocatable :: CopyOfInput(:,:) !This extra copy is here because ZGESDD destroys the input matrix
      real(8),allocatable :: DiagonalPart(:)
      integer :: LeftDimension,RightDimension
@@ -3620,7 +3671,6 @@ end function Tensor4Trace
      allocate(Work(LWork),RWork(LRWork),IWork(LIWork),STAT=Error)
      If (Error.ne.Normal) then
         call ThrowException('SingularValueDecomposition','Could not allocate memory',Error,CriticalError)
-        if(present(ErrorCode)) ErrorCode=Error
         return
      endif
      !For some reason I need to call LAPACK with LWork=-1 first
@@ -3630,7 +3680,6 @@ end function Tensor4Trace
           & LeftDimension,vTransposed%data,RightDimension,WORK,LWORK,RWORK,IWORK,Error )
      If (Error.ne.Normal) then
         call ThrowException('SingularValueDecomposition','Lapack search call returned error in ZGESDD',Error,CriticalError)
-        if(present(ErrorCode)) ErrorCode=Error
         return
      endif
 
@@ -3642,7 +3691,6 @@ end function Tensor4Trace
           & LeftDimension,vTransposed%data,RightDimension,WORK,LWORK,RWORK,IWORK,Error )
      If (Error.ne.Normal) then
         call ThrowException('SingularValueDecomposition','Lapack returned error in ZGESDD',Error,CriticalError)
-        if(present(ErrorCode)) ErrorCode=Error
         return
      endif
 
@@ -3655,16 +3703,84 @@ end function Tensor4Trace
      deallocate(Work,RWork,IWork,DiagonalPart,STAT=Error)
      If (Error.ne.Normal) then
         call ThrowException('SingularValueDecomposition','Problems in deallocation',Error,CriticalError)
-        if(present(ErrorCode)) ErrorCode=Error
         return
      endif
 
-     if(present(ErrorCode)) ErrorCode=Normal
-
-   end subroutine SingularValueDecomposition
+   end subroutine SingularValueDecompositionTensor2
 
 !##################################################################
 !##################################################################
+
+  subroutine SingularValueDecompositionTensor3(this,Sigma,U,RankTruncation)
+    class(Tensor3),intent(IN) :: this
+    class(Tensor3),intent(OUT) :: Sigma
+    type(Tensor2),intent(OUT) :: U(3)
+    integer,intent(IN),optional :: RankTruncation
+    type(Tensor2) :: Unfolding,UnfoldedSigma,VTFromUnfolding
+    integer :: n,dims(2)
+
+    do n=1,3
+        Unfolding=this%Unfold(n)
+        call Unfolding%SVD(U(n),UnfoldedSigma,VTFromUnfolding)
+    enddo
+    if (present(RankTruncation)) then
+        do n=1,3
+            dims=shape(U(n)%data)
+            U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation)])
+        enddo
+    endif
+    Sigma=nModeProduct(U(3),nModeProduct(U(2),nModeProduct(U(1),this,FIRST),SECOND),THIRD)
+
+  end subroutine SingularValueDecompositionTensor3
+
+!##################################################################
+
+  subroutine SingularValueDecompositionTensor4(this,Sigma,U,RankTruncation)
+    class(Tensor4),intent(IN) :: this
+    class(Tensor4),intent(OUT) :: Sigma
+    type(Tensor2),intent(OUT) :: U(4)
+    integer,intent(IN),optional :: RankTruncation
+    type(Tensor2) :: Unfolding,UnfoldedSigma,VTFromUnfolding
+    integer :: n,dims(2)
+
+    do n=1,4
+        Unfolding=this%Unfold(n)
+        call Unfolding%SVD(U(n),UnfoldedSigma,VTFromUnfolding)
+    enddo
+    if (present(RankTruncation)) then
+        do n=1,4
+            dims=shape(U(n)%data)
+            U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation)])
+        enddo
+    endif
+    Sigma=nModeProduct(U(4),nModeProduct(U(3),nModeProduct(U(2),nModeProduct(U(1),this,FIRST),SECOND),THIRD),FOURTH)
+
+  end subroutine SingularValueDecompositionTensor4
+
+  !##################################################################
+
+  subroutine SingularValueDecompositionTensor5(this,Sigma,U,RankTruncation)
+    class(Tensor5),intent(IN) :: this
+    class(Tensor5),intent(OUT) :: Sigma
+    type(Tensor2),intent(OUT) :: U(5)
+    integer,intent(IN),optional :: RankTruncation
+    type(Tensor2) :: Unfolding,UnfoldedSigma,VTFromUnfolding
+    integer :: n,dims(2)
+
+    do n=1,5
+        Unfolding=this%Unfold(n)
+        call Unfolding%SVD(U(n),UnfoldedSigma,VTFromUnfolding)
+    enddo
+    if (present(RankTruncation)) then
+        do n=1,5
+            dims=shape(U(n)%data)
+            U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation)])
+        enddo
+    endif
+    Sigma=nModeProduct(U(5),nModeProduct(U(4),nModeProduct(U(3),nModeProduct(U(2),nModeProduct(U(1),this,FIRST),SECOND),THIRD),FOURTH),FIFTH)
+
+  end subroutine SingularValueDecompositionTensor5
+
 !##################################################################
 !##################################################################
 !##################################################################
