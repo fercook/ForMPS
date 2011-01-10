@@ -206,15 +206,33 @@ module PEPSAlgorithms_Class
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
   function Overlap_PEPS(onePEPS, anotherPEPS) result(theOverlap)
-      class(PEPS),intent(INOUT) :: onePEPS, anotherPEPS
+      class(PEPS),intent(INOUT) :: onePEPS
+      class(PEPS),intent(INOUT),optional :: anotherPEPS
       type(Multiplicator2D) :: theEnvironment
       complex(8) :: theOverlap
 
-      theEnvironment=new_Multiplicator2D(onePEPS, anotherPEPS)
+      if (present(anotherPEPS)) then
+          theEnvironment=new_Multiplicator2D(onePEPS, anotherPEPS)
+      else
+          theEnvironment=new_Multiplicator2D(onePEPS)
+      endif
       theOverlap = Overlap_PEPSAboveBelow(theEnvironment)
 
   end function Overlap_PEPS
 
-  function Normalize_PEPS(aPEPS)
+  subroutine Normalize_PEPS(aPEPS)
+      class(PEPS),intent(INOUT) :: aPEPS
+      type(Multiplicator2D) :: theEnvironment
+      real(8) :: theNorm
+      integer :: TotalNumberOfTensors
+
+      theEnvironment=new_Multiplicator2D(aPEPS)
+      theNorm = abs(Overlap_PEPSAboveBelow(theEnvironment))   !!!Notice I should not use **2
+
+      TotalNumberOfTensors=product(aPEPS%GetSize())
+
+      call aPEPS%ScaleBy(ONE/(theNorm**(0.5d0/TotalNumberOfTensors)))
+
+  end subroutine Normalize_PEPS
 
 end module PEPSAlgorithms_Class

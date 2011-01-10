@@ -40,6 +40,7 @@ module PEPSTensor_Class
      procedure,public :: getSpin => Spin_PEPSTensor
      procedure,public :: PrintDimensions => Print_PEPSTensor_Dimensions
      procedure,public :: ApplyOperator => Apply_Operator_To_PEPS_Spin_Dimension
+     procedure,public :: ApplyMatrixToBond => Apply_Matrix_To_PEPS
      procedure,public :: Collapse => Collapse_PEPS_Into_Tensor4
      procedure,public :: CompactBonds => CompactPEPSBondDimensions
      procedure,public :: HOSVD => HighOrderSVDofPEPS
@@ -58,12 +59,12 @@ module PEPSTensor_Class
      module procedure new_PEPSTensor_fromAssignment
   end interface
 
-!  interface operator (.times.)
-!     module procedure PEPSTensor_times_matrix, matrix_times_PEPSTensor
-!  end interface
-
   interface operator (.apply.)
      module procedure Apply_Operator_To_PEPS_Spin_Dimension
+  end interface
+
+  interface ApplyMatrixToBond
+     module procedure Apply_Matrix_To_PEPS
   end interface
 
   interface CollapsePEPS
@@ -303,6 +304,33 @@ module PEPSTensor_Class
    end function Apply_Operator_To_PEPS_Spin_Dimension
 
 
+
+   function Apply_Matrix_To_PEPS(this,aMatrix,whichDimension) result(aTensor)
+     class(PEPSTensor),intent(IN) :: this
+     type(PEPSTensor) :: aTensor
+     class(Tensor2),intent(IN) :: aMatrix
+     integer :: whichDimension
+
+     if(this%IsInitialized()) then
+        select case(whichDimension)
+            case(LEFT)
+                aTensor=nModeProduct(aMatrix,this,FIRST)
+            case(RIGHT)
+                aTensor=nModeProduct(aMatrix,this,SECOND)
+            case(UP)
+                aTensor=nModeProduct(aMatrix,this,THIRD)
+            case(DOWN)
+                aTensor=nModeProduct(aMatrix,this,FOURTH)
+            case default
+                call ThrowException('Apply_Matrix_To_PEPS','dim must be LEFT/RIGHT/UP/DOWN',whichDimension,CriticalError)
+        end select
+     else
+        call ThrowException('Apply_Matrix_To_PEPS','Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+
+   end function Apply_Matrix_To_PEPS
+
+
 !##################################################################
 !##################################################################
 !##################################################################
@@ -361,15 +389,22 @@ module PEPSTensor_Class
 
     subroutine HighOrderSVDofPEPS(aPEPS,CoreTensor,UMatrices,newBondDim)
         class(PEPSTensor),intent(IN) :: aPEPS
-        integer,intent(IN) :: newBondDim
-        type(Tensor2) ,intent(OUT):: UMatrices(4)
+        integer,intent(IN),optional :: newBondDim
+        type(Tensor2) ,intent(OUT):: UMatrices(LEFT:DOWN)
         type(Tensor2) :: U(5)
         type(PEPSTensor), intent(OUT) :: CoreTensor
+        type(PEPSTensor) :: TempTensor
         type(Tensor2) :: SpinUMatrix
 
         if(aPEPS%Isinitialized()) then
-            call SingularValueDecomposition(aPEPS,CoreTensor,U, newBondDim)
-            CoreTensor=nModeProduct(U(5),CoreTensor,FIFTH)
+            if (present(newBondDim) ) then
+                call SingularValueDecomposition(aPEPS,TempTensor,U, newBondDim)
+            else
+                call SingularValueDecomposition(aPEPS,TempTensor,U)
+            endif
+            !The spin dimension is not decomposed and returned as is
+            CoreTensor=nModeProduct(U(5),TempTensor,FIFTH)
+            !Return order is Left-Right-Up-Down
             UMatrices=U(1:4)
         else
             call ThrowException('HighOrderSVDofPEPS','Tensor not initialized',NoErrorCode,CriticalError)

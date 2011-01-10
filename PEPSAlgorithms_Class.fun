@@ -31,12 +31,15 @@ test OverlapAlgorithm
   type(PEPS) :: aPEPS
   integer :: length=4,width=4,spin=2,bond=2, error
   complex(8) :: overlap12
-  type(Multiplicator2D) :: theEnvironment
 
-  aPEPS=new_PEPS(width,length,spin,bond)
-  theEnvironment=new_Multiplicator2D(aPEPS)
-  overlap12 = Overlap_PEPSAboveBelow(theEnvironment)
+  aPEPS=new_PEPS(length,width,spin,bond)
+  overlap12 = Overlap_PEPS(aPEPS)
   assert_false(abs(overlap12)**2.eq.1.0d0)
+
+  call Normalize(aPEPS)
+  overlap12 = Overlap_PEPS(aPEPS,aPEPS)
+  assert_equal_within(abs(overlap12)**2,1.0d0,1.0d-8)
+
   assert_false(WasThereError())
 
   error= aPEPS%Delete()
@@ -49,6 +52,8 @@ test  ApproximationAlgorithm
   real(8) :: overlap12
 
   aBigPEPS=new_PEPS(width,length,spin,bondBig)
+  call aBigPEPS%Normalize()
+
   print *,'About to approximate ---------'
   aPEPS=Approximate(aBigPEPS,bondSmall,overlap12)
   print *, 'Approximation overlaps to :', overlap12

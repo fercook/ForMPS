@@ -143,7 +143,7 @@ contains
         this%Ylength = Ylength
         this%Initialized = .true.
     else
-        call ThrowException('new_Multiplicator2d','PEPS not initialized',NoErrorCode,CriticalError)
+        call ThrowException('new_Multiplicator2d','PEPS_A not initialized',NoErrorCode,CriticalError)
     endif
   end function new_Multiplicator2D_WithPEPSandPEPO
 

@@ -36,7 +36,7 @@ test type_creation_deletion
   assert_equal(A%delete(),Normal)
   call LowerFlag()
   B=new_PEPSTensor(SpinT,BondL,BondR,bondU,bondD)
-  call B%Print('TESTING PRINTING')
+!  call B%Print('TESTING PRINTING')
   assert_equal(B%delete(),Normal)
   assert_false(WasThereError())
 end test
@@ -60,16 +60,36 @@ end test
 test CreateATransposedTensor
     type(PEPSTensor) :: A
     type(Tensor5) :: aTensor
-    integer :: spin=2, bondL=3, bondR=4,bondU=2,bondD=3
+    integer :: spinT=2, bondL=3, bondR=4,bondU=2,bondD=3
     integer :: dims(5)
 
-    aTensor=new_Tensor(bondR,spin,bondL,bondD,bondU)
+    aTensor=new_Tensor(bondR,spinT,bondL,bondD,bondU)
     A=new_PEPSTensor(aTensor,SecondDimension,ThirdDimension,FirstDimension,FifthDimension,FourthDimension)
     dims=A%GetDimensions()
-    assert_true( dims .equalvector. [bondL, bondR, bondU, bondD, spin] )
+    assert_true( dims .equalvector. [bondL, bondR, bondU, bondD, spinT] )
   assert_false(WasThereError())
 end test
 
+test HOSVD_of_PEPS
+    type(PEPSTensor) :: aTensor
+    type(PEPSTensor) :: theCore, reconstructedPEPS
+    type(Tensor2) :: Umatrices(4)
+    integer :: spinT=2, bondL=3, bondR=3,bondU=3,bondD=3
+
+    aTensor=new_PEPSTensor(SpinT,BondL,BondR,bondU,bondD)
+    call aTensor%HOSVD(theCore,Umatrices)
+    reconstructedPEPS=nModeProduct(Umatrices(4), &
+                        & nModeProduct(Umatrices(3),  &
+                          &  nModeProduct(Umatrices(2), &
+                            &  nModeProduct(Umatrices(1),theCore, &
+                            &  FIRST), &
+                          &  SECOND), &
+                         & THIRD), &
+                      & FOURTH)
+    assert_equal_within(reconstructedPEPS.absdiff.aTensor,0.0d0,1.0d-8 )
+    assert_false(WasThereError())
+
+end test
 
 end test_suite
 

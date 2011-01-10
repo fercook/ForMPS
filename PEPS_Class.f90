@@ -44,6 +44,7 @@ Module PEPS_Class
      procedure,public :: GetSpin => GetPEPSSpin
      procedure,public :: GetMaxBond => GetMaxPEPSBond
      procedure,public :: GetBondAt => GetPEPSBond
+     procedure,public :: SetMaxBond => SetMaxPEPSBond
      procedure,public :: IsInitialized => Is_PEPS_Initialized
      procedure,public :: CheckPointState => SetTensorsToUnchanged
   end type PEPS
@@ -257,7 +258,7 @@ Module PEPS_Class
     if(aPEPS%Initialized) then
         do m=1,aPEPS%Ylength
         do n=1,aPEPS%Xlength
-            aPEPS%TensorCollection(n,m) = aPEPS%TensorCollection(n,m)
+            aPEPS%TensorCollection(n,m) = factor* (aPEPS%TensorCollection(n,m))
         enddo
         enddo
     else
@@ -362,6 +363,30 @@ Module PEPS_Class
          call ThrowException('SetTensorsToUnchanged','PEPS not initialized',NoErrorCode,CriticalError)
      endif
    end subroutine SetTensorsToUnchanged
+
+   function SetMAXPEPSBond(thisPEPS,newMaxBond) result(newPEPS)
+     class(PEPS),intent(IN) :: thisPEPS
+     integer,intent(IN) :: newMaxBond
+     type(PEPS) :: newPEPS
+     integer :: X,Y
+     type(PEPSTensor) :: coreTensor,tempTensor
+     type(Tensor2) :: UMatrices(4)
+
+     if(aPEPS%Initialized) then
+         if (newMaxBond.ge.thisPEPS%GetMaxBond()) then
+            newPEPS=thisPEPS
+         else
+            newPEPS=new_PEPS(thisPEPS%XLength,thisPEPS%YLength,thisPEPS%spin,newMaxBond)
+            do Y=1,thisPEPS%YLength
+                do X=1,thisPEPS%XLength
+                    call thisPEPS%TensorCollection(X,Y)%HOSVD(coreTensor,Umatrices,newMaxBond)
+                    tempTensor=
+                    call newPEPS%SetTensorAt(X,Y,
+         endif
+     else
+         call ThrowException('SetPEPSBond','PEPS not initialized',NoErrorCode,CriticalError)
+     endif
+   end function SetMaxPEPSBond
 
  end module PEPS_Class
 

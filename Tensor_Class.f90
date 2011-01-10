@@ -1739,11 +1739,6 @@ integer function InitializationCheck(this) result(error)
 
 
 
-
-
-
-
-
     function Matrix_Xn_Tensor5(aMatrix,aTensor,summedIndex) result(this)
         class(Tensor5),intent(IN) :: aTensor
         class(Tensor2),intent(IN) :: aMatrix
@@ -1830,7 +1825,7 @@ integer function InitializationCheck(this) result(error)
                       do matrixFreeIndex=1,dimsOfMatrix(1)
                         do sumIndex=1,dimsOfMatrix(2)
                           Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
-                          do freeIndex4=1,newDims(5)
+                          do freeIndex4=1,newDims(4)
                             do freeIndex3=1,newDims(3)
                               do freeIndex2=1,newDims(2)
                                 do freeIndex1=1,newDims(1)
@@ -3723,15 +3718,21 @@ end function Tensor4Trace
         Unfolding=this%Unfold(n)
         call Unfolding%SVD(U(n),UnfoldedSigma,VTFromUnfolding)
     enddo
+
     if (present(RankTruncation)) then
         do n=1,3
             dims=shape(U(n)%data)
             U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation)])
         enddo
     endif
-    Sigma=nModeProduct(U(3),nModeProduct(U(2),nModeProduct(U(1),this,FIRST),SECOND),THIRD)
+    Sigma=nModeProduct(ConjugateTranspose(U(3)), &
+         & nModeProduct(ConjugateTranspose(U(2)), &
+          & nModeProduct(ConjugateTranspose(U(1)),  this, &
+            &FIRST),SECOND),THIRD)
 
   end subroutine SingularValueDecompositionTensor3
+
+!##################################################################
 
 !##################################################################
 
@@ -3753,7 +3754,11 @@ end function Tensor4Trace
             U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation)])
         enddo
     endif
-    Sigma=nModeProduct(U(4),nModeProduct(U(3),nModeProduct(U(2),nModeProduct(U(1),this,FIRST),SECOND),THIRD),FOURTH)
+    Sigma=nModeProduct(ConjugateTranspose(U(4)), &
+            & nModeProduct(ConjugateTranspose(U(3)), &
+                & nModeProduct(ConjugateTranspose(U(2)), &
+                    & nModeProduct(ConjugateTranspose(U(1)),   this,  &
+           & FIRST),SECOND),THIRD),FOURTH)
 
   end subroutine SingularValueDecompositionTensor4
 
@@ -3777,7 +3782,12 @@ end function Tensor4Trace
             U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation)])
         enddo
     endif
-    Sigma=nModeProduct(U(5),nModeProduct(U(4),nModeProduct(U(3),nModeProduct(U(2),nModeProduct(U(1),this,FIRST),SECOND),THIRD),FOURTH),FIFTH)
+    Sigma=nModeProduct(ConjugateTranspose(U(5)), &
+            & nModeProduct(ConjugateTranspose(U(4)), &
+               & nModeProduct(ConjugateTranspose(U(3)), &
+                & nModeProduct(ConjugateTranspose(U(2)), &
+                    & nModeProduct(ConjugateTranspose(U(1)),   this,  &
+           & FIRST),SECOND),THIRD),FOURTH),FIFTH)
 
   end subroutine SingularValueDecompositionTensor5
 

@@ -372,6 +372,110 @@ test Singular_Value_Decomposition
 
 end test
 
+test Singular_Value_Decomposition_T3
+   integer,parameter :: LeftDimension=3,RightDimension=3,CenterDimension=3
+   type(Tensor3) :: theTensor,theCore,correctCore,reconstructed
+   type(Tensor2) :: theUmatrices(3),correctUs(3)
+   complex(8) :: data(LeftDimension,CenterDimension,RightDimension),correctcenter(LeftDimension,CenterDimension,RightDimension)
+   complex(8) :: correctmatrices(3,LeftDimension,CenterDimension),signchange(3,LeftDimension,CenterDimension)
+   integer :: n
+
+    !Order needs to be changed so that it is the same as the example 4 from
+    !De Lathauwer et al. A multilinear singular value decomposition. SIAM Journal on Matrix Analysis and Applications (2000) vol. 21 (4) pp. 1253-1278
+    data= reshape ( ONE*[0.9073d0, 0.7158d0,  -0.3698d0, 1.7842d0, 1.6970d0, 0.0151d0, 2.1236d0, -0.0740d0, 1.4429d0, &
+                    & 0.8924d0, -0.4898d0, 2.4288d0, 1.7753d0, -1.5077d0, 4.0337d0, -0.6631d0, 1.9103d0, -1.7495d0, &
+                    & 2.1488d0, 0.3054d0, 2.3753d0, 4.2495d0, 0.3207d0, 4.7146d0, 1.8260d0, 2.1335d0, -0.2716d0], [LeftDimension,CenterDimension,RightDimension], ORDER=[3,2,1])
+    correctCenter = reshape ( [ 8.7088d0, 0.0489d0, -0.2797d0, 0.1066d0, 3.2737d0, 0.3223d0, -0.0033d0, -0.1797d0, -0.2222d0, &
+                    & -0.0256d0,   3.2546d0,  -0.2853d0, 3.1965d0,  -0.2130d0, 0.7829d0, 0.2948d0, -0.0378d0, -0.3704d0, &
+                    & 0.0000d0,  0.0000d0,  0.0000d0,  0.0000d0,  0.0000d0,  0.0000d0,  0.0000d0,  0.0000d0,  0.0000d0], [LeftDimension,CenterDimension,RightDimension], ORDER=[3,2,1])
+
+    theTensor=new_Tensor(data)
+    correctCore=new_Tensor(correctCenter)
+
+    correctmatrices(1,:,:) = reshape([0.1121d0, 0.5771d0, 0.8090d0, -0.7739d0, 0.5613d0, -0.2932d0,-0.6233d0, -0.5932d0, 0.5095d0], [3,3] )
+    correctmatrices(2,:,:) = reshape([0.4624d0,0.8866d0, -0.0072d0,0.0102d0, -0.0135d0, -0.9999d0,0.8866d0,-0.4623d0, 0.0152d0], [3,3] )
+    correctmatrices(3,:,:) = reshape([0.6208d0, -0.0575d0, 0.7819d0, -0.4986d0, -0.7986d0, 0.3371d0, 0.6050d0, -0.5992d0, -0.5244d0], [3,3])
+    signchange=ZERO
+    !Each computed matrix shows up with a sign (hopefully compensated by the core tensor sign)
+    !But for the test I have to fix this by hand
+    signchange(1,1,1)=-ONE
+    signchange(1,2,2)=-ONE
+    signchange(1,3,3)=ONE
+    signchange(2,1,1)=-ONE
+    signchange(2,2,2)=ONE
+    signchange(2,3,3)=ONE
+    signchange(3,1,1)=-ONE
+    signchange(3,2,2)=ONE
+    signchange(3,3,3)=-ONE
+    do n=1,3
+        correctUs(n)=new_Tensor(matmul(correctmatrices(n,:,:),signchange(n,:,:)))
+    enddo
+
+   call theTensor%SVD(theCore,theUmatrices)
+
+   !See if all matrices are allright
+   assert_equal_within(correctUs(1).absdiff.(theUMatrices(1)), 0.0d0, 1.0e-3)
+   assert_equal_within(correctUs(2).absdiff.theUMatrices(2), 0.0d0, 1.0e-3)
+   assert_equal_within(correctUs(3).absdiff.theUMatrices(3), 0.0d0, 1.0e-3)
+!   call theCore%Print('Core Info')
+!   assert_equal_within(correctCore.absdiff.theCore, 0.0d0, 1.0e-10)
+
+   reconstructed=nModeProduct(theUMatrices(3),nModeProduct(theUMatrices(2),nModeProduct(theUMatrices(1),theCore,FIRST),SECOND),THIRD)
+   !Now test if the three output matrices form the original one
+   assert_equal_within(theTensor.absdiff. reconstructed, 0.0d0, 1.0e-10)
+
+   assert_false(WasThereError())
+
+end test
+
+
+test Singular_Value_Decomposition_T4
+   integer,parameter :: dim1=3,dim2=4,dim3=2,dim4=3,dim5=2
+   type(Tensor4) :: theTensor,theCore,correctCore,reconstructed
+   type(Tensor2) :: theUmatrices(4)
+
+    theTensor=new_Tensor(dim1,dim2,dim3,dim4)
+
+   call theTensor%SVD(theCore,theUmatrices)
+
+   reconstructed=nModeProduct(theUMatrices(4),nModeProduct(theUMatrices(3), &
+   & nModeProduct(theUMatrices(2),nModeProduct(theUMatrices(1),theCore,FIRST),SECOND),THIRD),FOURTH)
+
+   assert_equal_within(theTensor.absdiff. reconstructed, 0.0d0, 1.0e-4)
+
+   assert_false(WasThereError())
+
+end test
+
+test Singular_Value_Decomposition_T5
+   integer,parameter :: dim1=3,dim2=4,dim3=2,dim4=3,dim5=2
+   type(Tensor5) :: theTensor,theCore,correctCore,reconstructed
+   type(Tensor2) :: theUmatrices(5)
+   complex(8) :: data(dim1,dim2,dim3,dim4,dim5)
+   integer :: i,j,k,l,m
+
+   data=ZERO
+
+   forall (i=1:dim1 ,j=1:dim2,k=1:dim3, l=1:dim4, m=1:dim5) &
+         & data(i,j,k,l,m)=one*(exp(II*i*Pi/dim1)+(j-1)*dim4+l*k)
+
+!   do i=1,dim5
+!    data(:,:,:,:,i)=ZERO
+!   enddo
+   theTensor=new_Tensor(data)
+
+!    theTensor=new_Tensor(dim1,dim2,dim3,dim4,dim5)
+
+   call theTensor%SVD(theCore,theUmatrices)
+
+   reconstructed=nModeProduct(theUMatrices(5),nModeProduct(theUMatrices(4),nModeProduct(theUMatrices(3), &
+   & nModeProduct(theUMatrices(2),nModeProduct(theUMatrices(1),theCore,FIRST),SECOND),THIRD),FOURTH),FIFTH)
+
+   assert_equal_within(theTensor.absdiff. reconstructed, 0.0d0, 1.0e-4)
+
+   assert_false(WasThereError())
+
+end test
 
 
 test Right_Compactification
@@ -551,7 +655,7 @@ end test
 test nModeProducts_5
   type(Tensor5) :: T5_result,T5_Tensor,T5_Correct
   type(Tensor2) :: T_Matrix
-  integer,parameter :: d1=2,d2=3,d3=4,d4=2,d5=2,dNew=3
+  integer,parameter :: d1=3,d2=3,d3=3,d4=3,d5=3,dNew=3
   real(8) :: matrixR(dNew,d3),t5R(d1,d2,d3,d4,d5)
   real(8) :: matrixI(dNew,d3),t5I(d1,d2,d3,d4,d5)
 
@@ -563,8 +667,24 @@ test nModeProducts_5
   T_Matrix=new_Tensor(matrixR+II*MatrixI)
   T5_Tensor=new_Tensor(t5R+II*t5I)
 
+  T5_Correct= TensorTranspose( T_Matrix * TensorTranspose(T5_Tensor,[1,2,3,4,5]) ,[1,2,3,4,5])
+  T5_Result= nModeProduct(T_matrix,T5_Tensor,FIRST)
+  assert_equal_within(T5_result.absdiff.T5_correct, 0.0d0, 1.0e-8)
+
+  T5_Correct= TensorTranspose( T_Matrix * TensorTranspose(T5_Tensor,[2,1,3,4,5]) ,[2,1,3,4,5])
+  T5_Result= nModeProduct(T_matrix,T5_Tensor,SECOND)
+  assert_equal_within(T5_result.absdiff.T5_correct, 0.0d0, 1.0e-8)
+
   T5_Correct= TensorTranspose( T_Matrix * TensorTranspose(T5_Tensor,[3,2,1,4,5]) ,[3,2,1,4,5])
-  T5_Result=nModeProduct(T_matrix,T5_Tensor,THIRD)
+  T5_Result= nModeProduct(T_matrix,T5_Tensor,THIRD)
+  assert_equal_within(T5_result.absdiff.T5_correct, 0.0d0, 1.0e-8)
+
+  T5_Correct= TensorTranspose( T_Matrix * TensorTranspose(T5_Tensor,[4,2,3,1,5]) ,[4,2,3,1,5])
+  T5_Result= nModeProduct(T_matrix,T5_Tensor,FOURTH)
+  assert_equal_within(T5_result.absdiff.T5_correct, 0.0d0, 1.0e-8)
+
+  T5_Correct= TensorTranspose( T_Matrix * TensorTranspose(T5_Tensor,[5,2,3,4,1]) ,[5,2,3,4,1])
+  T5_Result= nModeProduct(T_matrix,T5_Tensor,FIFTH)
   assert_equal_within(T5_result.absdiff.T5_correct, 0.0d0, 1.0e-8)
 
 end test
