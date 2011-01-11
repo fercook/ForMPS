@@ -35,7 +35,7 @@ module Tensor_Class
   public :: JoinIndicesOf,SplitIndexOf,TensorPad
   public :: CompactLeft,CompactRight,CompactBelow,SingularValueDecomposition
 
-  integer,parameter :: Max_Combined_Dimension = 1000000
+  integer,parameter :: Max_Combined_Dimension = 10000000
 
 !> \class Tensor (virtual)
 !! \brief

@@ -43,7 +43,6 @@ module MPSAlgorithms_Class
     if(mps1%IsInitialized().and.mps2%IsInitialized()) then
         aMultiplicator = new_Multiplicator(mps1,mps2)
         Overlap=TensorTrace( (LeftAtSite(aMultiplicator,0))*(RightAtSite(aMultiplicator,1)) )
-        Overlap=Overlap*(mps1%GetNorm())*(mps2%GetNorm())
     else
         call ThrowException('Overlap algorithm','MPS not initialized',NoErrorCode,CriticalError)
     endif

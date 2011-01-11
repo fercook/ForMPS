@@ -35,6 +35,7 @@ test MPS_creation_deletion
    assert_true(aTensor%GetDimensions().equalvector.[7,7,2])
    assert_false(WasThereError())
    assert_equal(anMPS%delete(),Normal)
+   print *,'MPS_creation_deletion'
 end test
 
 
@@ -48,6 +49,7 @@ test MPS_canonicalForm
    assert_true(aTensor%GetDimensions().equalvector.[4,4,2])
    assert_false(WasThereError())
    assert_equal(anMPS%delete(),Normal)
+   print *,'MPS_canonicalForm'
 end test
 
 test MPS_template

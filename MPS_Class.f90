@@ -34,7 +34,6 @@ Module MPS_Class
   type,public :: MPS
      private
      integer :: length,spin,bond
-     complex(8) :: Norm=ONE
      integer, allocatable :: bondList(:,:)
      type(MPSTensor), allocatable :: TensorCollection(:)
      logical :: Initialized=.false.
@@ -42,8 +41,6 @@ Module MPS_Class
      procedure,public :: LeftCanonizeAtSite => LeftCanonizeMPS_AtSite
      procedure,public :: RightCanonizeAtSite => RightCanonizeMPS_AtSite
      procedure,public :: Canonize => CanonizeMPS
-     procedure,public :: SetNorm => setMPSNorm
-     procedure,public :: GetNorm => GetMPSNorm
      procedure,public :: GetTensorAt => GetMPSTensorAtSite
      procedure,public :: SetTensorAt => SetMPSTensorAtSite
      procedure,public :: delete => delete_MPS
@@ -212,12 +209,7 @@ Module MPS_Class
         call ThrowException('LeftCanonizeMPS_AtSite','1<=Site<=Lenght',site,CriticalError)
     endif
     canonizingMatrix=LeftCanonize(aMPS%TensorCollection(site))
-    if (1.eq.site) then
-        call aMPS%SetNorm(aMPS%Norm*(canonizingMatrix%Norm()))
-!        aMPS%TensorCollection(0) = new_MPSTensor(aMPS%spin,integerONE,integerONE,ONE)
-    else
-        aMPS%TensorCollection(site-1)=MPSTensor_times_matrix(aMPS%TensorCollection(site-1),canonizingMatrix)
-    endif
+    aMPS%TensorCollection(site-1)=MPSTensor_times_matrix(aMPS%TensorCollection(site-1),canonizingMatrix)
     !Now fix the bond list
     aMPS%BondList(site,:)=[ aMPS%TensorCollection(site)%getDLeft(), aMPS%TensorCollection(site)%getDRight() ]
     aMPS%BondList(site-1,:)=[ aMPS%TensorCollection(site-1)%getDLeft(), aMPS%TensorCollection(site-1)%getDRight() ]
@@ -236,12 +228,7 @@ Module MPS_Class
         call ThrowException('RightCanonizeMPS_AtSite','1<=Site<=Lenght',site,CriticalError)
     endif
     canonizingMatrix=RightCanonize(aMPS%TensorCollection(site))
-    if (aMPS%length.eq.site) then
-        call aMPS%SetNorm(aMPS%Norm*(canonizingMatrix%Norm()))
-!        aMPS%TensorCollection(aMPS%length+1) = new_MPSTensor(aMPS%spin,integerONE,integerONE,ONE)
-    else
-        aMPS%TensorCollection(site+1)=matrix_times_MPSTensor(canonizingMatrix,aMPS%TensorCollection(site+1))
-    endif
+    aMPS%TensorCollection(site+1)=matrix_times_MPSTensor(canonizingMatrix,aMPS%TensorCollection(site+1))
     !now fix bond list
     aMPS%BondList(site,:)=[ aMPS%TensorCollection(site)%getDLeft(), aMPS%TensorCollection(site)%getDRight() ]
     aMPS%BondList(site+1,:)=[ aMPS%TensorCollection(site+1)%getDLeft(), aMPS%TensorCollection(site+1)%getDRight() ]
@@ -249,47 +236,43 @@ Module MPS_Class
   end subroutine RightCanonizeMPS_AtSite
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-  subroutine CanonizeMPS(aMPS)
+
+
+
+
+
+  subroutine CanonizeMPS(aMPS,Norm)
     class(MPS),intent(INOUT) :: aMPS
+    complex(8),intent(OUT),optional :: Norm
     integer :: n
 
     if(aMPS%Initialized) then
+        if (present(Norm)) Norm=ONE
         !First canonize to the right
         do n=1,aMPS%length
             call aMPS%RightCanonizeAtSite(n)
         enddo
+        if (present(Norm)) Norm=Norm*aMPS%TensorCollection(aMPS%length+1)%Norm()
+        aMPS%TensorCollection(aMPS%length+1) = new_MPSTensor(aMPS%spin,integerONE,integerONE,ONE)
         !Now canonize to the left and end at first site
         do n=aMPS%length,1,-1
             call aMPS%LeftCanonizeAtSite(n)
         enddo
+        if (present(Norm)) Norm=Norm*aMPS%TensorCollection(0)%Norm()
+        aMPS%TensorCollection(0) = new_MPSTensor(aMPS%spin,integerONE,integerONE,ONE)
     else
         call ThrowException('CanonizeMPS','MPS not initialized',NoErrorCode,CriticalError)
     endif
   end subroutine CanonizeMPS
 
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-  subroutine SetMPSNorm(aMPS,newNorm)
-    class(MPS),intent(INOUT) :: aMPS
-    complex(8), intent(IN) :: newNorm
 
-    if(aMPS%Initialized) then
-        aMPS%Norm=newNorm
-    else
-        call ThrowException('SetMPSNorm','MPS not initialized',NoErrorCode,CriticalError)
-    endif
-  end subroutine SetMPSNorm
 
-  function GetMPSNorm(aMPS)
-    class(MPS),intent(INOUT) :: aMPS
-    complex(8) :: GetMPSNorm
-    if(aMPS%Initialized) then
-        GetMPSNorm=aMPS%Norm
-    else
-        call ThrowException('GetMPSNorm','MPS not initialized',NoErrorCode,CriticalError)
-    endif
-  end function GetMPSNorm
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+
+
+
+
 
    function GetMPSTensorAtSite(aMPS,site) result(aMPSTensor)
      class(MPS),intent(IN) :: aMPS
@@ -306,6 +289,14 @@ Module MPS_Class
          call ThrowException('GetMPSTensorAtSite','MPS not initialized',NoErrorCode,CriticalError)
      endif
    end function GetMPSTensorAtSite
+
+
+
+
+
+
+
+
 
    subroutine SetMPSTensorAtSite(thisMPS,site,aMPSTensor)
      class(MPS),intent(INOUT) :: thisMPS
@@ -327,6 +318,12 @@ Module MPS_Class
      endif
    end Subroutine SetMPSTensorAtSite
 
+
+
+
+
+
+
    integer function GetMPSLength(aMPS) result(length)
      class(MPS),intent(IN) :: aMPS
      if(aMPS%Initialized) then
@@ -337,6 +334,12 @@ Module MPS_Class
    end function GetMPSLength
 
 
+
+
+
+
+
+
    integer function GetMPSSpin(aMPS) result(spin)
      class(MPS),intent(IN) :: aMPS
      if(aMPS%Initialized) then
@@ -345,6 +348,12 @@ Module MPS_Class
          call ThrowException('GetMPSSpin','MPS not initialized',NoErrorCode,CriticalError)
      endif
    end function GetMPSSpin
+
+
+
+
+
+
 
    integer function GetMaxMPSBond(aMPS) result(bond)
      class(MPS),intent(IN) :: aMPS

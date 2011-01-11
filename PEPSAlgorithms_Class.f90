@@ -73,7 +73,10 @@ module PEPSAlgorithms_Class
             smallPEPS = new_PEPS(bigPEPS)
             return
         else
-            smallPEPS= new_PEPS(PEPSSize(1),PEPSSize(2),PEPSSpin,newBondDimension)
+            call Normalize(bigPEPS)
+            smallPEPS = ReduceMAXPEPSBond(bigPEPS,newBondDimension) !new_PEPS(PEPSSize(1),PEPSSize(2),PEPSSpin,newBondDimension) !
+            call Normalize(smallPEPS)
+            !if( smallPEPS
         endif
 
         smallMultiplicator = new_Multiplicator2D(smallPEPS)
@@ -90,31 +93,31 @@ module PEPSAlgorithms_Class
 	                print *,'Optimizing site ',siteX,',',siteY
 	                localTensor = smallPEPS%GetTensorAt(siteX,siteY)
 	                localPEPSDims = localTensor%GetDimensions()
-	                call localTensor%Print('Previous tensor data')
-	                aTempTensor=smallMultiplicator%LeftAt(siteX-1,siteY)
-	                call aTempTensor%Print('Left environment data')
-	                call aTempTensor%PrintDimensions('xxxxxxxx-------   0,1 dims LEFT small')
-	                aTempTensor=smallMultiplicator%RightAt(siteX+1,siteY)
-	                call aTempTensor%Print('Right environment data')
-	                call aTempTensor%PrintDimensions('xxxxxxxx-------   2,1 dims RIGHT small')
-                    aTempTensor= smallMultiplicator%AboveAt(siteX,siteY+1)
-                    call aTempTensor%Print('Above environment data')
-                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,2 dims ABOVE small')
-                    aTempTensor=smallMultiplicator%BelowAt(siteX,siteY-1)
-                    call aTempTensor%Print('Below environment data')
-                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,0 dims BELOW small')
-                    aTempTensor=bigMultiplicator%LeftAt(siteX-1,siteY)
-                    call aTempTensor%Print('BIG Left environment data')
-                    call aTempTensor%PrintDimensions('xxxxxxxx-------   0,1 dims LEFT BIG')
-                    aTempTensor=bigMultiplicator%RightAt(siteX+1,siteY)
-                    call aTempTensor%Print('BIG Right environment data')
-                    call aTempTensor%PrintDimensions('xxxxxxxx-------   2,1 dims RIGHT BIG')
-                    aTempTensor=bigMultiplicator%AboveAt(siteX,siteY+1)
-                    call aTempTensor%Print('BIG Above environment data')
-                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,2 dims ABOVE BIG')
-                    aTempTensor=bigMultiplicator%BelowAt(siteX,siteY-1)
-                    call aTempTensor%Print('BIG Below environment data')
-                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,0 dims BELOW BIG')
+!	                call localTensor%Print('Previous tensor data')
+!	                aTempTensor=smallMultiplicator%LeftAt(siteX-1,siteY)
+!	                call aTempTensor%Print('Left environment data')
+!	                call aTempTensor%PrintDimensions('xxxxxxxx-------   0,1 dims LEFT small')
+!	                aTempTensor=smallMultiplicator%RightAt(siteX+1,siteY)
+!	                call aTempTensor%Print('Right environment data')
+!	                call aTempTensor%PrintDimensions('xxxxxxxx-------   2,1 dims RIGHT small')
+!                    aTempTensor= smallMultiplicator%AboveAt(siteX,siteY+1)
+!                    call aTempTensor%Print('Above environment data')
+!                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,2 dims ABOVE small')
+!                    aTempTensor=smallMultiplicator%BelowAt(siteX,siteY-1)
+!                    call aTempTensor%Print('Below environment data')
+!                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,0 dims BELOW small')
+!                    aTempTensor=bigMultiplicator%LeftAt(siteX-1,siteY)
+!                    call aTempTensor%Print('BIG Left environment data')
+!                    call aTempTensor%PrintDimensions('xxxxxxxx-------   0,1 dims LEFT BIG')
+!                    aTempTensor=bigMultiplicator%RightAt(siteX+1,siteY)
+!                    call aTempTensor%Print('BIG Right environment data')
+!                    call aTempTensor%PrintDimensions('xxxxxxxx-------   2,1 dims RIGHT BIG')
+!                    aTempTensor=bigMultiplicator%AboveAt(siteX,siteY+1)
+!                    call aTempTensor%Print('BIG Above environment data')
+!                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,2 dims ABOVE BIG')
+!                    aTempTensor=bigMultiplicator%BelowAt(siteX,siteY-1)
+!                    call aTempTensor%Print('BIG Below environment data')
+!                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,0 dims BELOW BIG')
 
                     localTensor = ComputePEPSOptimum ( smallMultiplicator%LeftAt(siteX-1,siteY), smallMultiplicator%RightAt(siteX+1,siteY), &
                         & smallMultiplicator%AboveAt(siteX,siteY+1), smallMultiplicator%BelowAt(siteX,siteY-1), &
@@ -122,7 +125,7 @@ module PEPSAlgorithms_Class
                         & bigMultiplicator%AboveAt(siteX,siteY+1), bigMultiplicator%BelowAt(siteX,siteY-1), &
                         & bigPEPS%GetTensorAt(siteX,siteY), localPEPSDims )
                         call smallPEPS%SetTensorAt(siteX,siteY,localTensor)
-                    call localTensor%Print('NEW Tensor data')
+
                 enddo
                 call smallMultiplicator%Reset(RIGHT)
                 call bigMultiplicator%Reset(RIGHT)
@@ -158,7 +161,7 @@ module PEPSAlgorithms_Class
         endif
         If (Verbose) print *,'PEPS-Approximate/Total sweeps performed: ',sweep
     else
-        call ThrowException('Overlap algorithm','PEPS not initialized',NoErrorCode,CriticalError)
+        call ThrowException('PEPS-approximate algorithm','PEPS not initialized',NoErrorCode,CriticalError)
     endif
 
   end function Approximate_PEPS
@@ -191,16 +194,16 @@ module PEPSAlgorithms_Class
 
     print *,'Environments computed'
 
-    call bigMatrixTimesVector%PrintDimensions('Big environment dims:')
+!    call bigMatrixTimesVector%PrintDimensions('Big environment dims:')
 
-    call smallMatrix%Print('Small matrix data:')
-    call bigMatrixTimesVector%Print('Big matrix*vector data:')
+!    call smallMatrix%Print('Small matrix data:')
+!    call bigMatrixTimesVector%Print('Big matrix*vector data:')
 
     newTensor= new_PEPSTensor(  &
        & SplitIndexOf(   &
        & SolveLinearProblem(smallMatrix, bigMatrixTimesVector, PSEUDOINVERSETOLERANCE ), newDims )  &
        &                      )
-        call newTensor%Print('New Tensor data:')
+!        call newTensor%Print('New Tensor data:')
   end function ComputePEPSOptimum
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -223,15 +226,14 @@ module PEPSAlgorithms_Class
 
   subroutine Normalize_PEPS(aPEPS)
       class(PEPS),intent(INOUT) :: aPEPS
-      type(Multiplicator2D) :: theEnvironment
       real(8) :: theNorm
       integer :: TotalNumberOfTensors
 
-      theEnvironment=new_Multiplicator2D(aPEPS)
-      theNorm = abs(Overlap_PEPSAboveBelow(theEnvironment))   !!!Notice I should not use **2
-
+      theNorm=2.0
+      theNorm = abs(Overlap_PEPS(aPEPS))   !!!Notice I should not use **2
+      print *,'The norm is:',theNorm
       TotalNumberOfTensors=product(aPEPS%GetSize())
-
+      print *,'Total number of tensors is :',TotalNumberOfTensors
       call aPEPS%ScaleBy(ONE/(theNorm**(0.5d0/TotalNumberOfTensors)))
 
   end subroutine Normalize_PEPS

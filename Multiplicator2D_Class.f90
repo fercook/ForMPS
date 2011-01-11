@@ -304,14 +304,14 @@ contains
         class(Multiplicator2D),intent(INOUT),target  :: this
         integer,intent(IN) :: row
         type(MPS),pointer :: aRowAsMPSBelow
+        complex(8) :: normOfnewMPS
 
         if(this%Initialized) then
             if (.not. this%MPS_Below(row)%IsInitialized() ) then
                 call this%PrepareRowAsMPO(row)
                 this%MPS_Below(row) = this%LowerMPSAtRow(row-1) .applyMPOTo. this%RowsAsMPO(row)
-                call  this%MPS_Below(row)%Canonize()
-                this%LowerProductOfNorms=this%LowerProductOfNorms*this%MPS_Below(row)%GetNorm()
-                call this%MPS_Below(row)%SetNorm(ONE)
+                call  this%MPS_Below(row)%Canonize(normOfnewMPS)
+                this%LowerProductOfNorms=this%LowerProductOfNorms*normOfnewMPS
                 this%MPS_Below(row) = Approximate(this%MPS_Below(row), this%MaximumApproximationBond)
             endif
             aRowAsMPSBelow => this%MPS_Below(row)
@@ -327,14 +327,14 @@ contains
         class(Multiplicator2D),intent(INOUT),target  :: this
         integer,intent(IN) :: row
         type(MPS),pointer :: aRowAsMPSAbove
+        complex(8) :: normOfnewMPS
 
         if(this%Initialized) then
             if (.not. this%MPS_Above(row)%IsInitialized() ) then
                 call this%PrepareRowAsMPO(row)
                 this%MPS_Above(row) = this%RowsAsMPO(row) .applyMPOTo. this%UpperMPSAtRow(row+1)
-                call this%MPS_Above(row)%Canonize()
-                this%UpperProductOfNorms=this%UpperProductOfNorms*this%MPS_Above(row)%GetNorm()
-                call this%MPS_Above(row)%SetNorm(ONE)
+                call this%MPS_Above(row)%Canonize(normOfnewMPS)
+                this%UpperProductOfNorms=this%UpperProductOfNorms*normOfnewMPS
                 this%MPS_Above(row) = Approximate( this%MPS_Above(row), this%MaximumApproximationBond)
             endif
             aRowAsMPSAbove => this%MPS_Above(row)

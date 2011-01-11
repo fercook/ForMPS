@@ -56,5 +56,15 @@ test PEPS_checkpointing
    assert_equal(aPEPS%delete(),Normal)
 end test
 
+test PEPS_Reduce_Bound_Dim
+    type(PEPS) :: aPEPS,smallPEPS
+
+    aPEPS=new_PEPS(4,4,2,4)
+    smallPEPS=ReduceMAXPEPSBond(aPEPS,3)
+
+    assert_equal(smallPEPS%GetMaxBond(),3)
+    assert_true(smallPEPS%IsPEPSWellFormed())
+    assert_true(aPEPS%IsPEPSWellFormed())
+end test
 
 end test_suite
