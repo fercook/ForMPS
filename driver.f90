@@ -1113,6 +1113,7 @@ integer :: numFailures       = 0
   call transpose_of_tensor4
   call funit_teardown
 
+
   call funit_setup
   call matrix_product
   call funit_teardown

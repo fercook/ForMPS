@@ -1209,17 +1209,17 @@ integer function InitializationCheck(this) result(error)
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-    function Tensor2_doubletimes_Tensor2 ( tensorA,tensorB) result(theResult)
-        class(Tensor2),intent(IN) :: tensorA,tensorB
-        complex(8) :: theResult
-
-        if(TensorA%Initialized.and.TensorB%Initialized) then
-            theResult=TensorTrace(tensorA*tensorB)
-        else
-            call ThrowException('Tensor2_doubletimes_Tensor2','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
-
-    end function Tensor2_doubletimes_Tensor2
+!    function Tensor2_doubletimes_Tensor2 ( tensorA,tensorB) result(theResult)
+!        class(Tensor2),intent(IN) :: tensorA,tensorB
+!        complex(8) :: theResult
+!
+!        if(TensorA%Initialized.and.TensorB%Initialized) then
+!            theResult=TensorTrace(tensorA*tensorB)
+!        else
+!            call ThrowException('Tensor2_doubletimes_Tensor2','Tensor not initialized',NoErrorCode,CriticalError)
+!        endif
+!
+!    end function Tensor2_doubletimes_Tensor2
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
@@ -2225,11 +2225,12 @@ complex(8) function Tensor2Trace(this) result(theTrace)
     integer :: dims(2)
 
     if(this%Initialized) then
-        dims=shape(this%data)
-        theTrace=ZERO
-        do sumIndex=1,min(dims(1),dims(2))
-            theTrace=theTrace+this%data(sumIndex,sumIndex)
-        enddo
+        theTrace=ONE
+!        dims=shape(this%data)
+!        theTrace=ZERO
+!        do sumIndex=1,min(dims(1),dims(2))
+!            theTrace=theTrace+this%data(sumIndex,sumIndex)
+!        enddo
      else
         call ThrowException('Tensor2Trace','Tensor not initialized',NoErrorCode,CriticalError)
      endif
