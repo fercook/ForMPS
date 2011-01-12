@@ -72,7 +72,6 @@ module Tensor_Class
     procedure,public :: Slice => Take_Slice_Of_Tensor3
     procedure,public :: PartialTrace => Tensor3Trace
     procedure,public :: Unfold => UnfoldTensor3
-    procedure,public :: SVD => SingularValueDecompositionTensor3
     final :: delete_Tensor3
   end type Tensor3
 
@@ -84,7 +83,6 @@ module Tensor_Class
     procedure,public :: Slice => Take_Slice_Of_Tensor4
     procedure,public :: PartialTrace => Tensor4Trace
     procedure,public :: Unfold => UnfoldTensor4
-    procedure,public :: SVD => SingularValueDecompositionTensor4
     final :: delete_Tensor4
   end type Tensor4
 
@@ -216,13 +214,8 @@ module Tensor_Class
   end interface
 
 
-  interface nModeProduct
-    module procedure Matrix_Xn_Tensor3, Matrix_Xn_Tensor4
-  end interface
-
   interface SingularValueDecomposition
-    module procedure SingularValueDecompositionTensor2, SingularValueDecompositionTensor3,&
-     & SingularValueDecompositionTensor4
+    module procedure SingularValueDecompositionTensor2
   end interface
 
   interface SolveLinearProblem
@@ -1182,166 +1175,6 @@ integer function InitializationCheck(this) result(error)
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-! n-Mode products
-    function Matrix_Xn_Tensor3(aMatrix,aTensor,summedIndex) result(this)
-        class(Tensor3),intent(IN) :: aTensor
-        class(Tensor2),intent(IN) :: aMatrix
-        integer,intent(IN) :: summedIndex(1)
-        type(Tensor3) :: this
-        integer :: dimsOfMatrix(2),dimsOfTensor(3),newDims(3)
-        integer :: sumIndex,freeIndex1,freeIndex2,matrixFreeIndex
-        complex(8) :: Ctemp
-
-        if(aTensor%Initialized.and.aMatrix%Initialized) then
-            dimsOfTensor=shape(aTensor%data)
-            dimsOfMatrix=shape(aMatrix%data)
-            if(dimsOfTensor(summedIndex(1)).eq.dimsOfMatrix(2)) then
-                newDims=dimsOfTensor
-                newDims(summedIndex(1))=dimsOfMatrix(1)
-                this=new_Tensor(newDims(1),newDims(2),newDims(3),ZERO)
-                !ALL LOOP STRUCTURES INSPIRED FROM BLAS3: Perhaps could be tuned in the future
-                select case(summedIndex(1))
-                    case(FIRST(1))
-                        do freeIndex2=1,newDims(3)
-                          do freeIndex1=1,newDims(2)
-                            do sumIndex=1,dimsOfMatrix(2)
-                              Ctemp=aTensor%data(sumIndex,freeIndex1,freeIndex2)
-                              do matrixFreeIndex=1,dimsOfMatrix(1)
-                                this%data(matrixFreeIndex,freeIndex1,freeIndex2) = this%data(matrixFreeIndex,freeIndex1,freeIndex2) &
-                                    & + Ctemp * aMatrix%data(matrixFreeIndex,sumIndex)
-                              enddo
-                            enddo
-                          enddo
-                        enddo
-                    case(SECOND(1))
-                        do freeIndex2=1,newDims(3)
-                          do matrixFreeIndex=1,dimsOfMatrix(1)
-                            do sumIndex=1,dimsOfMatrix(2)
-                              Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
-                              do freeIndex1=1,newDims(1)
-                                this%data(freeIndex1,matrixFreeIndex,freeIndex2) = this%data(freeIndex1,matrixFreeIndex,freeIndex2) &
-                                    & + Ctemp * aTensor%data(freeIndex1,sumIndex,freeIndex2)
-                              enddo
-                            enddo
-                          enddo
-                        enddo
-                    case(THIRD(1))
-                        do matrixFreeIndex=1,dimsOfMatrix(1)
-                          do sumIndex=1,dimsOfMatrix(2)
-                            Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
-                            do freeIndex2=1,newDims(2)
-                              do freeIndex1=1,newDims(1)
-                                this%data(freeIndex1,freeIndex2,matrixFreeIndex) = this%data(freeIndex1,freeIndex2,matrixFreeIndex) &
-                                    & + Ctemp * aTensor%data(freeIndex1,freeIndex2,sumIndex)
-                              enddo
-                            enddo
-                          enddo
-                        enddo
-                    case default
-                        call ThrowException('Matrix_Xn_Tensor3','Index must be FIRST to THIRD',summedIndex(1),CriticalError)
-                end select
-            else
-                call ThrowException('Matrix_Xn_Tensor3','Summed indexes are not equal',NoErrorCode,CriticalError)
-            endif
-        else
-            call ThrowException('Matrix_Xn_Tensor3','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
-
-     end function Matrix_Xn_Tensor3
-
-
-
-
-
-
-
-    function Matrix_Xn_Tensor4(aMatrix,aTensor,summedIndex) result(this)
-        class(Tensor4),intent(IN) :: aTensor
-        class(Tensor2),intent(IN) :: aMatrix
-        integer,intent(IN) :: summedIndex(1)
-        type(Tensor4) :: this
-        integer :: dimsOfMatrix(2),dimsOfTensor(4),newDims(4)
-        integer :: sumIndex,freeIndex1,freeIndex2,freeIndex3,matrixFreeIndex
-        complex(8) :: Ctemp
-
-        if(aTensor%Initialized.and.aMatrix%Initialized) then
-            dimsOfTensor=shape(aTensor%data)
-            dimsOfMatrix=shape(aMatrix%data)
-            if(dimsOfTensor(summedIndex(1)).eq.dimsOfMatrix(2)) then
-                newDims=dimsOfTensor
-                newDims(summedIndex(1))=dimsOfMatrix(1)
-                this=new_Tensor(newDims(1),newDims(2),newDims(3),newDims(4),ZERO)
-                !ALL LOOP STRUCTURES INSPIRED FROM BLAS3: Perhaps could be tuned in the future
-                select case(summedIndex(1))
-                    case(FIRST(1))
-                        do freeIndex3=1,newDims(4)
-                          do freeIndex2=1,newDims(3)
-                            do freeIndex1=1,newDims(2)
-                              do sumIndex=1,dimsOfMatrix(2)
-                                Ctemp=aTensor%data(sumIndex,freeIndex1,freeIndex2,freeIndex3)
-                                do matrixFreeIndex=1,dimsOfMatrix(1)
-                                  this%data(matrixFreeIndex,freeIndex1,freeIndex2,freeIndex3) = this%data(matrixFreeIndex,freeIndex1,freeIndex2,freeIndex3) &
-                                      & + Ctemp * aMatrix%data(matrixFreeIndex,sumIndex)
-                                enddo
-                              enddo
-                            enddo
-                          enddo
-                        enddo
-                    case(SECOND(1))
-                      do freeIndex3=1,newDims(4)
-                        do freeIndex2=1,newDims(3)
-                          do matrixFreeIndex=1,dimsOfMatrix(1)
-                            do sumIndex=1,dimsOfMatrix(2)
-                              Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
-                              do freeIndex1=1,newDims(1)
-                                this%data(freeIndex1,matrixFreeIndex,freeIndex2,freeIndex3) = this%data(freeIndex1,matrixFreeIndex,freeIndex2,freeIndex3) &
-                                    & + Ctemp * aTensor%data(freeIndex1,sumIndex,freeIndex2,freeIndex3)
-                              enddo
-                            enddo
-                          enddo
-                        enddo
-                      enddo
-                    case(THIRD(1))
-                      do freeIndex3=1,newDims(4)
-                        do matrixFreeIndex=1,dimsOfMatrix(1)
-                          do sumIndex=1,dimsOfMatrix(2)
-                            Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
-                            do freeIndex2=1,newDims(2)
-                              do freeIndex1=1,newDims(1)
-                                this%data(freeIndex1,freeIndex2,matrixFreeIndex,freeIndex3) = this%data(freeIndex1,freeIndex2,matrixFreeIndex,freeIndex3) &
-                                   & + Ctemp * aTensor%data(freeIndex1,freeIndex2,sumIndex,freeIndex3)
-                              enddo
-                            enddo
-                          enddo
-                        enddo
-                      enddo
-                    case(FOURTH(1))
-                      do matrixFreeIndex=1,dimsOfMatrix(1)
-                        do sumIndex=1,dimsOfMatrix(2)
-                          Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
-                          do freeIndex3=1,newDims(3)
-                            do freeIndex2=1,newDims(2)
-                              do freeIndex1=1,newDims(1)
-                                this%data(freeIndex1,freeIndex2,freeIndex3,matrixFreeIndex) = this%data(freeIndex1,freeIndex2,freeIndex3,matrixFreeIndex) &
-                                    & + Ctemp * aTensor%data(freeIndex1,freeIndex2,freeIndex3,sumIndex)
-                              enddo
-                            enddo
-                          enddo
-                        enddo
-                      enddo
-                    case default
-                        call ThrowException('Matrix_Xn_Tensor4','Index must be FIRST to FOURTH',summedIndex(1),CriticalError)
-                end select
-            else
-                call ThrowException('Matrix_Xn_Tensor4','Summed indexes are not equal',NoErrorCode,CriticalError)
-            endif
-        else
-            call ThrowException('Matrix_Xn_Tensor4','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
-
-     end function Matrix_Xn_Tensor4
-
 
 
 
@@ -2780,65 +2613,6 @@ end function Tensor4Trace
 
 !##################################################################
 !##################################################################
-
-  subroutine SingularValueDecompositionTensor3(this,Sigma,U,RankTruncation)
-    class(Tensor3),intent(IN) :: this
-    class(Tensor3),intent(OUT) :: Sigma
-    type(Tensor2),intent(OUT) :: U(3)
-    integer,intent(IN),optional :: RankTruncation
-    type(Tensor2) :: Unfolding,UnfoldedSigma,VTFromUnfolding
-    integer :: n,dims(2)
-
-    do n=1,3
-        Unfolding=this%Unfold(n)
-        call Unfolding%SVD(U(n),UnfoldedSigma,VTFromUnfolding)
-    enddo
-
-    if (present(RankTruncation)) then
-        do n=1,3
-            dims=shape(U(n)%data)
-            U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation)])
-        enddo
-    endif
-    Sigma=nModeProduct(ConjugateTranspose(U(3)), &
-         & nModeProduct(ConjugateTranspose(U(2)), &
-          & nModeProduct(ConjugateTranspose(U(1)),  this, &
-            &FIRST),SECOND),THIRD)
-
-  end subroutine SingularValueDecompositionTensor3
-
-!##################################################################
-
-!##################################################################
-
-  subroutine SingularValueDecompositionTensor4(this,Sigma,U,RankTruncation)
-    class(Tensor4),intent(IN) :: this
-    class(Tensor4),intent(OUT) :: Sigma
-    type(Tensor2),intent(OUT) :: U(4)
-    integer,intent(IN),optional :: RankTruncation
-    type(Tensor2) :: Unfolding,UnfoldedSigma,VTFromUnfolding
-    integer :: n,dims(2)
-
-    do n=1,4
-        Unfolding=this%Unfold(n)
-        call Unfolding%SVD(U(n),UnfoldedSigma,VTFromUnfolding)
-    enddo
-    if (present(RankTruncation)) then
-        do n=1,4
-            dims=shape(U(n)%data)
-            U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation)])
-        enddo
-    endif
-    Sigma=nModeProduct(ConjugateTranspose(U(4)), &
-            & nModeProduct(ConjugateTranspose(U(3)), &
-                & nModeProduct(ConjugateTranspose(U(2)), &
-                    & nModeProduct(ConjugateTranspose(U(1)),   this,  &
-           & FIRST),SECOND),THIRD),FOURTH)
-
-  end subroutine SingularValueDecompositionTensor4
-
-  !##################################################################
-
 
 !##################################################################
 !##################################################################
