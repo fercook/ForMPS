@@ -59,7 +59,6 @@ module Tensor_Class
     procedure,public :: trace => Tensor2Trace
     procedure,public :: CompactFromLeft => Mirror_Compact_Left_With_Tensor3
     procedure,public :: CompactFromRight => Mirror_Compact_Right_With_Tensor3
-    procedure,public :: Split => SplitIndicesOfTensor2in5
     final :: delete_Tensor2
   end type Tensor2
 
@@ -89,17 +88,6 @@ module Tensor_Class
     final :: delete_Tensor4
   end type Tensor4
 
-  type,public,extends(Tensor) :: Tensor5
-    private
-    complex(8),allocatable :: data(:,:,:,:,:)
-  contains
-     procedure,public :: MirrorCompact => Mirror_Compact_Tensor5
-     procedure,public :: Slice => Take_Slice_Of_Tensor5
-     procedure,public :: JoinIndices => JoinIndicesOfTensor5
-     procedure,public :: Unfold => UnfoldTensor5
-     procedure,public :: SVD => SingularValueDecompositionTensor5
-     final :: delete_Tensor5
-  end type Tensor5
 
 
 !###############################
@@ -110,17 +98,15 @@ module Tensor_Class
      module procedure new_Tensor1_Random,new_Tensor1_fromTensor1,new_Tensor1_fromData,new_Tensor1_withConstant, &
 		& new_Tensor2_Random,new_Tensor2_fromTensor2,new_Tensor2_fromData,new_Tensor2_withConstant, &
 		& new_Tensor3_Random,new_Tensor3_fromTensor3,new_Tensor3_fromData,new_Tensor3_withConstant, &
-		& new_Tensor4_Random,new_Tensor4_fromTensor4,new_Tensor4_fromData,new_Tensor4_withConstant, &
-		& new_Tensor5_Random,new_Tensor5_fromTensor5,new_Tensor5_fromData,new_Tensor5_withConstant
+		& new_Tensor4_Random,new_Tensor4_fromTensor4,new_Tensor4_fromData,new_Tensor4_withConstant
   end interface
 
   interface operator (*)
      module procedure &
-     	  & number_times_Tensor1,number_times_Tensor2,number_times_Tensor3,number_times_Tensor4,number_times_Tensor5, &
+     	  & number_times_Tensor1,number_times_Tensor2,number_times_Tensor3,number_times_Tensor4, &
      	  & Tensor2_matmul_Tensor2, Tensor2_matmul_Tensor1, Tensor1_matmul_Tensor2, &
      	  & Tensor1_dotProduct_Tensor1, &
-     	  & Tensor3_matmul_Tensor3, Tensor2_matmul_Tensor3, Tensor3_matmul_Tensor2, &
-     	  & Tensor5_matmul_Tensor2,Tensor2_matmul_Tensor5
+     	  & Tensor3_matmul_Tensor3, Tensor2_matmul_Tensor3, Tensor3_matmul_Tensor2
   end interface
 
 !  interface operator ()
@@ -132,7 +118,7 @@ module Tensor_Class
      module procedure &
           & Tensor2_matmul_Tensor2, Tensor2_matmul_Tensor1, Tensor1_matmul_Tensor2, &
           & Tensor1_dotProduct_Tensor1, Tensor3_matmul_Tensor3, Tensor2_matmul_Tensor3, &
-          & Tensor5_matmul_Tensor2, Tensor3_matmul_Tensor2, Tensor2_matmul_Tensor5
+          & Tensor3_matmul_Tensor2
   end interface
 
   interface operator (.xxx.)
@@ -142,26 +128,26 @@ module Tensor_Class
 
   interface operator (.xplus.)
      module procedure &
-     &   MultAndCollapse_Tensor3_Tensor4, MultAndCollapse_Tensor5_Tensor5, MultAndCollapse_Tensor3_Tensor3, &
+     &   MultAndCollapse_Tensor3_Tensor4, MultAndCollapse_Tensor3_Tensor3, &
      &   MultAndCollapse_Tensor4_Tensor4
   end interface
 
   interface operator (+)
-     module procedure add_Tensor1,add_Tensor2,add_Tensor3,add_Tensor4,add_Tensor5
+     module procedure add_Tensor1,add_Tensor2,add_Tensor3,add_Tensor4
   end interface
 
   interface operator (-)
-     module procedure subtract_Tensor1,subtract_Tensor2,subtract_Tensor3,subtract_Tensor4,subtract_Tensor5
+     module procedure subtract_Tensor1,subtract_Tensor2,subtract_Tensor3,subtract_Tensor4
   end interface
 
   interface MultAndCollapse
     module procedure MultAndCollapse_Tensor3_Tensor4, &
-        & MultAndCollapse_Tensor5_Tensor5, MultAndCollapse_Tensor3_Tensor3, MultAndCollapse_Tensor4_Tensor4
+        &  MultAndCollapse_Tensor3_Tensor3, MultAndCollapse_Tensor4_Tensor4
   end interface
 
   interface assignment (=)
      module procedure new_Tensor1_fromAssignment, new_Tensor2_fromAssignment, &
-          & new_Tensor3_fromAssignment, new_Tensor4_fromAssignment, new_Tensor5_fromAssignment
+          & new_Tensor3_fromAssignment, new_Tensor4_fromAssignment
   end interface
 
   interface operator (.diff.)
@@ -181,12 +167,12 @@ module Tensor_Class
   end interface
 
   interface operator (.unfold.)
-     module procedure UnfoldTensor3,UnfoldTensor4,UnfoldTensor5
+     module procedure UnfoldTensor3,UnfoldTensor4
   end interface
 
   interface TensorSlice
     module procedure Take_Slice_Of_Tensor1,Take_Slice_Of_Tensor2,Take_Slice_Of_Tensor3, &
-        & Take_Slice_Of_Tensor4, Take_Slice_Of_Tensor5
+        & Take_Slice_Of_Tensor4
   end interface
 
   interface JoinIndicesOf
@@ -194,7 +180,7 @@ module Tensor_Class
   end interface
 
   interface SplitIndexOf
-    module procedure SplitIndexOfTensor2,SplitIndexOfTensor3,SplitIndicesOfTensor2in5
+    module procedure SplitIndexOfTensor2,SplitIndexOfTensor3
   end interface
 
   interface TensorPad
@@ -202,15 +188,15 @@ module Tensor_Class
   end interface
 
   interface Conjugate
-    module procedure ConjugateTensor1,ConjugateTensor2,ConjugateTensor3,ConjugateTensor4, ConjugateTensor5
+    module procedure ConjugateTensor1,ConjugateTensor2,ConjugateTensor3,ConjugateTensor4
   end interface
 
   interface TensorTranspose
-    module procedure TensorTranspose2,TensorTranspose3,TensorTranspose4,TensorTranspose5
+    module procedure TensorTranspose2,TensorTranspose3,TensorTranspose4
   end interface
 
   interface ConjugateTranspose
-    module procedure ConjugateTranspose2,ConjugateTranspose3,ConjugateTranspose4,ConjugateTranspose5
+    module procedure ConjugateTranspose2,ConjugateTranspose3,ConjugateTranspose4
   end interface
 
   interface TensorTrace
@@ -229,17 +215,14 @@ module Tensor_Class
     module procedure Compact_From_Below_With_Tensor4
   end interface
 
-  interface MirrorCompact
-    module procedure Mirror_Compact_Tensor5
-  end interface
 
   interface nModeProduct
-    module procedure Matrix_Xn_Tensor3, Matrix_Xn_Tensor4, Matrix_Xn_Tensor5
+    module procedure Matrix_Xn_Tensor3, Matrix_Xn_Tensor4
   end interface
 
   interface SingularValueDecomposition
     module procedure SingularValueDecompositionTensor2, SingularValueDecompositionTensor3,&
-     & SingularValueDecompositionTensor4, SingularValueDecompositionTensor5
+     & SingularValueDecompositionTensor4
   end interface
 
   interface SolveLinearProblem
@@ -364,31 +347,6 @@ module Tensor_Class
 
    end function new_Tensor4_Random
 
-   function new_Tensor5_Random (dim1,dim2,dim3,dim4,dim5) result (this)
-     integer,intent(in) :: dim1,dim2,dim3,dim4,dim5
-     type(Tensor5) :: this
-     real(8) :: randomtensorR(dim1,dim2,dim3,dim4,dim5),randomtensorC(dim1,dim2,dim3,dim4,dim5)
-
-     if(dim1*dim2*dim3*dim4*dim5.gt.Max_Combined_Dimension) then
-        call ThrowException('new_Tensor5_Random','Dimensions are larger than maximum',NoErrorCode,CriticalError)
-        return
-     endif
-     if(dim1.lt.1.or.dim2.lt.1.or.dim3.lt.1.or.dim4.lt.1.or.dim5.lt.1) then
-        call ThrowException('new_Tensor5_Random','One dimension is smaller than 1',NoErrorCode,CriticalError)
-        return
-     endif
-
-     if(this%Initialized) deallocate(this%data)
-     allocate(this%data(dim1,dim2,dim3,dim4,dim5))
-
-     Call random_number(randomtensorR)
-     call random_number(randomtensorC)
-
-     This%data=randomtensorR+II*randomtensorC
-
-     this%Initialized=.true.
-
-   end function new_Tensor5_Random
 
 !##################################################################
    function new_Tensor1_fromData (originalData) result (this)
@@ -489,33 +447,6 @@ module Tensor_Class
 
    end function new_Tensor4_fromData
 
-   function new_Tensor5_fromData (originalData) result (this)
-     complex(8),intent(in) :: originalData(:,:,:,:,:)
-     integer :: dim1,dim2,dim3,dim4,dim5
-     type(Tensor5) this
-
-    dim1=size(originalData,1)
-    dim2=size(originalData,2)
-    dim3=size(originalData,3)
-    dim4=size(originalData,4)
-    dim5=size(originalData,5)
-     if(dim1*dim2*dim3*dim4*dim5.gt.Max_Combined_Dimension) then
-        call ThrowException('new_Tensor5_fromData','Dimensions are larger than maximum',NoErrorCode,CriticalError)
-        return
-     endif
-     if(dim1.lt.1.or.dim2.lt.1.or.dim3.lt.1.or.dim4.lt.1.or.dim5.lt.1) then
-        call ThrowException('new_Tensor5_fromData','One dimension is smaller than 1',NoErrorCode,CriticalError)
-        return
-     endif
-
-     if(this%Initialized) deallocate(this%data)
-     allocate(this%data(dim1,dim2,dim3,dim4,dim5))
-     this%data=originalData
-     this%Initialized=.true.
-
-   end function new_Tensor5_fromData
-
-
 !##################################################################
    function new_Tensor1_withConstant (dim1,constant) result (this)
      integer,intent(in) :: dim1
@@ -601,28 +532,6 @@ module Tensor_Class
 
    end function new_Tensor4_withConstant
 
-   function new_Tensor5_withConstant (dim1,dim2,dim3,dim4,dim5,constant) result (this)
-     integer,intent(in) :: dim1,dim2,dim3,dim4,dim5
-     complex(8),intent(in) :: constant
-     type(Tensor5) this
-
-     if(dim1*dim2*dim3*dim4*dim5.gt.Max_Combined_Dimension) then
-        call ThrowException('new_Tensor5_withConstant','Dimensions are larger than maximum',NoErrorCode,CriticalError)
-        return
-     endif
-     if(dim1.lt.1.or.dim2.lt.1.or.dim3.lt.1.or.dim4.lt.1.or.dim5.lt.1) then
-        call ThrowException('new_Tensor5_withConstant','One dimension is smaller than 1',NoErrorCode,CriticalError)
-        return
-     endif
-
-     if(this%Initialized) deallocate(this%data)
-     allocate(this%data(dim1,dim2,dim3,dim4,dim5))
-     this%data=constant
-     this%Initialized=.true.
-
-   end function new_Tensor5_withConstant
-
-
 !##################################################################
    function new_Tensor1_fromTensor1 (tensor) result (this)
      class(Tensor1),intent(in) :: tensor
@@ -672,17 +581,6 @@ module Tensor_Class
 
    end function new_Tensor4_fromTensor4
 
-   function new_Tensor5_fromTensor5 (tensor) result (this)
-     class(Tensor5),intent(in) :: tensor
-     type(Tensor5) this
-     integer error
-
-     if(this%Initialized) deallocate(this%data)
-     allocate(this%data(size(tensor%data,1),size(tensor%data,2),size(tensor%data,3),size(tensor%data,4),size(tensor%data,5)))
-     this%data=tensor%data
-     this%Initialized=.true.
-
-   end function new_Tensor5_fromTensor5
 
 
  !##################################################################
@@ -731,16 +629,6 @@ module Tensor_Class
 
    end subroutine new_Tensor4_fromAssignment
 
-   subroutine new_Tensor5_fromAssignment(lhs,rhs)
-     class(Tensor5),intent(out) :: lhs
-     type(Tensor5),intent(in) :: rhs
-
-     if(lhs%Initialized) deallocate(lhs%data)
-     allocate(lhs%data(size(rhs%data,1),size(rhs%data,2),size(rhs%data,3),size(rhs%data,4),size(rhs%data,5)))
-     lhs%data=rhs%data
-     lhs%Initialized=.true.
-
-   end subroutine new_Tensor5_fromAssignment
 
 
  !######################################    delete
@@ -776,13 +664,6 @@ module Tensor_Class
      this%Initialized=.false.
    end subroutine delete_Tensor4
 !##################################################################
-   subroutine delete_Tensor5 (this)
-     type(Tensor5) :: this
-     if (allocated(this%data)) then
-       deallocate(this%data)
-     endif
-     this%Initialized=.false.
-   end subroutine delete_Tensor5
 !##################################################################
 !##################################################################
 
@@ -835,9 +716,6 @@ integer function InitializationCheck(this) result(error)
         class is (Tensor4)
             print *,'4-Tensor data:'
             print *,Typed_this%data
-        class is (Tensor5)
-            print *,'5-Tensor data:'
-            print *,Typed_this%data
 	 	class is (Tensor)
 	 		print *,'No data in raw tensor'
 	 end select
@@ -870,9 +748,6 @@ integer function InitializationCheck(this) result(error)
         class is (Tensor4)
             write(*,'("4-Tensor Dimensions:",I3," x",I3," x",I3," x",I3)'),size(Typed_this%data,1),size(Typed_this%data,2), &
                   & size(Typed_this%data,3),size(Typed_this%data,4)
-        class is (Tensor5)
-            write(*,'("5-Tensor Dimensions:",I3," x",I3," x",I3," x",I3," x",I3)'),size(Typed_this%data,1),size(Typed_this%data,2), &
-                  & size(Typed_this%data,3),size(Typed_this%data,4),size(Typed_this%data,5)
 	 	class is (Tensor)
 	 		print *,'No data in raw tensor'
 	 end select
@@ -904,9 +779,6 @@ integer function InitializationCheck(this) result(error)
             class is (Tensor4)
                 allocate(Dims(4))
                 Dims=shape(Typed_this%data)
-            class is (Tensor5)
-                allocate(Dims(5))
-                Dims=shape(Typed_this%data)
 	 		class is (Tensor)
 	    	    call ThrowException('getDimensions','Dimensions not defined',NoErrorCode,CriticalError)
     	    	return
@@ -932,8 +804,6 @@ integer function InitializationCheck(this) result(error)
 	 	class is (Tensor3)
 	 		Norm_Of_Tensor=sum(abs(Typed_this%data))
         class is (Tensor4)
-            Norm_Of_Tensor=sum(abs(Typed_this%data))
-        class is (Tensor5)
             Norm_Of_Tensor=sum(abs(Typed_this%data))
 	 	class is (Tensor)
 	    	call ThrowException('Norm_Of_Tensor','Norm is not defined',NoErrorCode,CriticalError)
@@ -1016,20 +886,6 @@ integer function InitializationCheck(this) result(error)
 
    end function Number_times_Tensor4
 
-   function number_times_Tensor5(constant, aTensor) result(this)
-     complex(8),intent(IN) :: constant
-     class(Tensor5),intent(IN) :: aTensor
-     type(Tensor5) :: this
-
-     if(.not.aTensor%Initialized) then
-        call ThrowException('Number_times_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
-     else
-         this=new_Tensor(constant*aTensor%data)
-     endif
-     return
-
-   end function Number_times_Tensor5
-
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -1078,17 +934,6 @@ integer function InitializationCheck(this) result(error)
         return
     end function add_Tensor4
 
-    function add_Tensor5(tensorA,tensorB) result(this)
-        class(tensor5),intent(IN) :: tensorA,tensorB
-        type(Tensor5) :: this
-        if(TensorA%Initialized.and.TensorB%Initialized.and.(tensorA.equaldims.tensorB)) then
-           this=new_Tensor(tensorA%data+tensorB%data)
-        else
-           call ThrowException('add_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
-        return
-    end function add_Tensor5
-
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -1136,18 +981,6 @@ integer function InitializationCheck(this) result(error)
         endif
         return
     end function subtract_Tensor4
-
-    function subtract_Tensor5(tensorA,tensorB) result(this)
-        class(tensor5),intent(IN) :: tensorA,tensorB
-        type(Tensor5) :: this
-        if(TensorA%Initialized.and.TensorB%Initialized.and.(tensorA.equaldims.tensorB)) then
-           this=new_Tensor(tensorA%data-tensorB%data)
-        else
-           call ThrowException('subtract_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
-        return
-    end function subtract_Tensor5
-
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -1344,69 +1177,6 @@ integer function InitializationCheck(this) result(error)
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-    function Tensor5_matmul_Tensor2(aTensor, aMatrix) result(this)
-        class(Tensor5),intent(IN) :: aTensor
-        class(Tensor2),intent(IN) :: aMatrix
-        type(Tensor5) :: this
-        integer :: index1,index2,index3,dimsOfTensor(5),dimsOfMatrix(2)
-        complex(8),allocatable :: anArray(:,:,:,:,:)
-
-        if(aTensor%Initialized.and.aMatrix%Initialized) then
-            dimsOfTensor=shape(aTensor%data)
-            dimsOfMatrix=shape(aMatrix%data)
-            if(dimsOfTensor(5).eq.dimsOfMatrix(1)) then
-                allocate(anArray(dimsOfTensor(1),dimsOfTensor(2),dimsOfTensor(3),dimsOfTensor(4),dimsOfMatrix(2)) )
-                do index3=1,dimsOfTensor(3)
-                    do index2=1,dimsOfTensor(2)
-                        do index1=1,dimsOfTensor(1)
-                            anArray(index1,index2,index3,:,:)= &
-                                & matmul(aTensor%data(index1,index2,index3,:,:),aMatrix%data)
-                        enddo
-                    enddo
-                enddo
-                this=new_Tensor(anArray)
-                deallocate(anArray)
-            else
-                call ThrowException('Tensor5_matmul_Tensor2','Tensor indexes are not equal',NoErrorCode,CriticalError)
-            endif
-        else
-            call ThrowException('Tensor5_matmul_Tensor2','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
-
-    end function Tensor5_matmul_Tensor2
-
-
-    function Tensor2_matmul_Tensor5( aMatrix, aTensor) result(this)
-        class(Tensor5),intent(IN) :: aTensor
-        class(Tensor2),intent(IN) :: aMatrix
-        type(Tensor5) :: this
-        integer :: index3,index4,index5,dimsOfTensor(5),dimsOfMatrix(2)
-        complex(8),allocatable :: anArray(:,:,:,:,:)
-
-        if(aTensor%Initialized.and.aMatrix%Initialized) then
-            dimsOfTensor=shape(aTensor%data)
-            dimsOfMatrix=shape(aMatrix%data)
-            if(dimsOfTensor(1).eq.dimsOfMatrix(2)) then
-                allocate(anArray(dimsOfMatrix(1),dimsOfTensor(2),dimsOfTensor(3),dimsOfTensor(4),dimsOfTensor(5)) )
-                do index5=1,dimsOfTensor(5)
-                    do index4=1,dimsOfTensor(4)
-                        do index3=1,dimsOfTensor(3)
-                            anArray(:,:,index3,index4,index5)= &
-                                & matmul(aMatrix%data,aTensor%data(:,:,index3,index4,index5))
-                        enddo
-                    enddo
-                enddo
-                this=new_Tensor(anArray)
-                deallocate(anArray)
-            else
-                call ThrowException('Tensor2_matmul_Tensor5','Tensor indexes are not equal',NoErrorCode,CriticalError)
-            endif
-        else
-            call ThrowException('Tensor2_matmul_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
-
-    end function Tensor2_matmul_Tensor5
-
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -1573,117 +1343,6 @@ integer function InitializationCheck(this) result(error)
      end function Matrix_Xn_Tensor4
 
 
-
-
-    function Matrix_Xn_Tensor5(aMatrix,aTensor,summedIndex) result(this)
-        class(Tensor5),intent(IN) :: aTensor
-        class(Tensor2),intent(IN) :: aMatrix
-        integer,intent(IN) :: summedIndex(1)
-        type(Tensor5) :: this
-        integer :: dimsOfMatrix(2),dimsOfTensor(5),newDims(5)
-        integer :: sumIndex,freeIndex1,freeIndex2,freeIndex3,freeIndex4,matrixFreeIndex
-        complex(8) :: Ctemp
-
-        if(aTensor%Initialized.and.aMatrix%Initialized) then
-            dimsOfTensor=shape(aTensor%data)
-            dimsOfMatrix=shape(aMatrix%data)
-            if(dimsOfTensor(summedIndex(1)).eq.dimsOfMatrix(2)) then
-                newDims=dimsOfTensor
-                newDims(summedIndex(1))=dimsOfMatrix(1)
-                this=new_Tensor(newDims(1),newDims(2),newDims(3),newDims(4),newDims(5),ZERO)
-                !ALL LOOP STRUCTURES INSPIRED FROM BLAS3: Perhaps could be tuned in the future
-                select case(summedIndex(1))
-                    case(FIRST(1))
-                      do freeIndex4=1,newDims(5)
-                        do freeIndex3=1,newDims(4)
-                          do freeIndex2=1,newDims(3)
-                            do freeIndex1=1,newDims(2)
-                              do sumIndex=1,dimsOfMatrix(2)
-                                Ctemp=aTensor%data(sumIndex,freeIndex1,freeIndex2,freeIndex3,freeIndex4)
-                                do matrixFreeIndex=1,dimsOfMatrix(1)
-                                  this%data(matrixFreeIndex,freeIndex1,freeIndex2,freeIndex3,freeIndex4) = this%data(matrixFreeIndex,freeIndex1,freeIndex2,freeIndex3,freeIndex4) &
-                                      & + Ctemp * aMatrix%data(matrixFreeIndex,sumIndex)
-                                enddo
-                              enddo
-                            enddo
-                          enddo
-                        enddo
-                      enddo
-                    case(SECOND(1))
-                      do freeIndex4=1,newDims(5)
-                        do freeIndex3=1,newDims(4)
-                          do freeIndex2=1,newDims(3)
-                            do matrixFreeIndex=1,dimsOfMatrix(1)
-                              do sumIndex=1,dimsOfMatrix(2)
-                                Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
-                                do freeIndex1=1,newDims(1)
-                                  this%data(freeIndex1,matrixFreeIndex,freeIndex2,freeIndex3,freeIndex4) = this%data(freeIndex1,matrixFreeIndex,freeIndex2,freeIndex3,freeIndex4) &
-                                      & + Ctemp * aTensor%data(freeIndex1,sumIndex,freeIndex2,freeIndex3,freeIndex4)
-                                enddo
-                              enddo
-                            enddo
-                          enddo
-                        enddo
-                      enddo
-                    case(THIRD(1))
-                      do freeIndex4=1,newDims(5)
-                        do freeIndex3=1,newDims(4)
-                          do matrixFreeIndex=1,dimsOfMatrix(1)
-                            do sumIndex=1,dimsOfMatrix(2)
-                              Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
-                              do freeIndex2=1,newDims(2)
-                                do freeIndex1=1,newDims(1)
-                                  this%data(freeIndex1,freeIndex2,matrixFreeIndex,freeIndex3,freeIndex4) = this%data(freeIndex1,freeIndex2,matrixFreeIndex,freeIndex3,freeIndex4) &
-                                     & + Ctemp * aTensor%data(freeIndex1,freeIndex2,sumIndex,freeIndex3,freeIndex4)
-                                enddo
-                              enddo
-                            enddo
-                          enddo
-                        enddo
-                      enddo
-                    case(FOURTH(1))
-                      do freeIndex4=1,newDims(5)
-                        do matrixFreeIndex=1,dimsOfMatrix(1)
-                          do sumIndex=1,dimsOfMatrix(2)
-                            Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
-                            do freeIndex3=1,newDims(3)
-                              do freeIndex2=1,newDims(2)
-                                do freeIndex1=1,newDims(1)
-                                  this%data(freeIndex1,freeIndex2,freeIndex3,matrixFreeIndex,freeIndex4) = this%data(freeIndex1,freeIndex2,freeIndex3,matrixFreeIndex,freeIndex4) &
-                                     & + Ctemp * aTensor%data(freeIndex1,freeIndex2,freeIndex3,sumIndex,freeIndex4)
-                                enddo
-                              enddo
-                            enddo
-                          enddo
-                        enddo
-                      enddo
-                    case(FIFTH(1))
-                      do matrixFreeIndex=1,dimsOfMatrix(1)
-                        do sumIndex=1,dimsOfMatrix(2)
-                          Ctemp=aMatrix%data(matrixFreeIndex,sumIndex)
-                          do freeIndex4=1,newDims(4)
-                            do freeIndex3=1,newDims(3)
-                              do freeIndex2=1,newDims(2)
-                                do freeIndex1=1,newDims(1)
-                                  this%data(freeIndex1,freeIndex2,freeIndex3,freeIndex4,matrixFreeIndex) = this%data(freeIndex1,freeIndex2,freeIndex3,freeIndex4,matrixFreeIndex) &
-                                      & + Ctemp * aTensor%data(freeIndex1,freeIndex2,freeIndex3,freeIndex4,sumIndex)
-                                enddo
-                              enddo
-                            enddo
-                          enddo
-                        enddo
-                      enddo
-                    case default
-                        call ThrowException('Matrix_Xn_Tensor5','Index must be FIRST to FIFTH',summedIndex(1),CriticalError)
-                end select
-            else
-                call ThrowException('Matrix_Xn_Tensor5','Summed indexes are not equal',NoErrorCode,CriticalError)
-            endif
-        else
-            call ThrowException('Matrix_Xn_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
-
-     end function Matrix_Xn_Tensor5
 
 
 
@@ -2128,99 +1787,6 @@ integer function InitializationCheck(this) result(error)
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-    function Mirror_Compact_Tensor5(upTensor,downTensor,boundIndex) result(theResult)
-        class(Tensor5),intent(IN) :: upTensor,downTensor
-        integer,intent(IN) :: boundIndex(1)
-        type(Tensor4) :: theResult
-        integer :: permutation(5),freeDims(4)
-        integer :: n,index
-
-        if(.not.(upTensor%Initialized.and.downTensor%Initialized)) then
-            call ThrowException('Mirror_Compact_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
-            return
-        endif
-
-        !Skip the bound indices to find the free dimensions
-        index=1
-        do n=1,5
-          if (n.ne.boundIndex(1)) then
-            freeDims(index)=n
-            index=index+1
-          endif
-        enddo
-
-        !Prepare permutation vectors for transposition of bound index to the last position
-        permutation(boundIndex(1))=5
-        permutation(freeDims(1))=1
-        permutation(freeDims(2))=2
-        permutation(freeDims(3))=3
-        permutation(freeDims(4))=4
-
-        theResult=MultAndCollapse(TensorTranspose(upTensor,permutation),TensorTranspose(downTensor,permutation))
-
-    end function Mirror_Compact_Tensor5
-
-!!##################################################################
-
-  function MultAndCollapse_Tensor5_Tensor5(upTensor,downTensor) result(theResult)
-     class(Tensor5),intent(IN) :: upTensor,downTensor
-     type(Tensor4) :: theResult
-     integer :: dimsUp(5),dimsDown(5),newDims(4)
-     integer :: freeIndex1,freeIndex2,freeIndex3,freeIndex4,sumIndex
-     integer :: a,b,c,d,alpha,beta,gama,delta
-     complex(8),allocatable :: anArray(:,:,:,:)
-     integer,parameter :: BoundIndex=5
-
-     if(.not.(upTensor%Initialized.and.downTensor%Initialized)) then
-        call ThrowException('MultAndCollapse_Tensor5_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
-        return
-     endif
-
-     dimsUp=shape(upTensor%data)
-     dimsDown=shape(downTensor%data)
-
-     if(dimsUp(BoundIndex).ne.dimsDown(BoundIndex)) then
-        call ThrowException('MultAndCollapse_Tensor5_Tensor5','Contracted index is not equal on tensors', &
-           & dimsUp(BoundIndex)-dimsDown(BoundIndex),CriticalError)
-        return
-     endif
-
-    newDims=dimsUp(1:4)*dimsDown(1:4)
-
-    allocate(anArray(newDims(1),newDims(2),newDims(3),newDims(4)) )
-    anArray=ZERO
-
-    do sumIndex=1,dimsUp(BoundIndex)
-      do delta=1,dimsDown(4)
-      do d=1,dimsUp(4)
-        freeIndex4=d+(delta-1)*dimsUp(4)
-	    do gama=1,dimsDown(3)
-        do c=1,dimsUp(3)
-          freeIndex3=c+(gama-1)*dimsUp(3)
-	      do beta=1,dimsDown(2)
-          do b=1,dimsUp(2)
-	        freeIndex2=b+(beta-1)*dimsUp(2)
-	        do alpha=1,dimsDown(1)
-            do a=1,dimsUp(1)
-	          freeIndex1=a+(alpha-1)*dimsUp(1)
-              anArray(freeIndex1,freeIndex2,freeIndex3,freeIndex4)= anArray(freeIndex1,freeIndex2,freeIndex3,freeIndex4) + &
-                & upTensor%data(a,b,c,d,sumIndex) * &
-                & conjg( downTensor%data(alpha,beta,gama,delta,sumIndex) )
-            enddo
-            enddo
-          enddo
-          enddo
-        enddo
-        enddo
-      enddo
-      enddo
-    enddo
-
-    theResult=new_Tensor(anArray)
-    deallocate(anArray)
-
-   end function MultAndCollapse_Tensor5_Tensor5
-
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 !!##################################################################
@@ -2271,14 +1837,6 @@ integer function InitializationCheck(this) result(error)
         class is (Tensor4)
             select type (Typed_B => tensorB)
                 class is (Tensor4)
-                    diff=sum(Typed_A%data-Typed_B%data)
-                class default
-                    call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
-                    return
-            end select
-        class is (Tensor5)
-            select type (Typed_B => tensorB)
-                class is (Tensor5)
                     diff=sum(Typed_A%data-Typed_B%data)
                 class default
                     call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
@@ -2345,14 +1903,6 @@ integer function InitializationCheck(this) result(error)
                     call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
                     return
             end select
-        class is (Tensor5)
-            select type (Typed_B => tensorB)
-                class is (Tensor5)
-                    diff=sum(abs(Typed_A%data-Typed_B%data))
-                class default
-                    call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
-                    return
-            end select
 	 	class is (Tensor)
 	    	call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
     	    return
@@ -2404,14 +1954,6 @@ integer function InitializationCheck(this) result(error)
       class is (Tensor4)
          select type (Typed_B => tensorB)
              class is (Tensor4)
-                equals=sum(abs(shape(typed_A%data)-shape(typed_B%data))).eq.ZERO
-             class default
-                call ThrowException('Tensors_are_equal','Unknown error',NoErrorCode,CriticalError)
-                return
-         end select
-      class is (Tensor5)
-         select type (Typed_B => tensorB)
-             class is (Tensor5)
                 equals=sum(abs(shape(typed_A%data)-shape(typed_B%data))).eq.ZERO
              class default
                 call ThrowException('Tensors_are_equal','Unknown error',NoErrorCode,CriticalError)
@@ -2596,36 +2138,8 @@ end function JoinIndicesOfTensor4
 
 !##################################################################
 
-    function JoinIndicesOfTensor5(this) result(aMatrix)
-        class(Tensor5),intent(IN) :: this
-        type(Tensor2) :: aMatrix
-        integer :: dims(5)
-
-        if(this%Initialized) then
-            dims=shape(this%data)
-            aMatrix=new_Tensor( product(dims(1:4)), dims(5) , ZERO )
-            aMatrix%data=reshape(this%data, [product(dims(1:4)), dims(5)])
-        else
-            call ThrowException('JoinIndicesOfTensor5','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
-
-    end function JoinIndicesOfTensor5
-
 !##################################################################
 
-    function SplitIndicesOfTensor2in5(this,dims) result(aTensor)
-        class(Tensor2),intent(IN) :: this
-        type(Tensor5) :: aTensor
-        integer,intent(IN) :: dims(5)
-
-        if(this%Initialized) then
-            aTensor=new_Tensor( dims(1), dims(2), dims(3), dims(4), dims(5) , ZERO )
-            aTensor%data=reshape(this%data, dims )
-        else
-            call ThrowException('SplitIndicesOfTensor5','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
-
-    end function SplitIndicesOfTensor2in5
 
 !##################################################################
 
@@ -2711,26 +2225,6 @@ function Take_Slice_Of_Tensor1(this,range1) result (aTensor)
 end function Take_Slice_Of_Tensor1
 
 !##################################################################
-
-function Take_Slice_Of_Tensor5(this,range1,range2,range3,range4,range5) result (aTensor)
-    integer,intent(IN) :: range1(2),range2(2),range3(2),range4(2),range5(2)
-    class(tensor5),intent(IN) :: this
-    type(tensor5) :: aTensor
-    integer :: dims(5)
-
-     if(this%Initialized) then
-        dims=shape(this%data)
-        if(range1(1).ge.1.and.range2(1).ge.1.and.range3(1).ge.1.and.range4(1).ge.1.and.range5(1).ge.1.and. &
-          & range1(2).le.dims(1).and.range2(2).le.dims(2).and.range3(2).le.dims(3).and.range4(2).le.dims(4).and.range5(2).le.dims(5) ) then
-            aTensor=new_Tensor(this%data(range1(1):range1(2),range2(1):range2(2),range3(1):range3(2),range4(1):range4(2),range5(1):range5(2)))
-        else
-            call ThrowException('Take_Slice_Of_Tensor5','Index is inappropriate',noErrorCode,CriticalError)
-        endif
-     else
-        call ThrowException('Take_Slice_Of_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
-     endif
-end function Take_Slice_Of_Tensor5
-
 !##################################################################
 
 function SplitIndexOfTensor2(this,WhichIndex,Partition) result (aTensor)
@@ -2893,17 +2387,6 @@ function ConjugateTensor4(this) result(thisdagger)
    return
 end function ConjugateTensor4
 
-function ConjugateTensor5(this) result(thisdagger)
-   class(Tensor5),intent(IN) :: this
-   type(Tensor5) :: thisdagger
-
-   if(this%Initialized) then
-       thisdagger=new_Tensor5_fromData(dconjg(this%data))
-   else
-       call ThrowException('Conjugate5','Tensor not initialized',NoErrorCode,CriticalError)
-   endif
-   return
-end function ConjugateTensor5
 
 !##################################################################
 
@@ -2945,18 +2428,6 @@ function ConjugateTranspose4(this,permutation) result(thisdagger)
    return
 end function ConjugateTranspose4
 
-function ConjugateTranspose5(this,permutation) result(thisdagger)
-   class(Tensor5),intent(IN) :: this
-   type(Tensor5) :: thisdagger
-   integer,intent(IN) :: permutation(5)
-
-   if(this%Initialized) then
-        thisdagger=TensorTranspose(Conjugate(this),permutation)
-   else
-       call ThrowException('ConjugateTranspose5','Tensor not initialized',NoErrorCode,CriticalError)
-   endif
-   return
-end function ConjugateTranspose5
 
 
 function TensorTranspose2(this) result(thisdagger)
@@ -3017,28 +2488,6 @@ function TensorTranspose4(this,permutation) result(thisTransposed)
    endif
    return
 end function TensorTranspose4
-
-function TensorTranspose5(this,permutation) result(thisTransposed)
-   class(Tensor5),intent(IN) :: this
-   type(Tensor5) :: thisTransposed
-   integer,intent(IN) :: permutation(5)
-   integer :: dims(5),newdims(5),n
-
-   if(this%Initialized) then
-        if(120.eq.permutation(1)*permutation(2)*permutation(3)*permutation(4)*permutation(5).and.15.eq.sum(permutation)) then
-            dims=shape(this%data)
-            do n=1,size(dims)
-                newdims(permutation(n))=dims(n)
-            enddo
-            thisTransposed=new_Tensor(reshape(this%data,newdims,ORDER=permutation))
-        else
-            call ThrowException('TensorTranspose5','Order must be permutation of 1,2,3,4,5',NoErrorCode,CriticalError)
-        endif
-   else
-       call ThrowException('TensorTranspose5','Tensor not initialized',NoErrorCode,CriticalError)
-   endif
-   return
-end function TensorTranspose5
 
 
 !##################################################################
@@ -3202,31 +2651,6 @@ end function Tensor4Trace
 
 !##################################################################
 !##################################################################
-
-    function UnfoldTensor5(this,survivingIndex) result(aMatrix)
-        class(Tensor5),intent(IN) :: this
-        integer,intent(IN) :: survivingIndex
-        type(Tensor2) :: aMatrix
-        integer :: dims(5),tempdims(5),reordering(5),newdims(2)
-
-        if(this%Initialized) then
-            reordering=[1,2,3,4,5]
-            reordering(1)=survivingIndex
-            reordering(survivingIndex)=1
-            dims=shape(this%data)
-            tempdims=dims
-            tempdims(1)=dims(survivingIndex)
-            tempdims(survivingIndex)=dims(1)
-            newdims(1)=tempdims(1)
-            newdims(2)=product(tempdims(2:5))
-            aMatrix=new_Tensor( newdims(1), newdims(2) , ZERO )
-            aMatrix%data=reshape( reshape(this%data, tempdims, ORDER=reordering), newdims)
-        else
-            call ThrowException('UnfoldTensor5','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
-
-    end function UnfoldTensor5
-
 !##################################################################
 
     function UnfoldTensor4(this,survivingIndex) result(aMatrix)
@@ -3415,32 +2839,6 @@ end function Tensor4Trace
 
   !##################################################################
 
-  subroutine SingularValueDecompositionTensor5(this,Sigma,U,RankTruncation)
-    class(Tensor5),intent(IN) :: this
-    class(Tensor5),intent(OUT) :: Sigma
-    type(Tensor2),intent(OUT) :: U(5)
-    integer,intent(IN),optional :: RankTruncation
-    type(Tensor2) :: Unfolding,UnfoldedSigma,VTFromUnfolding
-    integer :: n,dims(2)
-
-    do n=1,5
-        Unfolding=this%Unfold(n)
-        call Unfolding%SVD(U(n),UnfoldedSigma,VTFromUnfolding)
-    enddo
-    if (present(RankTruncation)) then
-        do n=1,5
-            dims=shape(U(n)%data)
-            U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation)])
-        enddo
-    endif
-    Sigma=nModeProduct(ConjugateTranspose(U(5)), &
-            & nModeProduct(ConjugateTranspose(U(4)), &
-               & nModeProduct(ConjugateTranspose(U(3)), &
-                & nModeProduct(ConjugateTranspose(U(2)), &
-                    & nModeProduct(ConjugateTranspose(U(1)),   this,  &
-           & FIRST),SECOND),THIRD),FOURTH),FIFTH)
-
-  end subroutine SingularValueDecompositionTensor5
 
 !##################################################################
 !##################################################################
