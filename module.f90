@@ -70,7 +70,6 @@ module Tensor_Class
     procedure,public :: CompactFromBelow => Compact_From_Below_With_Tensor4
     procedure,public :: Slice => Take_Slice_Of_Tensor3
     procedure,public :: PartialTrace => Tensor3Trace
-    procedure,public :: Unfold => UnfoldTensor3
     final :: delete_Tensor3
   end type Tensor3
 
@@ -81,7 +80,6 @@ module Tensor_Class
     procedure,public :: JoinIndices => JoinIndicesOfTensor4
     procedure,public :: Slice => Take_Slice_Of_Tensor4
     procedure,public :: PartialTrace => Tensor4Trace
-    procedure,public :: Unfold => UnfoldTensor4
     final :: delete_Tensor4
   end type Tensor4
 
@@ -163,9 +161,6 @@ module Tensor_Class
      module procedure Tensors_are_of_equal_Type
   end interface
 
-  interface operator (.unfold.)
-     module procedure UnfoldTensor3,UnfoldTensor4
-  end interface
 
   interface TensorSlice
     module procedure Take_Slice_Of_Tensor1,Take_Slice_Of_Tensor2,Take_Slice_Of_Tensor3, &
@@ -2474,56 +2469,6 @@ end function Tensor4Trace
 !##################################################################
 !##################################################################
 !##################################################################
-
-    function UnfoldTensor4(this,survivingIndex) result(aMatrix)
-        class(Tensor4),intent(IN) :: this
-        integer,intent(IN) :: survivingIndex
-        type(Tensor2) :: aMatrix
-        integer :: dims(4),tempdims(4),reordering(4),newdims(2)
-
-        if(this%Initialized) then
-            reordering=[1,2,3,4]
-            reordering(1)=survivingIndex
-            reordering(survivingIndex)=1
-            dims=shape(this%data)
-            tempdims=dims
-            tempdims(1)=dims(survivingIndex)
-            tempdims(survivingIndex)=dims(1)
-            newdims(1)=tempdims(1)
-            newdims(2)=product(tempdims(2:4))
-            aMatrix=new_Tensor( newdims(1), newdims(2) , ZERO )
-            aMatrix%data=reshape( reshape(this%data, tempdims, ORDER=reordering), newdims)
-        else
-            call ThrowException('UnfoldTensor4','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
-
-    end function UnfoldTensor4
-!##################################################################
-
-    function UnfoldTensor3(this,survivingIndex) result(aMatrix)
-        class(Tensor3),intent(IN) :: this
-        integer,intent(IN) :: survivingIndex
-        type(Tensor2) :: aMatrix
-        integer :: dims(3),tempdims(3),reordering(3),newdims(2)
-
-        if(this%Initialized) then
-            !This will be the new order of the matrix
-            reordering=[1,2,3]
-            reordering(1)=survivingIndex
-            reordering(survivingIndex)=1
-            dims=shape(this%data)
-            tempdims=dims
-            tempdims(1)=dims(survivingIndex)
-            tempdims(survivingIndex)=dims(1)
-            newdims(1)=tempdims(1)
-            newdims(2)=product(tempdims(2:3))
-            aMatrix=new_Tensor( newdims(1), newdims(2) , ZERO )
-            aMatrix%data=reshape( reshape(this%data, tempdims, ORDER=reordering), newdims)
-        else
-            call ThrowException('UnfoldTensor3','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
-
-    end function UnfoldTensor3
 
 !##################################################################
 !##################################################################
