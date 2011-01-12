@@ -33,7 +33,7 @@ module Tensor_Class
   	private
   	integer :: Initialized=.false.
   contains
-  	procedure,public :: IsInitialized => Is_Tensor_init !Commented out because of Ifort bug
+  	procedure,public :: IsInitialized => Is_Tensor_init
   	procedure,public :: print => print_Tensor
 	procedure,public :: PrintDimensions => Print_Tensor_Dimensions
     procedure,public :: getDimensions => getDimensions_Of_Tensor
@@ -44,7 +44,6 @@ module Tensor_Class
   	private
   	complex(8),allocatable :: data(:)
   contains
-    procedure,public :: Slice => Take_Slice_Of_Tensor1
     final :: delete_Tensor1
   end type Tensor1
 
@@ -53,7 +52,6 @@ module Tensor_Class
   	complex(8),allocatable :: data(:,:)
   contains
     procedure,public :: SplitIndex => SplitIndexOfTensor2
-    procedure,public :: Slice => Take_Slice_Of_Tensor2
     procedure,public :: dagger => ConjugateTranspose2
     procedure,public :: trace => Tensor2Trace
     procedure,public :: CompactFromLeft => Mirror_Compact_Left_With_Tensor3
@@ -68,7 +66,6 @@ module Tensor_Class
     procedure,public :: JoinIndices => JoinIndicesOfTensor3
     procedure,public :: SplitIndex => SplitIndexOfTensor3
     procedure,public :: CompactFromBelow => Compact_From_Below_With_Tensor4
-    procedure,public :: Slice => Take_Slice_Of_Tensor3
     procedure,public :: PartialTrace => Tensor3Trace
     final :: delete_Tensor3
   end type Tensor3
@@ -78,7 +75,6 @@ module Tensor_Class
     complex(8),allocatable :: data(:,:,:,:)
   contains
     procedure,public :: JoinIndices => JoinIndicesOfTensor4
-    procedure,public :: Slice => Take_Slice_Of_Tensor4
     procedure,public :: PartialTrace => Tensor4Trace
     final :: delete_Tensor4
   end type Tensor4
@@ -161,11 +157,6 @@ module Tensor_Class
      module procedure Tensors_are_of_equal_Type
   end interface
 
-
-  interface TensorSlice
-    module procedure Take_Slice_Of_Tensor1,Take_Slice_Of_Tensor2,Take_Slice_Of_Tensor3, &
-        & Take_Slice_Of_Tensor4
-  end interface
 
   interface JoinIndicesOf
   	module procedure JoinIndicesOfTensor3,JoinIndicesOfTensor4 !,JoinTwoIndicesOfTensor4
@@ -1959,87 +1950,6 @@ end function JoinIndicesOfTensor4
 
 
 !##################################################################
-
-function Take_Slice_Of_Tensor4(this,range1,range2,range3,range4) result (aTensor)
-    integer,intent(IN) :: range1(2),range2(2),range3(2),range4(2)
-    class(tensor4),intent(IN) :: this
-    type(tensor4) :: aTensor
-    integer :: dims(4)
-
-     if(this%Initialized) then
-        dims=shape(this%data)
-        if(range1(1).ge.1.and.range2(1).ge.1.and.range3(1).ge.1.and.range4(1).ge.1.and. &
-          & range1(2).le.dims(1).and.range2(2).le.dims(2).and.range3(2).le.dims(3).and.range4(2).le.dims(4) ) then
-            aTensor=new_Tensor(this%data(range1(1):range1(2),range2(1):range2(2),range3(1):range3(2),range4(1):range4(2)))
-	  	else
-	  	    call ThrowException('Take_Slice_Of_Tensor4','Index is inappropriate',noErrorCode,CriticalError)
-	  	endif
-     else
-        call ThrowException('Take_Slice_Of_Tensor4','Tensor not initialized',NoErrorCode,CriticalError)
-     endif
-end function Take_Slice_Of_Tensor4
-
-!##################################################################
-
-function Take_Slice_Of_Tensor3(this,range1,range2,range3) result (aTensor)
-    integer,intent(IN) :: range1(2),range2(2),range3(2)
-    class(tensor3),intent(IN) :: this
-    type(tensor3) :: aTensor
-    integer :: dims(3)
-
-     if(this%Initialized) then
-         dims=shape(this%data)
-         if(range1(1).ge.1.and.range2(1).ge.1.and.range3(1).ge.1.and. &
-          & range1(2).le.dims(1).and.range2(2).le.dims(2).and.range3(2).le.dims(3)) then
-                aTensor=new_Tensor(this%data(range1(1):range1(2),range2(1):range2(2),range3(1):range3(2)))
-        else
-            call ThrowException('Take_Slice_Of_Tensor3','Index is inappropriate',NoErrorCode,CriticalError)
-        endif
-     else
-        call ThrowException('Take_Slice_Of_Tensor3','Tensor not initialized',NoErrorCode,CriticalError)
-     endif
-end function Take_Slice_Of_Tensor3
-
-!##################################################################
-
-function Take_Slice_Of_Tensor2(this,range1,range2) result (aTensor)
-    integer,intent(IN) :: range1(2),range2(2)
-    class(tensor2),intent(IN) :: this
-    type(tensor2) :: aTensor
-    integer :: dims(2)
-
-     if(this%Initialized) then
-         dims=shape(this%data)
-         if(range1(1).ge.1.and.range2(1).ge.1.and. &
-          & range1(2).le.dims(1).and.range2(2).le.dims(2)) then
-                aTensor=new_Tensor(this%data(range1(1):range1(2),range2(1):range2(2)))
-        else
-            call ThrowException('Take_Slice_Of_Tensor2','Index is inappropriate',NoErrorCode,CriticalError)
-        endif
-     else
-        call ThrowException('Take_Slice_Of_Tensor2','Tensor not initialized',NoErrorCode,CriticalError)
-     endif
-end function Take_Slice_Of_Tensor2
-
-!##################################################################
-
-function Take_Slice_Of_Tensor1(this,range1) result (aTensor)
-    integer,intent(IN) :: range1(2)
-    class(tensor1),intent(IN) :: this
-    type(tensor1) :: aTensor
-    integer :: dims(1)
-
-     if(this%Initialized) then
-         dims=shape(this%data)
-         if(range1(1).ge.1.and.range1(2).le.dims(1)) then
-                aTensor=new_Tensor(this%data(range1(1):range1(2)))
-        else
-            call ThrowException('Take_Slice_Of_Tensor1','Index is inappropriate',NoErrorCode,CriticalError)
-        endif
-     else
-        call ThrowException('Take_Slice_Of_Tensor1','Tensor not initialized',NoErrorCode,CriticalError)
-     endif
-end function Take_Slice_Of_Tensor1
 
 !##################################################################
 !##################################################################
