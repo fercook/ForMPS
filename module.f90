@@ -52,7 +52,6 @@ module Tensor_Class
   	private
   	complex(8),allocatable :: data(:,:)
   contains
-    procedure,public :: SVD => SingularValueDecompositionTensor2
     procedure,public :: SplitIndex => SplitIndexOfTensor2
     procedure,public :: Slice => Take_Slice_Of_Tensor2
     procedure,public :: dagger => ConjugateTranspose2
@@ -211,16 +210,6 @@ module Tensor_Class
 
   interface CompactBelow
     module procedure Compact_From_Below_With_Tensor4
-  end interface
-
-
-  interface SingularValueDecomposition
-    module procedure SingularValueDecompositionTensor2
-  end interface
-
-  interface SolveLinearProblem
-    module procedure SolveLinearProblem_LAPACK_matrix, SolveLinearProblem_LAPACK_vector
-    !SolveLinearProblem_Netlib,SolveLinearProblem_NNLSNasa,SolveLinearProblem_CACM66
   end interface
 
 !######################################################################################
@@ -2542,75 +2531,6 @@ end function Tensor4Trace
 !##################################################################
 !##################################################################
 
-  subroutine SingularValueDecompositionTensor2(this,U,Sigma,vTransposed)
-     class(Tensor2),intent(IN) :: this
-     type(Tensor2),intent(OUT) :: U,Sigma,vTransposed
-     complex(8),allocatable :: CopyOfInput(:,:) !This extra copy is here because ZGESDD destroys the input matrix
-     real(8),allocatable :: DiagonalPart(:)
-     integer :: LeftDimension,RightDimension
-     integer :: Error=Normal
-     !Lapack ugly variables
-     integer :: Lwork,LRWork,LIWork,info,idx
-     complex(8),allocatable :: Work(:)
-     real(8),allocatable :: RWork(:)
-     integer(8),allocatable :: IWork(:)
-     character,parameter :: Jobz='S' !Always get the minimum only, hopefully the rest of the matrix is zeroed out
-
-     !Prepare matrices according to input dimensions
-     LeftDimension=size(this%data,1); RightDimension=size(this%data,2)
-     U=new_Tensor(LeftDimension,LeftDimension,ZERO)
-     Sigma=new_Tensor(LeftDimension,RightDimension,ZERO)
-     vTransposed=new_Tensor(RightDimension,RightDimension,ZERO)
-     allocate(DiagonalPart(min(LeftDimension,RightDimension)))
-     !This doubling of memory allocation is because ZGESDD destroys the input matrix
-     allocate (CopyOfInput(LeftDimension,RightDimension))
-     CopyOfInput=this%data
-
-     !Recommended values of memory allocation from LAPACK documentation
-     LWork=(Min(LeftDimension,RightDimension)*(Min(LeftDimension,RightDimension)+2)+Max(LeftDimension,RightDimension))
-     LRWork=5*Min(LeftDimension,RightDimension)*(Min(LeftDimension,RightDimension)+1)
-     LIWork=8*Min(LeftDimension,RightDimension)
-
-     allocate(Work(LWork),RWork(LRWork),IWork(LIWork),STAT=Error)
-     If (Error.ne.Normal) then
-        call ThrowException('SingularValueDecomposition','Could not allocate memory',Error,CriticalError)
-        return
-     endif
-     !For some reason I need to call LAPACK with LWork=-1 first
-     !And find out the optimum work storage, otherwise it returns an error
-     LWork=-1
-     call ZGESDD(JOBZ, LeftDimension, RightDimension, CopyOfInput, LeftDimension, DiagonalPart, U%data, &
-          & LeftDimension,vTransposed%data,RightDimension,WORK,LWORK,RWORK,IWORK,Error )
-     If (Error.ne.Normal) then
-        call ThrowException('SingularValueDecomposition','Lapack search call returned error in ZGESDD',Error,CriticalError)
-        return
-     endif
-
-     !And now call with right value of LWork
-     LWork=Int(Work(1))
-     deallocate(Work)
-     Allocate(Work(LWork))
-     call ZGESDD(JOBZ, LeftDimension, RightDimension, CopyOfInput, LeftDimension, DiagonalPart, U%data, &
-          & LeftDimension,vTransposed%data,RightDimension,WORK,LWORK,RWORK,IWORK,Error )
-     If (Error.ne.Normal) then
-        call ThrowException('SingularValueDecomposition','Lapack returned error in ZGESDD',Error,CriticalError)
-        return
-     endif
-
-    !Manually insert the diagonal, move this to a routine
-     do idx=1,min(LeftDimension,RightDimension)
-         Sigma%data(idx,idx)=DiagonalPart(idx)
-     enddo
-
-     !Clean up: manually remove memory otherwise compiler gives warnings
-     deallocate(Work,RWork,IWork,DiagonalPart,STAT=Error)
-     If (Error.ne.Normal) then
-        call ThrowException('SingularValueDecomposition','Problems in deallocation',Error,CriticalError)
-        return
-     endif
-
-   end subroutine SingularValueDecompositionTensor2
-
 !##################################################################
 !##################################################################
 
@@ -2618,58 +2538,5 @@ end function Tensor4Trace
 !##################################################################
 !##################################################################
 !##################################################################
-
-   function SolveLinearProblem_LAPACK_vector(theMatrix,theVector, LS_Tolerance) result(theSolution)
-    class(Tensor2),intent(IN) :: theMatrix
-    class(Tensor1),intent(IN) :: theVector
-    real(8),intent(IN) :: LS_Tolerance
-    type(Tensor1) :: theSolution
-
-    theSolution = theVector
-
-    call ZGELSD( theMatrix%data, theSolution%data, LS_Tolerance )
-
-   end function SolveLinearProblem_LAPACK_vector
-
-
-   function SolveLinearProblem_LAPACK_matrix(theMatrix,theVectorAsMatrix, LS_Tolerance) result(theSolution)
-    class(Tensor2),intent(IN) :: theMatrix
-    class(Tensor2),intent(IN) :: theVectorAsMatrix
-    real(8),intent(IN) :: LS_Tolerance
-    type(Tensor2) :: theSolution
-    type(Tensor2) :: CopyOfMatrix
-    integer :: matrixSize(2),vectorSize(2)
-    !These variables are for LAPACK F77 Interface
-    real(8),allocatable :: GELOutputS(:)
-    integer :: rank,info,tempDim
-    complex(8),allocatable :: work(:)
-    real(8),allocatable :: rwork(:)
-    integer,allocatable :: iwork(:)
-    integer :: lwork,lrwork,liwork
-
-    matrixSize=shape(theMatrix%data)
-    vectorSize=shape(theVectorAsMatrix%data)
-    theSolution=theVectorAsMatrix
-    CopyOfMatrix=theMatrix
-
-    allocate(GELoutputS(minval(matrixSize)))
-    !Call MKL Lapack solver
-    tempDim=1
-    allocate (work(tempDim),rwork(tempDim),iwork(tempDim))
-    !Find out optimum lwork
-    lwork=-1
-    call ZGELSD ( matrixSize(1), matrixSize(2), vectorsize(2), CopyOfMatrix%data, matrixSize(1), theSolution%data, vectorsize(1), &
-        & GELOutputS, LS_Tolerance, rank, work, lwork, rwork, iwork, info)
-    lwork=int(work(1))
-    lrwork=int(rwork(1))
-    liwork=iwork(1)
-    deallocate(work,rwork,iwork)
-    allocate(work(lwork),rwork(lrwork),iwork(liwork))
-    !Now make final call
-    call ZGELSD ( matrixSize(1), matrixSize(2), vectorsize(2), CopyOfMatrix%data, matrixSize(1), theSolution%data, vectorsize(1), &
-        & GELOutputS, LS_Tolerance, rank, work, lwork, rwork, iwork, info)
-
-   end function SolveLinearProblem_LAPACK_matrix
-
 
 end module Tensor_Class

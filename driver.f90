@@ -861,68 +861,6 @@ integer :: numFailures       = 0
 
 
 
- subroutine Singular_Value_Decomposition
-
-   integer,parameter :: LeftDimension=6,RightDimension=8
-   type(Tensor2) :: aMatrix,theU,theVt
-   type(Tensor2) :: theSigma
-   complex(8) :: data(LeftDimension,RightDimension)
-   integer :: i,j,k
-
-   !Input value is somewhat regular, perhaps try with random data at some point
-   forall (i=1:LeftDimension ,j=1:RightDimension) &
-      & data(i,j)=one*(exp(II*i*Pi/LeftDimension)+(j-1)*LeftDimension)
-      !Input value is somewhat regular, perhaps try with random data at some point
-
-    aMatrix=new_Tensor(data)
-
-   call aMatrix%SVD(theU,theSigma,theVt)
-   !Now test if the three output matrices form the original one
-  ! Assert_Equal_Within assertion
-  numAsserts = numAsserts + 1
-  if (noAssertFailed) then
-    if (.not.((0.0d0 &
-     +1.0e-10) &
-     .ge. &
-     (aMatrix.absdiff.(theU*(theSigma*theVt))) &
-             .and. &
-     (0.0d0 &
-     -1.0e-10) &
-     .le. &
-     (aMatrix.absdiff.(theU*(theSigma*theVt))) )) then
-      print *, " *Assert_Equal_Within failed* in test Singular_Value_Decomposition &
-              &[Tensor_Class.fun:343]"
-      print *, "  ", "aMatrix.absdiff.(theU*(theSigma*theVt)) (",aMatrix.absdiff.(theU*(theSigma*theVt)),") is not", &
- 0.0d0,"within",1.0e-10
-      print *, ""
-      noAssertFailed = .false.
-      numFailures    = numFailures + 1
-    else
-      numAssertsTested = numAssertsTested + 1
-    endif
-  endif
-  ! Assert_False assertion
-  numAsserts = numAsserts + 1
-  if (noAssertFailed) then
-    if (WasThereError()) then
-      print *, " *Assert_False failed* in test Singular_Value_Decomposition &
-              &[Tensor_Class.fun:344]"
-      print *, "  ", "WasThereError() is not false"
-      print *, ""
-      noAssertFailed = .false.
-      numFailures    = numFailures + 1
-    else
-      numAssertsTested = numAssertsTested + 1
-    endif
-  endif
-
-
-  numTests = numTests + 1
-
- end subroutine Singular_Value_Decomposition
-
-
-
  subroutine Right_Compactification
 
 
@@ -1366,57 +1304,6 @@ integer :: numFailures       = 0
  end subroutine TensorTraceWithTensor4
 
 
- subroutine LinearSolver
-
-    integer,parameter :: lft=5,rgt=2
-    real(8) :: tempR(lft,lft),tempI(lft,lft),vecR(lft,rgt),vecI(lft,rgt)
-    complex(8) :: thedata(lft,lft),vectordata(lft,rgt)
-    type(tensor2) :: matrix,vector,solution,originalMatrix
-    integer :: errorpoint
-
-    call random_number(tempR)
-    call random_number(tempI)
-    thedata=tempR+II*tempI
-    call random_number(vecR)
-    call random_number(vecI)
-    vectordata=vecR+II*vecI
-
-    vector=new_Tensor(vectorData)
-    matrix=new_Tensor(thedata)
-    originalMatrix=new_Tensor(matrix)
-    solution=SolveLinearProblem(matrix, vector, 1.0d-8 )
-  ! Assert_Equal_Within assertion
-  numAsserts = numAsserts + 1
-  if (noAssertFailed) then
-    if (.not.((0.0d0 &
-     +1.0d-8) &
-     .ge. &
-     ( matrix * solution.absdiff.vector) &
-             .and. &
-     (0.0d0 &
-     -1.0d-8) &
-     .le. &
-     ( matrix * solution.absdiff.vector) )) then
-      print *, " *Assert_Equal_Within failed* in test LinearSolver &
-              &[Tensor_Class.fun:812]"
-      print *, "  ", " matrix * solution.absdiff.vector (", matrix * solution.absdiff.vector,") is not", &
- 0.0d0,"within",1.0d-8
-      print *, ""
-      noAssertFailed = .false.
-      numFailures    = numFailures + 1
-    else
-      numAssertsTested = numAssertsTested + 1
-    endif
-  endif
-
-    !call ZGELSD( thedata, vectordata, 1.0d-8 )
-
-
-  numTests = numTests + 1
-
- end subroutine LinearSolver
-
-
  subroutine funit_setup
   !Set testing mode
   MaxErrorAllowed=CriticalError
@@ -1480,10 +1367,6 @@ integer :: numFailures       = 0
   call funit_teardown
 
   call funit_setup
-  call Singular_Value_Decomposition
-  call funit_teardown
-
-  call funit_setup
   call Right_Compactification
   call funit_teardown
 
@@ -1506,10 +1389,6 @@ integer :: numFailures       = 0
 
   call funit_setup
   call TensorTraceWithTensor4
-  call funit_teardown
-
-  call funit_setup
-  call LinearSolver
   call funit_teardown
 
   nTests          = numTests
