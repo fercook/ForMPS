@@ -54,7 +54,6 @@ module Tensor_Class
   	integer :: Initialized=.false.
   contains
   	procedure,public :: IsInitialized => Is_Tensor_init !Commented out because of Ifort bug
-    procedure,public :: delete => delete_Tensor
   	procedure,public :: print => print_Tensor
 	procedure,public :: PrintDimensions => Print_Tensor_Dimensions
     procedure,public :: getDimensions => getDimensions_Of_Tensor
@@ -66,6 +65,7 @@ module Tensor_Class
   	complex(8),allocatable :: data(:)
   contains
     procedure,public :: Slice => Take_Slice_Of_Tensor1
+    final :: delete_Tensor1
   end type Tensor1
 
   type,public,extends(Tensor) :: Tensor2
@@ -80,6 +80,7 @@ module Tensor_Class
     procedure,public :: CompactFromLeft => Mirror_Compact_Left_With_Tensor3
     procedure,public :: CompactFromRight => Mirror_Compact_Right_With_Tensor3
     procedure,public :: Split => SplitIndicesOfTensor2in5
+    final :: delete_Tensor2
   end type Tensor2
 
   type,public,extends(Tensor) :: Tensor3
@@ -93,6 +94,7 @@ module Tensor_Class
     procedure,public :: PartialTrace => Tensor3Trace
     procedure,public :: Unfold => UnfoldTensor3
     procedure,public :: SVD => SingularValueDecompositionTensor3
+    final :: delete_Tensor3
   end type Tensor3
 
   type,public,extends(Tensor) :: Tensor4
@@ -104,6 +106,7 @@ module Tensor_Class
     procedure,public :: PartialTrace => Tensor4Trace
     procedure,public :: Unfold => UnfoldTensor4
     procedure,public :: SVD => SingularValueDecompositionTensor4
+    final :: delete_Tensor4
   end type Tensor4
 
   type,public,extends(Tensor) :: Tensor5
@@ -116,12 +119,14 @@ module Tensor_Class
      procedure,public :: JoinIndices => JoinIndicesOfTensor5
      procedure,public :: Unfold => UnfoldTensor5
      procedure,public :: SVD => SingularValueDecompositionTensor5
+     final :: delete_Tensor5
   end type Tensor5
 
   type,public,extends(Tensor) :: Tensor6
     private
     complex(8),allocatable :: data(:,:,:,:,:,:)
-!  contains
+  contains
+    final :: delete_Tensor6
   end type Tensor6
 
 
@@ -867,41 +872,53 @@ module Tensor_Class
    end subroutine new_Tensor6_fromAssignment
 
  !######################################    delete
-   integer function delete_Tensor (this) result(error)
-     class(Tensor),intent(INOUT) :: this   !!<<TYPE>>!!
-
-     error=Warning
-
-     if(.not.this%Initialized) then
-        call ThrowException('delete_Tensor','Trying to delete an uninitialized tensor',NoErrorCode,error)
-        return
+   subroutine delete_Tensor1 (this)
+     type(Tensor1) :: this
+	 if (allocated(this%data)) then
+	   deallocate(this%data)
      endif
-
-     ! Need to check the type to deallocate memory
-	 select type (Typed_this => this)
-	 	class is (Tensor1)
-	 		deallocate(Typed_this%data)
-	 	class is (Tensor2)
-	 		deallocate(Typed_this%data)
-	 	class is (Tensor3)
-	 		deallocate(Typed_this%data)
-        class is (Tensor4)
-            deallocate(Typed_this%data)
-        class is (Tensor5)
-            deallocate(Typed_this%data)
-        class is (Tensor6)
-            deallocate(Typed_this%data)
-	 	class is (Tensor)
-	        call ThrowException('delete_Tensor','Unknown class for tensor',NoErrorCode,error)
-	        return
-	 end select
-
-     !Flip flag
      this%Initialized=.false.
-
-     error=Normal
-
-   end function delete_Tensor
+   end subroutine delete_Tensor1
+!##################################################################
+   subroutine delete_Tensor2 (this)
+     type(Tensor2) :: this
+     if (allocated(this%data)) then
+       deallocate(this%data)
+     endif
+     this%Initialized=.false.
+   end subroutine delete_Tensor2
+!##################################################################
+   subroutine delete_Tensor3 (this)
+     type(Tensor3) :: this
+     if (allocated(this%data)) then
+       deallocate(this%data)
+     endif
+     this%Initialized=.false.
+   end subroutine delete_Tensor3
+!##################################################################
+   subroutine delete_Tensor4 (this)
+     type(Tensor4) :: this
+     if (allocated(this%data)) then
+       deallocate(this%data)
+     endif
+     this%Initialized=.false.
+   end subroutine delete_Tensor4
+!##################################################################
+   subroutine delete_Tensor5 (this)
+     type(Tensor5) :: this
+     if (allocated(this%data)) then
+       deallocate(this%data)
+     endif
+     this%Initialized=.false.
+   end subroutine delete_Tensor5
+!##################################################################
+   subroutine delete_Tensor6 (this)
+     type(Tensor6) :: this
+     if (allocated(this%data)) then
+       deallocate(this%data)
+     endif
+     this%Initialized=.false.
+   end subroutine delete_Tensor6
 !##################################################################
 
 logical function Is_Tensor_init(this) result(AmIInitialized)

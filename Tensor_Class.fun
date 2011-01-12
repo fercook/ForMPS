@@ -40,8 +40,6 @@ test type_creation_deletion
   type(tensor3) :: aTensor
   integer error
   aTensor=new_Tensor(2,20,20)
-  error=aTensor%delete()
-  assert_equal(error,Normal)
   assert_false(WasThereError())
 
 end test
@@ -53,8 +51,6 @@ test assignments_of_tensor
   mps1=new_Tensor(10,2,10)
   mps2=mps1
   assert_equal_within(mps1.absdiff.mps2, 0.0d0, 1.0e-10)
-  assert_equal(mps1%delete(),Normal)
-  assert_equal(mps2%delete(),Normal)
   assert_false(WasThereError())
 
 end test
@@ -79,9 +75,6 @@ test tensor3_joinindices_first
   aMatrix=JoinindicesOf(aMPS,THiRD,FiRSTANDSECOND)
   assert_equal_within(amatrix.absdiff.correct, 0.0d0, 1.0e-8)
 
-   assert_equal(aMPS%delete(),Normal)
-   assert_equal(aMatrix%delete(),Normal)
-   assert_equal(correct%delete(),Normal)
    assert_false(WasThereError())
 end test
 
@@ -101,7 +94,6 @@ test tensor4_joinindices
   aMatrix=aTensor%Joinindices(FiRSTANDSECOND,THiRDANDFOURTH)
   assert_equal_within(amatrix.absdiff.correct, 0.0d0, 1.0e-8)
 
-  error=correct%Delete()
   correct=new_Tensor(transpose(matrix))
 
   aMatrix=aTensor%Joinindices(THiRDANDFOURTH,FiRSTANDSECOND)
