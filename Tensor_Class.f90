@@ -54,10 +54,6 @@ module Tensor_Class
   	integer :: Initialized=.false.
   contains
   	procedure,public :: IsInitialized => Is_Tensor_init !Commented out because of Ifort bug
-  	procedure,public :: print => print_Tensor
-	procedure,public :: PrintDimensions => Print_Tensor_Dimensions
-    procedure,public :: getDimensions => getDimensions_Of_Tensor
-    procedure,public :: Norm => Norm_Of_Tensor
   end type Tensor
 
   type,public,extends(Tensor) :: Tensor1
@@ -65,7 +61,12 @@ module Tensor_Class
   	complex(8),allocatable :: data(:)
   contains
     procedure,public :: Slice => Take_Slice_Of_Tensor1
-    final :: delete_Tensor1
+    procedure,public :: getDimensions => getDimensions_Of_Tensor1
+    procedure,public :: print => print_Tensor1
+    procedure,public :: PrintDimensions => Print_Tensor1_Dimensions
+    procedure,public :: Norm => Norm_Of_Tensor1
+    procedure,public :: Delete => delete_Tensor1
+!    final :: delete_Tensor1
   end type Tensor1
 
   type,public,extends(Tensor) :: Tensor2
@@ -80,7 +81,12 @@ module Tensor_Class
     procedure,public :: CompactFromLeft => Mirror_Compact_Left_With_Tensor3
     procedure,public :: CompactFromRight => Mirror_Compact_Right_With_Tensor3
     procedure,public :: Split => SplitIndicesOfTensor2in5
-    final :: delete_Tensor2
+    procedure,public :: getDimensions => getDimensions_Of_Tensor2
+    procedure,public :: print => print_Tensor2
+    procedure,public :: PrintDimensions => Print_Tensor2_Dimensions
+    procedure,public :: Norm => Norm_Of_Tensor2
+    procedure,public :: Delete => delete_Tensor2
+!    final :: delete_Tensor2
   end type Tensor2
 
   type,public,extends(Tensor) :: Tensor3
@@ -94,7 +100,12 @@ module Tensor_Class
     procedure,public :: PartialTrace => Tensor3Trace
     procedure,public :: Unfold => UnfoldTensor3
     procedure,public :: SVD => SingularValueDecompositionTensor3
-    final :: delete_Tensor3
+    procedure,public :: getDimensions => getDimensions_Of_Tensor3
+    procedure,public :: print => print_Tensor3
+    procedure,public :: PrintDimensions => Print_Tensor3_Dimensions
+    procedure,public :: Norm => Norm_Of_Tensor3
+    procedure,public :: Delete => delete_Tensor3
+!    final :: delete_Tensor3
   end type Tensor3
 
   type,public,extends(Tensor) :: Tensor4
@@ -106,7 +117,12 @@ module Tensor_Class
     procedure,public :: PartialTrace => Tensor4Trace
     procedure,public :: Unfold => UnfoldTensor4
     procedure,public :: SVD => SingularValueDecompositionTensor4
-    final :: delete_Tensor4
+    procedure,public :: getDimensions => getDimensions_Of_Tensor4
+    procedure,public :: print => print_Tensor4
+    procedure,public :: PrintDimensions => Print_Tensor4_Dimensions
+    procedure,public :: Norm => Norm_Of_Tensor4
+    procedure,public :: Delete => delete_Tensor4
+!    final :: delete_Tensor4
   end type Tensor4
 
   type,public,extends(Tensor) :: Tensor5
@@ -119,14 +135,24 @@ module Tensor_Class
      procedure,public :: JoinIndices => JoinIndicesOfTensor5
      procedure,public :: Unfold => UnfoldTensor5
      procedure,public :: SVD => SingularValueDecompositionTensor5
-     final :: delete_Tensor5
+     procedure,public :: getDimensions => getDimensions_Of_Tensor5
+     procedure,public :: print => print_Tensor5
+     procedure,public :: PrintDimensions => Print_Tensor5_Dimensions
+     procedure,public :: Norm => Norm_Of_Tensor5
+     procedure,public :: Delete => delete_Tensor5
+!     final :: delete_Tensor5
   end type Tensor5
 
   type,public,extends(Tensor) :: Tensor6
     private
     complex(8),allocatable :: data(:,:,:,:,:,:)
   contains
-    final :: delete_Tensor6
+    procedure,public :: getDimensions => getDimensions_Of_Tensor6
+    procedure,public :: print => print_Tensor6
+    procedure,public :: PrintDimensions => Print_Tensor6_Dimensions
+    procedure,public :: Norm => Norm_Of_Tensor6
+    procedure,public :: Delete => delete_Tensor6
+!    final :: delete_Tensor6
   end type Tensor6
 
 
@@ -151,11 +177,6 @@ module Tensor_Class
      	  & Tensor3_matmul_Tensor3, Tensor2_matmul_Tensor3, Tensor3_matmul_Tensor2, &
      	  & Tensor5_matmul_Tensor2,Tensor2_matmul_Tensor5
   end interface
-
-!  interface operator ()
-!     module procedure &
-!     &   Tensor4_doubletimes_Tensor4,Tensor2_doubletimes_Tensor2
-!  end interface
 
   interface operator (.x.)
      module procedure &
@@ -872,53 +893,59 @@ module Tensor_Class
    end subroutine new_Tensor6_fromAssignment
 
  !######################################    delete
-   subroutine delete_Tensor1 (this)
-     type(Tensor1) :: this
+   integer function delete_Tensor1 (this) result(error)
+     class(Tensor1) :: this
 	 if (allocated(this%data)) then
 	   deallocate(this%data)
      endif
      this%Initialized=.false.
-   end subroutine delete_Tensor1
+     error=Normal
+   end function delete_Tensor1
 !##################################################################
-   subroutine delete_Tensor2 (this)
-     type(Tensor2) :: this
+   integer function delete_Tensor2 (this) result(error)
+     class(Tensor2) :: this
      if (allocated(this%data)) then
        deallocate(this%data)
      endif
      this%Initialized=.false.
-   end subroutine delete_Tensor2
+     error=Normal
+   end function delete_Tensor2
 !##################################################################
-   subroutine delete_Tensor3 (this)
-     type(Tensor3) :: this
+   integer function delete_Tensor3 (this) result(error)
+     class(Tensor3) :: this
      if (allocated(this%data)) then
        deallocate(this%data)
      endif
      this%Initialized=.false.
-   end subroutine delete_Tensor3
+     error=Normal
+   end function delete_Tensor3
 !##################################################################
-   subroutine delete_Tensor4 (this)
-     type(Tensor4) :: this
+   integer function delete_Tensor4 (this) result(error)
+     class(Tensor4) :: this
      if (allocated(this%data)) then
        deallocate(this%data)
      endif
      this%Initialized=.false.
-   end subroutine delete_Tensor4
+     error=Normal
+   end function delete_Tensor4
 !##################################################################
-   subroutine delete_Tensor5 (this)
-     type(Tensor5) :: this
+   integer function delete_Tensor5 (this) result(error)
+     class(Tensor5) :: this
      if (allocated(this%data)) then
        deallocate(this%data)
      endif
      this%Initialized=.false.
-   end subroutine delete_Tensor5
+     error=Normal
+   end function delete_Tensor5
 !##################################################################
-   subroutine delete_Tensor6 (this)
-     type(Tensor6) :: this
+   integer function delete_Tensor6 (this) result(error)
+     class(Tensor6) :: this
      if (allocated(this%data)) then
        deallocate(this%data)
      endif
      this%Initialized=.false.
-   end subroutine delete_Tensor6
+     error=Normal
+   end function delete_Tensor6
 !##################################################################
 
 logical function Is_Tensor_init(this) result(AmIInitialized)
@@ -942,170 +969,353 @@ integer function InitializationCheck(this) result(error)
 
 
 !######################################     print
-   subroutine Print_Tensor(this,message,error)
-     class(Tensor),intent(IN) :: this
-     integer i,j,k
+   subroutine Print_Tensor1(this,message,error)
+     class(Tensor1),intent(IN) :: this
      character*(*),optional :: message
      integer,optional :: error
 
-     If(present(error)) error = Warning
-
-     if(.not.(this%Initialized)) then
-        call ThrowException('PrintTensor','Tensor not initialized',NoErrorCode,Warning)
-        return
+     if((this%Initialized)) then
+         if(present(message)) print *,message
+         print *,'Vector data:'
+         print *,this%data
+         If(present(error)) error=Normal
+     else
+         call ThrowException('PrintTensor1','Tensor not initialized',NoErrorCode,Warning)
+         If(present(error)) error = Warning
+         return
      endif
-
-     if(present(message)) print *,message
-
-	 select type (Typed_this => this)
-	 	class is (Tensor1)
-        	print *,'Vector data:'
-	 		print *,Typed_this%data
-	 	class is (Tensor2)
-        	print *,'Matrix data:'
-	 		print *,Typed_this%data
-	 	class is (Tensor3)
-        	print *,'3-Tensor data:'
-	 		print *,Typed_this%data
-        class is (Tensor4)
-            print *,'4-Tensor data:'
-            print *,Typed_this%data
-        class is (Tensor5)
-            print *,'5-Tensor data:'
-            print *,Typed_this%data
-        class is (Tensor6)
-            print *,'6-Tensor data:'
-            print *,Typed_this%data
-	 	class is (Tensor)
-	 		print *,'No data in raw tensor'
-	 end select
-
-     If(present(error)) error=Normal
-
-   end subroutine Print_Tensor
-
-
-   subroutine Print_Tensor_Dimensions(this,message)
-     class(Tensor),intent(IN) :: this  !!<<TYPE>>!!
+   end subroutine Print_Tensor1
+!######################################     print
+   subroutine Print_Tensor2(this,message,error)
+     class(Tensor2),intent(IN) :: this
      character*(*),optional :: message
-     integer i,j,k
+     integer,optional :: error
 
-     if(.not.(this%Initialized)) then
+     if((this%Initialized)) then
+         if(present(message)) print *,message
+         print *,'Matrix data:'
+         print *,this%data
+         If(present(error)) error=Normal
+     else
+         call ThrowException('PrintTensor2','Tensor not initialized',NoErrorCode,Warning)
+         If(present(error)) error = Warning
+         return
+     endif
+   end subroutine Print_Tensor2
+!######################################     print
+   subroutine Print_Tensor3(this,message,error)
+     class(Tensor3),intent(IN) :: this
+     character*(*),optional :: message
+     integer,optional :: error
+
+     if((this%Initialized)) then
+         if(present(message)) print *,message
+         print *,'3-Tensor data:'
+         print *,this%data
+         If(present(error)) error=Normal
+     else
+         call ThrowException('PrintTensor3','Tensor not initialized',NoErrorCode,Warning)
+         If(present(error)) error = Warning
+         return
+     endif
+   end subroutine Print_Tensor3
+!######################################     print
+   subroutine Print_Tensor4(this,message,error)
+     class(Tensor4),intent(IN) :: this
+     character*(*),optional :: message
+     integer,optional :: error
+
+     if((this%Initialized)) then
+         if(present(message)) print *,message
+         print *,'4-Tensor data:'
+         print *,this%data
+         If(present(error)) error=Normal
+     else
+         call ThrowException('PrintTensor4','Tensor not initialized',NoErrorCode,Warning)
+         If(present(error)) error = Warning
+         return
+     endif
+   end subroutine Print_Tensor4
+!######################################     print
+   subroutine Print_Tensor5(this,message,error)
+     class(Tensor5),intent(IN) :: this
+     character*(*),optional :: message
+     integer,optional :: error
+
+     if((this%Initialized)) then
+         if(present(message)) print *,message
+         print *,'5-Tensor data:'
+         print *,this%data
+         If(present(error)) error=Normal
+     else
+         call ThrowException('PrintTensor5','Tensor not initialized',NoErrorCode,Warning)
+         If(present(error)) error = Warning
+         return
+     endif
+   end subroutine Print_Tensor5
+!######################################     print
+   subroutine Print_Tensor6(this,message,error)
+     class(Tensor6),intent(IN) :: this
+     character*(*),optional :: message
+     integer,optional :: error
+
+     if((this%Initialized)) then
+         if(present(message)) print *,message
+         print *,'6-Tensor data:'
+         print *,this%data
+         If(present(error)) error=Normal
+     else
+         call ThrowException('PrintTensor6','Tensor not initialized',NoErrorCode,Warning)
+         If(present(error)) error = Warning
+         return
+     endif
+   end subroutine Print_Tensor6
+
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+  subroutine Print_Tensor1_Dimensions(this,message)
+     class(Tensor1),intent(IN) :: this  !!<<TYPE>>!!
+     character*(*),optional :: message
+
+     if((this%Initialized)) then
+        if (present(message)) write(*,'(A)'),message
+        write(*,'("Vector Dimension:",I6)'), size(this%data,1)
+     else
         call ThrowException('Print Tensor','Tensor not initialized',NoErrorCode,Warning)
         return
      endif
+  end subroutine Print_Tensor1_Dimensions
 
-     if (present(message)) write(*,'(A)'),message
 
-	 select type (Typed_this => this)
-	 	class is (Tensor1)
-            write(*,'("Vector Dimension:",I6)'), size(Typed_this%data,1)
-	 	class is (Tensor2)
-            write(*,'("Matrix Dimensions:",I4," x",I4)'),size(Typed_this%data,1),size(Typed_this%data,2)
-	 	class is (Tensor3)
-            write(*,'("3-Tensor Dimensions:",I3," x",I3," x",I4)'),size(Typed_this%data,1),size(Typed_this%data,2), &
-                  & size(Typed_this%data,3)
-        class is (Tensor4)
-            write(*,'("4-Tensor Dimensions:",I3," x",I3," x",I3," x",I3)'),size(Typed_this%data,1),size(Typed_this%data,2), &
-                  & size(Typed_this%data,3),size(Typed_this%data,4)
-        class is (Tensor5)
-            write(*,'("5-Tensor Dimensions:",I3," x",I3," x",I3," x",I3," x",I3)'),size(Typed_this%data,1),size(Typed_this%data,2), &
-                  & size(Typed_this%data,3),size(Typed_this%data,4),size(Typed_this%data,5)
-        class is (Tensor6)
-            write(*,'("6-Tensor Dimensions:",I3," x",I3," x",I3," x",I3," x",I3," x",I3)'), &
-                  & size(Typed_this%data,1),size(Typed_this%data,2),size(Typed_this%data,3), &
-                  & size(Typed_this%data,4),size(Typed_this%data,5),size(Typed_this%data,6)
-	 	class is (Tensor)
-	 		print *,'No data in raw tensor'
-	 end select
+  subroutine Print_Tensor2_Dimensions(this,message)
+     class(Tensor2),intent(IN) :: this  !!<<TYPE>>!!
+     character*(*),optional :: message
 
-   end subroutine Print_Tensor_Dimensions
+     if((this%Initialized)) then
+        if (present(message)) write(*,'(A)'),message
+        write(*,'("Matrix Dimensions:",I4," x",I4)'),size(this%data,1),size(this%data,2)
+     else
+        call ThrowException('Print Tensor2','Tensor not initialized',NoErrorCode,Warning)
+        return
+     endif
+  end subroutine Print_Tensor2_Dimensions
+
+
+    subroutine Print_Tensor3_Dimensions(this,message)
+     class(Tensor3),intent(IN) :: this  !!<<TYPE>>!!
+     character*(*),optional :: message
+
+     if((this%Initialized)) then
+        if (present(message)) write(*,'(A)'),message
+        write(*,'("3-Tensor Dimensions:",I3," x",I3," x",I4)'),size(this%data,1),size(this%data,2), &
+              & size(this%data,3)
+     else
+        call ThrowException('Print Tensor3','Tensor not initialized',NoErrorCode,Warning)
+        return
+     endif
+  end subroutine Print_Tensor3_Dimensions
+
+  subroutine Print_Tensor4_Dimensions(this,message)
+     class(Tensor4),intent(IN) :: this  !!<<TYPE>>!!
+     character*(*),optional :: message
+
+     if((this%Initialized)) then
+        if (present(message)) write(*,'(A)'),message
+        write(*,'("4-Tensor Dimensions:",I3," x",I3," x",I3," x",I3)'),size(this%data,1),size(this%data,2), &
+                  & size(this%data,3),size(this%data,4)
+     else
+        call ThrowException('Print Tensor4','Tensor not initialized',NoErrorCode,Warning)
+        return
+     endif
+  end subroutine Print_Tensor4_Dimensions
+
+  subroutine Print_Tensor5_Dimensions(this,message)
+     class(Tensor5),intent(IN) :: this  !!<<TYPE>>!!
+     character*(*),optional :: message
+
+     if((this%Initialized)) then
+        if (present(message)) write(*,'(A)'),message
+        write(*,'("5-Tensor Dimensions:",I3," x",I3," x",I3," x",I3," x",I3)'),size(this%data,1),size(this%data,2), &
+              & size(this%data,3),size(this%data,4),size(this%data,5)
+     else
+        call ThrowException('Print Tensor5','Tensor not initialized',NoErrorCode,Warning)
+        return
+     endif
+  end subroutine Print_Tensor5_Dimensions
+
+  subroutine Print_Tensor6_Dimensions(this,message)
+     class(Tensor6),intent(IN) :: this  !!<<TYPE>>!!
+     character*(*),optional :: message
+
+     if((this%Initialized)) then
+        if (present(message)) write(*,'(A)'),message
+        write(*,'("6-Tensor Dimensions:",I3," x",I3," x",I3," x",I3," x",I3," x",I3)'), &
+               & size(this%data,1),size(this%data,2),size(this%data,3), &
+               & size(this%data,4),size(this%data,5),size(this%data,6)
+     else
+        call ThrowException('Print Tensor6','Tensor not initialized',NoErrorCode,Warning)
+        return
+     endif
+  end subroutine Print_Tensor6_Dimensions
+
 !##################################################################
 
 
-	function getDimensions_Of_Tensor(this) result(Dims)
-		class(Tensor),intent(IN) :: this
-!		type(Tensor1) :: Dims
-		integer,allocatable :: Dims(:)
+	function getDimensions_Of_Tensor1(this) result(Dims)
+		class(Tensor1),intent(IN) :: this
+		integer :: Dims(1)
 
 	    if(.not.(this%Initialized)) then
-    	    call ThrowException('getDimensions','Tensor not initialized',NoErrorCode,CriticalError)
+    	    call ThrowException('getDimensions1','Tensor not initialized',NoErrorCode,CriticalError)
         	return
 	    endif
 
-	 	select type (Typed_this => this)
-	 		class is (Tensor1)
-	 		    allocate(Dims(1))
-	 		    Dims=shape(Typed_this%data)
-	 		class is (Tensor2)
-                allocate(Dims(2))
-                Dims=shape(Typed_this%data)
-	 		class is (Tensor3)
-                allocate(Dims(3))
-                Dims=shape(Typed_this%data)
-            class is (Tensor4)
-                allocate(Dims(4))
-                Dims=shape(Typed_this%data)
-            class is (Tensor5)
-                allocate(Dims(5))
-                Dims=shape(Typed_this%data)
-            class is (Tensor6)
-                allocate(Dims(6))
-                Dims=shape(Typed_this%data)
-	 		class is (Tensor)
-	    	    call ThrowException('getDimensions','Dimensions not defined',NoErrorCode,CriticalError)
-    	    	return
-	 	end select
+	 	Dims=shape(this%data)
+   end function getDimensions_Of_Tensor1
 
-   end function getDimensions_Of_Tensor
-!##################################################################
 
-   real(8) function Norm_Of_Tensor(this)
-     class(Tensor),intent(IN) :: this
+    function getDimensions_Of_Tensor2(this) result(Dims)
+        class(Tensor2),intent(IN) :: this
+        integer :: Dims(2)
 
-	 if(.not.(this%Initialized)) then
-   		call ThrowException('Norm_Of_Tensor','Tensor not initialized',NoErrorCode,CriticalError)
+        if(.not.(this%Initialized)) then
+            call ThrowException('getDimensions2','Tensor not initialized',NoErrorCode,CriticalError)
+            return
+        endif
+
+        Dims=shape(this%data)
+   end function getDimensions_Of_Tensor2
+
+    function getDimensions_Of_Tensor3(this) result(Dims)
+        class(Tensor3),intent(IN) :: this
+        integer :: Dims(3)
+
+        if(.not.(this%Initialized)) then
+            call ThrowException('getDimensions3','Tensor not initialized',NoErrorCode,CriticalError)
+            return
+        endif
+
+        Dims=shape(this%data)
+   end function getDimensions_Of_Tensor3
+
+    function getDimensions_Of_Tensor4(this) result(Dims)
+        class(Tensor4),intent(IN) :: this
+        integer :: Dims(4)
+
+        if(.not.(this%Initialized)) then
+            call ThrowException('getDimensions4','Tensor not initialized',NoErrorCode,CriticalError)
+            return
+        endif
+
+        Dims=shape(this%data)
+   end function getDimensions_Of_Tensor4
+
+
+    function getDimensions_Of_Tensor5(this) result(Dims)
+        class(Tensor5),intent(IN) :: this
+        integer :: Dims(5)
+
+        if(.not.(this%Initialized)) then
+            call ThrowException('getDimensions1','Tensor not initialized',NoErrorCode,CriticalError)
+            return
+        endif
+
+        Dims=shape(this%data)
+   end function getDimensions_Of_Tensor5
+
+
+    function getDimensions_Of_Tensor6(this) result(Dims)
+        class(Tensor6),intent(IN) :: this
+        integer :: Dims(6)
+
+        if(.not.(this%Initialized)) then
+            call ThrowException('getDimensions6','Tensor not initialized',NoErrorCode,CriticalError)
+            return
+        endif
+
+        Dims=shape(this%data)
+   end function getDimensions_Of_Tensor6
+
+   !##################################################################
+
+   real(8) function Norm_Of_Tensor1(this)
+     class(Tensor1),intent(IN) :: this
+
+	 if(this%Initialized) then
+	    Norm_Of_Tensor1=sum(abs(this%data))
+	 else
+   		call ThrowException('Norm_Of_Tensor1','Tensor not initialized',NoErrorCode,CriticalError)
         return
 	 endif
 
-     Norm_Of_Tensor=0.0d0
-	 select type (Typed_this => this)
-	 	class is (Tensor1)
-	 		Norm_Of_Tensor=sum(abs(Typed_this%data))
-	 	class is (Tensor2)
-	 		Norm_Of_Tensor=sum(abs(Typed_this%data))
-	 	class is (Tensor3)
-	 		Norm_Of_Tensor=sum(abs(Typed_this%data))
-        class is (Tensor4)
-            Norm_Of_Tensor=sum(abs(Typed_this%data))
-        class is (Tensor5)
-            Norm_Of_Tensor=sum(abs(Typed_this%data))
-        class is (Tensor6)
-            Norm_Of_Tensor=sum(abs(Typed_this%data))
-	 	class is (Tensor)
-	    	call ThrowException('Norm_Of_Tensor','Norm is not defined',NoErrorCode,CriticalError)
-    	    return
-	 end select
+   end function Norm_Of_Tensor1
 
-     return
-   end function Norm_Of_Tensor
+   real(8) function Norm_Of_Tensor2(this)
+     class(Tensor2),intent(IN) :: this
 
-!
-!! FUTURE POLYMORPHIC CODE
-!   function number_times_Tensor(constant, aTensor) result(this)
-!     complex(8),intent(IN) :: constant
-!     class(Tensor),intent(IN) :: aTensor
-!     class(Tensor),allocatable :: this
-!
-!     if(.not.aTensor%Initialized) then
-!        call ThrowException('Number_times_Tensor','Tensor not initialized',NoErrorCode,CriticalError)
-!	 else
-!	 	 allocate(this,SOURCE=aTensor)
-!     endif
-!	 return
-!
-!   end function Number_times_Tensor
-!
+     if(this%Initialized) then
+        Norm_Of_Tensor2=sum(abs(this%data))
+     else
+        call ThrowException('Norm_Of_Tensor2','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+   end function Norm_Of_Tensor2
+
+   real(8) function Norm_Of_Tensor3(this)
+     class(Tensor3),intent(IN) :: this
+
+     if(this%Initialized) then
+        Norm_Of_Tensor3=sum(abs(this%data))
+     else
+        call ThrowException('Norm_Of_Tensor3','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+   end function Norm_Of_Tensor3
+
+   real(8) function Norm_Of_Tensor4(this)
+     class(Tensor4),intent(IN) :: this
+
+     if(this%Initialized) then
+        Norm_Of_Tensor4=sum(abs(this%data))
+     else
+        call ThrowException('Norm_Of_Tensor4','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+   end function Norm_Of_Tensor4
+
+   real(8) function Norm_Of_Tensor5(this)
+     class(Tensor5),intent(IN) :: this
+
+     if(this%Initialized) then
+        Norm_Of_Tensor5=sum(abs(this%data))
+     else
+        call ThrowException('Norm_Of_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+   end function Norm_Of_Tensor5
+
+   real(8) function Norm_Of_Tensor6(this)
+     class(Tensor6),intent(IN) :: this
+
+     if(this%Initialized) then
+        Norm_Of_Tensor6=sum(abs(this%data))
+     else
+        call ThrowException('Norm_Of_Tensor6','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+   end function Norm_Of_Tensor6
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
    function number_times_Tensor1(constant, aTensor) result(this)
      complex(8),intent(IN) :: constant
@@ -2748,10 +2958,6 @@ integer function InitializationCheck(this) result(error)
         call ThrowException('MPSTensors_are_of_equal_Shape','Tensors not initialized',NoErrorCode,CriticalError)
         return
      endif
-	if( .not. same_type_as(tensorA,tensorB) ) then
-		call ThrowException('Tensors_are_of_equal_Shape','Tensor not of same type',NoErrorCode,CriticalError)
-        return
-	endif
 	equals=same_type_as(tensorA,tensorB)
 	return
 

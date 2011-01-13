@@ -175,7 +175,7 @@ Module MPS_Class
      n=0
      error=Normal
      do while (error.eq.Normal.and.n.le.this%length+1)
-        error=this%TensorCollection(n)%delete()
+        error= this%TensorCollection(n)%delete()
         n=n+1
      enddo
      if (error.ne.Normal) then
