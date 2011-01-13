@@ -41,20 +41,6 @@ test PEPS_creation_deletion
    assert_equal(aPEPS%delete(),Normal)
 end test
 
-test PEPS_checkpointing
-   type(PEPS) :: aPEPS
-   type(PEPSTensor) :: aTensor
-
-   aPEPS=new_PEPS(4,4,2,2)
-   call aPEPS%CheckPointState(ALLTENSORS)
-   assert_false( ALL(aPEPS%HasTensorChangedAt))
-   aTensor=new_PEPSTensor(2,4,4,4,4)
-   call aPEPS%SetTensorAt(2,2,aTensor)
-   assert_false( ALL(aPEPS%HasTensorChangedAt))
-   assert_true( ANY(aPEPS%HasTensorChangedAt))
-   assert_false(WasThereError())
-   assert_equal(aPEPS%delete(),Normal)
-end test
 
 test PEPS_Reduce_Bound_Dim
     type(PEPS) :: aPEPS,smallPEPS

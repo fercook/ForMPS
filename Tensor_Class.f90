@@ -30,7 +30,7 @@ module Tensor_Class
   public :: new_Tensor
   public :: operator(*),assignment(=),operator(.x.),operator(+),operator(-),operator(.xplus.)
   public :: operator(.diff.),operator(.absdiff.)
-  public :: operator(.equaldims.),operator(.equaltype.)
+  public :: operator(.equaldims.)
   public :: Conjugate,TensorTranspose,ConjugateTranspose
   public :: JoinIndicesOf,SplitIndexOf,TensorPad
   public :: CompactLeft,CompactRight,CompactBelow,SingularValueDecomposition
@@ -49,15 +49,10 @@ module Tensor_Class
 !!     integer(:) %getDimensions()
 !!     real(8) %Norm()
 !!
-  type,private :: Tensor
-  	private
-  	integer :: Initialized=.false.
-  contains
-  	procedure,public :: IsInitialized => Is_Tensor_init !Commented out because of Ifort bug
-  end type Tensor
 
-  type,public,extends(Tensor) :: Tensor1
+  type,public :: Tensor1
   	private
+    integer :: Initialized=.false.
   	complex(8),allocatable :: data(:)
   contains
     procedure,public :: Slice => Take_Slice_Of_Tensor1
@@ -65,12 +60,14 @@ module Tensor_Class
     procedure,public :: print => print_Tensor1
     procedure,public :: PrintDimensions => Print_Tensor1_Dimensions
     procedure,public :: Norm => Norm_Of_Tensor1
+    procedure,public :: IsInitialized => Is_Tensor1_init !Commented out because of Ifort bug
     procedure,public :: Delete => delete_Tensor1
 !    final :: delete_Tensor1
   end type Tensor1
 
-  type,public,extends(Tensor) :: Tensor2
+  type,public :: Tensor2
   	private
+    integer :: Initialized=.false.
   	complex(8),allocatable :: data(:,:)
   contains
     procedure,public :: SVD => SingularValueDecompositionTensor2
@@ -85,12 +82,14 @@ module Tensor_Class
     procedure,public :: print => print_Tensor2
     procedure,public :: PrintDimensions => Print_Tensor2_Dimensions
     procedure,public :: Norm => Norm_Of_Tensor2
+    procedure,public :: IsInitialized => Is_Tensor2_init !Commented out because of Ifort bug
     procedure,public :: Delete => delete_Tensor2
 !    final :: delete_Tensor2
   end type Tensor2
 
-  type,public,extends(Tensor) :: Tensor3
+  type,public :: Tensor3
   	private
+    integer :: Initialized=.false.
   	complex(8),allocatable :: data(:,:,:)
   contains
     procedure,public :: JoinIndices => JoinIndicesOfTensor3
@@ -104,12 +103,14 @@ module Tensor_Class
     procedure,public :: print => print_Tensor3
     procedure,public :: PrintDimensions => Print_Tensor3_Dimensions
     procedure,public :: Norm => Norm_Of_Tensor3
+    procedure,public :: IsInitialized => Is_Tensor3_init !Commented out because of Ifort bug
     procedure,public :: Delete => delete_Tensor3
 !    final :: delete_Tensor3
   end type Tensor3
 
-  type,public,extends(Tensor) :: Tensor4
+  type,public :: Tensor4
     private
+    integer :: Initialized=.false.
     complex(8),allocatable :: data(:,:,:,:)
   contains
     procedure,public :: JoinIndices => JoinIndicesOfTensor4
@@ -121,12 +122,14 @@ module Tensor_Class
     procedure,public :: print => print_Tensor4
     procedure,public :: PrintDimensions => Print_Tensor4_Dimensions
     procedure,public :: Norm => Norm_Of_Tensor4
+    procedure,public :: IsInitialized => Is_Tensor4_init !Commented out because of Ifort bug
     procedure,public :: Delete => delete_Tensor4
 !    final :: delete_Tensor4
   end type Tensor4
 
-  type,public,extends(Tensor) :: Tensor5
+  type,public :: Tensor5
     private
+    integer :: Initialized=.false.
     complex(8),allocatable :: data(:,:,:,:,:)
   contains
      procedure,public :: CompactFromBelow => CompactTensor5_From_Below_With_Tensor6
@@ -139,18 +142,21 @@ module Tensor_Class
      procedure,public :: print => print_Tensor5
      procedure,public :: PrintDimensions => Print_Tensor5_Dimensions
      procedure,public :: Norm => Norm_Of_Tensor5
+     procedure,public :: IsInitialized => Is_Tensor5_init !Commented out because of Ifort bug
      procedure,public :: Delete => delete_Tensor5
 !     final :: delete_Tensor5
   end type Tensor5
 
-  type,public,extends(Tensor) :: Tensor6
+  type,public :: Tensor6
     private
+    integer :: Initialized=.false.
     complex(8),allocatable :: data(:,:,:,:,:,:)
   contains
     procedure,public :: getDimensions => getDimensions_Of_Tensor6
     procedure,public :: print => print_Tensor6
     procedure,public :: PrintDimensions => Print_Tensor6_Dimensions
     procedure,public :: Norm => Norm_Of_Tensor6
+    procedure,public :: IsInitialized => Is_Tensor6_init !Commented out because of Ifort bug
     procedure,public :: Delete => delete_Tensor6
 !    final :: delete_Tensor6
   end type Tensor6
@@ -215,19 +221,19 @@ module Tensor_Class
   end interface
 
   interface operator (.diff.)
-     module procedure Difference_btw_Tensors
+     module procedure Difference_btw_Tensors1,Difference_btw_Tensors2,Difference_btw_Tensors3,Difference_btw_Tensors4, &
+        & Difference_btw_Tensors5,Difference_btw_Tensors6
   end interface
 
   interface operator (.absdiff.)
-     module procedure Difference_btw_Tensors_WithAbsoluteValue
+     module procedure Difference_btw_Tensors1_WithAbsoluteValue, Difference_btw_Tensors2_WithAbsoluteValue, &
+      & Difference_btw_Tensors3_WithAbsoluteValue, Difference_btw_Tensors4_WithAbsoluteValue, &
+      & Difference_btw_Tensors5_WithAbsoluteValue, Difference_btw_Tensors6_WithAbsoluteValue
   end interface
 
   interface operator (.equaldims.)
-     module procedure  Tensors_are_of_equal_Shape
-  end interface
-
-  interface operator (.equaltype.)
-     module procedure Tensors_are_of_equal_Type
+     module procedure  Tensors1_are_of_equal_Shape,Tensors2_are_of_equal_Shape,Tensors3_are_of_equal_Shape, &
+        & Tensors4_are_of_equal_Shape,Tensors5_are_of_equal_Shape,Tensors6_are_of_equal_Shape
   end interface
 
   interface operator (.unfold.)
@@ -947,26 +953,53 @@ module Tensor_Class
      error=Normal
    end function delete_Tensor6
 !##################################################################
+!##################################################################
 
-logical function Is_Tensor_init(this) result(AmIInitialized)
-    class(Tensor) :: this
+logical function Is_Tensor2_init(this) result(AmIInitialized)
+    class(Tensor2) :: this
 
     AmIInitialized=this%Initialized
 
-end function Is_Tensor_Init
+end function Is_Tensor2_Init
+!##################################################################
+logical function Is_Tensor1_init(this) result(AmIInitialized)
+    class(Tensor1) :: this
 
-integer function InitializationCheck(this) result(error)
-    class(Tensor),intent(IN) :: this
+    AmIInitialized=this%Initialized
 
-    if (.not.this%Initialized) then
-       error=CriticalError
-       call ThrowException('Internal Routine ','Uninitialized tensor',NoErrorCode,error)
-    else
-       error=Normal
-    endif
+end function Is_Tensor1_Init
+!##################################################################
+logical function Is_Tensor3_init(this) result(AmIInitialized)
+    class(Tensor3) :: this
 
-  end function InitializationCheck
+    AmIInitialized=this%Initialized
 
+end function Is_Tensor3_Init
+!##################################################################
+logical function Is_Tensor4_init(this) result(AmIInitialized)
+    class(Tensor4) :: this
+
+    AmIInitialized=this%Initialized
+
+end function Is_Tensor4_Init
+!##################################################################
+logical function Is_Tensor5_init(this) result(AmIInitialized)
+    class(Tensor5) :: this
+
+    AmIInitialized=this%Initialized
+
+end function Is_Tensor5_Init
+!##################################################################
+logical function Is_Tensor6_init(this) result(AmIInitialized)
+    class(Tensor6) :: this
+
+    AmIInitialized=this%Initialized
+
+end function Is_Tensor6_Init
+
+!##################################################################
+!##################################################################
+!##################################################################
 
 !######################################     print
    subroutine Print_Tensor1(this,message,error)
@@ -2756,212 +2789,301 @@ integer function InitializationCheck(this) result(error)
 !!##################################################################
 !!##################################################################
 !!##################################################################
-
-   real(8) function Difference_btw_Tensors(tensorA, tensorB) result(diff)
-     class(Tensor),intent(IN) :: tensorA,tensorB
-
-     diff=0.0d0
-
-	if(.not.(tensorA%Initialized .and. tensorB%Initialized)) then
-		call ThrowException('Difference_btw_Tensors','Tensor not initialized',NoErrorCode,CriticalError)
-        return
-	endif
-	if( .not. same_type_as(tensorA,tensorB) ) then
-		call ThrowException('Difference_btw_Tensors','Tensor not of same type',NoErrorCode,CriticalError)
-        return
-	endif
-	if (tensorA.equaldims.tensorB) then
-	!The following ugly structure is the best I have to cast the tensors into
-	!their corresponding type
-	select type (Typed_A => tensorA)
-	    class is (Tensor1)
-			select type (Typed_B => tensorB)
-				class is (Tensor1)
-					diff=sum(Typed_A%data-Typed_B%data)
-				class default
-			    	call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
-    			    return
-			end select
-	 	class is (Tensor2)
-			select type (Typed_B => tensorB)
-				class is (Tensor2)
-					diff=sum(Typed_A%data-Typed_B%data)
-				class default
-			    	call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
-    			    return
-			end select
-	 	class is (Tensor3)
-			select type (Typed_B => tensorB)
-				class is (Tensor3)
-					diff=sum(Typed_A%data-Typed_B%data)
-				class default
-			    	call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
-    			    return
-			end select
-        class is (Tensor4)
-            select type (Typed_B => tensorB)
-                class is (Tensor4)
-                    diff=sum(Typed_A%data-Typed_B%data)
-                class default
-                    call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
-                    return
-            end select
-        class is (Tensor5)
-            select type (Typed_B => tensorB)
-                class is (Tensor5)
-                    diff=sum(Typed_A%data-Typed_B%data)
-                class default
-                    call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
-                    return
-            end select
-	 	class is (Tensor)
-	    	call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
-    	    return
-	 end select
-    else !Not equal shape
-        call ThrowException('Difference_btw_Tensors','Tensor not of same shape',NoErrorCode,CriticalError)
-    endif
-
-   end function Difference_btw_Tensors
-
-
-   real function Difference_btw_Tensors_WithAbsoluteValue(tensorA, tensorB) result(diff)
-     class(Tensor),intent(IN) :: tensorA,tensorB
+   real(8) function Difference_btw_Tensors1(tensorA, tensorB) result(diff)
+     class(Tensor1),intent(IN) :: tensorA,tensorB
 
      diff=0.0d0
 
-	if(.not.(tensorA%Initialized .and. tensorB%Initialized)) then
+	if((tensorA%Initialized .and. tensorB%Initialized)) then
+        if (tensorA.equaldims.tensorB) then
+	       diff=sum(tensorA%data-tensorB%data)
+	    else
+	       call ThrowException('Difference_btw_Tensors','Tensor not of same shape',NoErrorCode,CriticalError)
+	    endif
+	else
 		call ThrowException('Difference_btw_Tensors','Tensor not initialized',NoErrorCode,CriticalError)
         return
 	endif
-	if( .not. same_type_as(tensorA,tensorB) ) then
-		call ThrowException('Difference_btw_Tensors','Tensor not of same type',NoErrorCode,CriticalError)
-        return
-	endif
 
-	if (tensorA.equaldims.tensorB) then
-	!The following ugly structure is the best I have to cast the tensors into
-	!their corresponding type
-	select type (Typed_A => tensorA)
-	    class is (Tensor1)
-			select type (Typed_B => tensorB)
-				class is (Tensor1)
-					diff=sum(abs(Typed_A%data-Typed_B%data))
-				class default
-			    	call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
-    			    return
-			end select
-	 	class is (Tensor2)
-			select type (Typed_B => tensorB)
-				class is (Tensor2)
-					diff=sum(abs(Typed_A%data-Typed_B%data))
-				class default
-			    	call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
-    			    return
-			end select
-	 	class is (Tensor3)
-			select type (Typed_B => tensorB)
-				class is (Tensor3)
-					diff=sum(abs(Typed_A%data-Typed_B%data))
-				class default
-			    	call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
-    			    return
-			end select
-        class is (Tensor4)
-            select type (Typed_B => tensorB)
-                class is (Tensor4)
-                    diff=sum(abs(Typed_A%data-Typed_B%data))
-                class default
-                    call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
-                    return
-            end select
-        class is (Tensor5)
-            select type (Typed_B => tensorB)
-                class is (Tensor5)
-                    diff=sum(abs(Typed_A%data-Typed_B%data))
-                class default
-                    call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
-                    return
-            end select
-	 	class is (Tensor)
-	    	call ThrowException('Difference_btw_Tensors','Unknown error',NoErrorCode,CriticalError)
-    	    return
-	 end select
-    else !Not equal shape
-        call ThrowException('Difference_btw_Tensors','Tensor not of same shape',NoErrorCode,CriticalError)
+	end function Difference_btw_Tensors1
+
+!!##################################################################
+   real(8) function Difference_btw_Tensors2(tensorA, tensorB) result(diff)
+     class(Tensor2),intent(IN) :: tensorA,tensorB
+
+     diff=0.0d0
+
+    if((tensorA%Initialized .and. tensorB%Initialized)) then
+        if (tensorA.equaldims.tensorB) then
+           diff=sum(tensorA%data-tensorB%data)
+        else
+           call ThrowException('Difference_btw_Tensors','Tensor not of same shape',NoErrorCode,CriticalError)
+        endif
+    else
+        call ThrowException('Difference_btw_Tensors','Tensor not initialized',NoErrorCode,CriticalError)
+        return
     endif
 
-   end function Difference_btw_Tensors_WithAbsoluteValue
+    end function Difference_btw_Tensors2
+!!##################################################################
+   real(8) function Difference_btw_Tensors3(tensorA, tensorB) result(diff)
+     class(Tensor3),intent(IN) :: tensorA,tensorB
+
+     diff=0.0d0
+
+    if((tensorA%Initialized .and. tensorB%Initialized)) then
+        if (tensorA.equaldims.tensorB) then
+           diff=sum(tensorA%data-tensorB%data)
+        else
+           call ThrowException('Difference_btw_Tensors','Tensor not of same shape',NoErrorCode,CriticalError)
+        endif
+    else
+        call ThrowException('Difference_btw_Tensors','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+    endif
+
+    end function Difference_btw_Tensors3
+!!##################################################################
+   real(8) function Difference_btw_Tensors4(tensorA, tensorB) result(diff)
+     class(Tensor4),intent(IN) :: tensorA,tensorB
+
+     diff=0.0d0
+
+    if((tensorA%Initialized .and. tensorB%Initialized)) then
+        if (tensorA.equaldims.tensorB) then
+           diff=sum(tensorA%data-tensorB%data)
+        else
+           call ThrowException('Difference_btw_Tensors','Tensor not of same shape',NoErrorCode,CriticalError)
+        endif
+    else
+        call ThrowException('Difference_btw_Tensors','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+    endif
+
+    end function Difference_btw_Tensors4
+!!##################################################################
+   real(8) function Difference_btw_Tensors5(tensorA, tensorB) result(diff)
+     class(Tensor5),intent(IN) :: tensorA,tensorB
+
+     diff=0.0d0
+
+    if((tensorA%Initialized .and. tensorB%Initialized)) then
+        if (tensorA.equaldims.tensorB) then
+           diff=sum(tensorA%data-tensorB%data)
+        else
+           call ThrowException('Difference_btw_Tensors','Tensor not of same shape',NoErrorCode,CriticalError)
+        endif
+    else
+        call ThrowException('Difference_btw_Tensors','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+    endif
+
+    end function Difference_btw_Tensors5
+!!##################################################################
+   real(8) function Difference_btw_Tensors6(tensorA, tensorB) result(diff)
+     class(Tensor6),intent(IN) :: tensorA,tensorB
+
+     diff=0.0d0
+
+    if((tensorA%Initialized .and. tensorB%Initialized)) then
+        if (tensorA.equaldims.tensorB) then
+           diff=sum(tensorA%data-tensorB%data)
+        else
+           call ThrowException('Difference_btw_Tensors','Tensor not of same shape',NoErrorCode,CriticalError)
+        endif
+    else
+        call ThrowException('Difference_btw_Tensors','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+    endif
+
+    end function Difference_btw_Tensors6
+
+!!##################################################################
+!!##################################################################
+!!##################################################################
+
+   real(8) function Difference_btw_Tensors1_WithAbsoluteValue(tensorA, tensorB) result(diff)
+     class(Tensor1),intent(IN) :: tensorA,tensorB
+
+     diff=0.0d0
+
+    if((tensorA%Initialized .and. tensorB%Initialized)) then
+        if (tensorA.equaldims.tensorB) then
+           diff=sum(abs(tensorA%data-tensorB%data))
+        else
+           call ThrowException('Difference_btw_Tensors','Tensor not of same shape',NoErrorCode,CriticalError)
+        endif
+    else
+        call ThrowException('Difference_btw_Tensors','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+    endif
+
+    end function Difference_btw_Tensors1_WithAbsoluteValue
+
+!!##################################################################
+   real(8) function Difference_btw_Tensors2_WithAbsoluteValue(tensorA, tensorB) result(diff)
+     class(Tensor2),intent(IN) :: tensorA,tensorB
+
+     diff=0.0d0
+
+    if((tensorA%Initialized .and. tensorB%Initialized)) then
+        if (tensorA.equaldims.tensorB) then
+           diff=sum(abs(tensorA%data-tensorB%data))
+        else
+           call ThrowException('Difference_btw_Tensors','Tensor not of same shape',NoErrorCode,CriticalError)
+        endif
+    else
+        call ThrowException('Difference_btw_Tensors','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+    endif
+
+    end function Difference_btw_Tensors2_WithAbsoluteValue
+!!##################################################################
+   real(8) function Difference_btw_Tensors3_WithAbsoluteValue(tensorA, tensorB) result(diff)
+     class(Tensor3),intent(IN) :: tensorA,tensorB
+
+     diff=0.0d0
+
+    if((tensorA%Initialized .and. tensorB%Initialized)) then
+        if (tensorA.equaldims.tensorB) then
+           diff=sum(abs(tensorA%data-tensorB%data))
+        else
+           call ThrowException('Difference_btw_Tensors','Tensor not of same shape',NoErrorCode,CriticalError)
+        endif
+    else
+        call ThrowException('Difference_btw_Tensors','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+    endif
+
+    end function Difference_btw_Tensors3_WithAbsoluteValue
+!!##################################################################
+   real(8) function Difference_btw_Tensors4_WithAbsoluteValue(tensorA, tensorB) result(diff)
+     class(Tensor4),intent(IN) :: tensorA,tensorB
+
+     diff=0.0d0
+
+    if((tensorA%Initialized .and. tensorB%Initialized)) then
+        if (tensorA.equaldims.tensorB) then
+           diff=sum(abs(tensorA%data-tensorB%data))
+        else
+           call ThrowException('Difference_btw_Tensors','Tensor not of same shape',NoErrorCode,CriticalError)
+        endif
+    else
+        call ThrowException('Difference_btw_Tensors','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+    endif
+
+    end function Difference_btw_Tensors4_WithAbsoluteValue
+!!##################################################################
+   real(8) function Difference_btw_Tensors5_WithAbsoluteValue(tensorA, tensorB) result(diff)
+     class(Tensor5),intent(IN) :: tensorA,tensorB
+
+     diff=0.0d0
+
+    if((tensorA%Initialized .and. tensorB%Initialized)) then
+        if (tensorA.equaldims.tensorB) then
+           diff=sum(abs(tensorA%data-tensorB%data))
+        else
+           call ThrowException('Difference_btw_Tensors','Tensor not of same shape',NoErrorCode,CriticalError)
+        endif
+    else
+        call ThrowException('Difference_btw_Tensors','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+    endif
+
+    end function Difference_btw_Tensors5_WithAbsoluteValue
+!!##################################################################
+   real(8) function Difference_btw_Tensors6_WithAbsoluteValue(tensorA, tensorB) result(diff)
+     class(Tensor6),intent(IN) :: tensorA,tensorB
+
+     diff=0.0d0
+
+    if((tensorA%Initialized .and. tensorB%Initialized)) then
+        if (tensorA.equaldims.tensorB) then
+           diff=sum(abs(tensorA%data-tensorB%data))
+        else
+           call ThrowException('Difference_btw_Tensors','Tensor not of same shape',NoErrorCode,CriticalError)
+        endif
+    else
+        call ThrowException('Difference_btw_Tensors','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+    endif
+
+    end function Difference_btw_Tensors6_WithAbsoluteValue
+
 
 !##################################################################
+   logical function Tensors1_are_of_equal_Shape(tensorA,tensorB) result(equals)
+     class(Tensor1),intent(IN) :: tensorA,tensorB
 
-   logical function Tensors_are_of_equal_Shape(tensorA,tensorB) result(equals)
-     class(Tensor),intent(IN) :: tensorA,tensorB
-
-     if(.not.(tensorA%Initialized .and. tensorB%Initialized)) then
-        call ThrowException('MPSTensors_are_of_equal_Shape','Tensors not initialized',NoErrorCode,CriticalError)
-        return
+     if((tensorA%Initialized .and. tensorB%Initialized)) then
+        equals=sum(abs(shape(tensorA%data)-shape(tensorB%data))).eq.ZERO
+     else
+        call ThrowException('Tensors_are_of_equal_Shape','Tensors not initialized',NoErrorCode,CriticalError)
      endif
-	if( .not. same_type_as(tensorA,tensorB) ) then
-		call ThrowException('Tensors_are_of_equal_Shape','Tensor not of same type',NoErrorCode,CriticalError)
-        return
-	endif
-	select type (Typed_A => tensorA)
-      class is (Tensor1)
-         select type (Typed_B => tensorB)
-             class is (Tensor1)
-                equals=sum(abs(shape(typed_A%data)-shape(typed_B%data))).eq.ZERO
-             class default
-                call ThrowException('Tensors_are_equal','Unknown error',NoErrorCode,CriticalError)
-                return
-         end select
-      class is (Tensor2)
-         select type (Typed_B => tensorB)
-             class is (Tensor2)
-                equals=sum(abs(shape(typed_A%data)-shape(typed_B%data))).eq.ZERO
-             class default
-                call ThrowException('Tensors_are_equal','Unknown error',NoErrorCode,CriticalError)
-                return
-         end select
-      class is (Tensor3)
-         select type (Typed_B => tensorB)
-             class is (Tensor3)
-                equals=sum(abs(shape(typed_A%data)-shape(typed_B%data))).eq.ZERO
-             class default
-                call ThrowException('Tensors_are_equal','Unknown error',NoErrorCode,CriticalError)
-                return
-         end select
-      class is (Tensor4)
-         select type (Typed_B => tensorB)
-             class is (Tensor4)
-                equals=sum(abs(shape(typed_A%data)-shape(typed_B%data))).eq.ZERO
-             class default
-                call ThrowException('Tensors_are_equal','Unknown error',NoErrorCode,CriticalError)
-                return
-         end select
-      class is (Tensor5)
-         select type (Typed_B => tensorB)
-             class is (Tensor5)
-                equals=sum(abs(shape(typed_A%data)-shape(typed_B%data))).eq.ZERO
-             class default
-                call ThrowException('Tensors_are_equal','Unknown error',NoErrorCode,CriticalError)
-                return
-         end select
-      end select
 
-   end function Tensors_are_of_equal_Shape
+   end function Tensors1_are_of_equal_Shape
 
-  logical function Tensors_are_of_equal_Type(tensorA,tensorB) result(equals)
-     class(Tensor),intent(IN) :: tensorA,tensorB
+!##################################################################
+   logical function Tensors2_are_of_equal_Shape(tensorA,tensorB) result(equals)
+     class(Tensor2),intent(IN) :: tensorA,tensorB
 
-     if(.not.(tensorA%Initialized .and. tensorB%Initialized)) then
-        call ThrowException('MPSTensors_are_of_equal_Shape','Tensors not initialized',NoErrorCode,CriticalError)
-        return
+     if((tensorA%Initialized .and. tensorB%Initialized)) then
+        equals=sum(abs(shape(tensorA%data)-shape(tensorB%data))).eq.ZERO
+     else
+        call ThrowException('Tensors_are_of_equal_Shape','Tensors not initialized',NoErrorCode,CriticalError)
      endif
-	equals=same_type_as(tensorA,tensorB)
-	return
 
-  end function Tensors_are_of_equal_Type
+   end function Tensors2_are_of_equal_Shape
+
+!##################################################################
+   logical function Tensors3_are_of_equal_Shape(tensorA,tensorB) result(equals)
+     class(Tensor3),intent(IN) :: tensorA,tensorB
+
+     if((tensorA%Initialized .and. tensorB%Initialized)) then
+        equals=sum(abs(shape(tensorA%data)-shape(tensorB%data))).eq.ZERO
+     else
+        call ThrowException('Tensors_are_of_equal_Shape','Tensors not initialized',NoErrorCode,CriticalError)
+     endif
+
+   end function Tensors3_are_of_equal_Shape
+
+!##################################################################
+   logical function Tensors4_are_of_equal_Shape(tensorA,tensorB) result(equals)
+     class(Tensor4),intent(IN) :: tensorA,tensorB
+
+     if((tensorA%Initialized .and. tensorB%Initialized)) then
+        equals=sum(abs(shape(tensorA%data)-shape(tensorB%data))).eq.ZERO
+     else
+        call ThrowException('Tensors_are_of_equal_Shape','Tensors not initialized',NoErrorCode,CriticalError)
+     endif
+
+   end function Tensors4_are_of_equal_Shape
+
+!##################################################################
+   logical function Tensors5_are_of_equal_Shape(tensorA,tensorB) result(equals)
+     class(Tensor5),intent(IN) :: tensorA,tensorB
+
+     if((tensorA%Initialized .and. tensorB%Initialized)) then
+        equals=sum(abs(shape(tensorA%data)-shape(tensorB%data))).eq.ZERO
+     else
+        call ThrowException('Tensors_are_of_equal_Shape','Tensors not initialized',NoErrorCode,CriticalError)
+     endif
+
+   end function Tensors5_are_of_equal_Shape
+
+!##################################################################
+   logical function Tensors6_are_of_equal_Shape(tensorA,tensorB) result(equals)
+     class(Tensor6),intent(IN) :: tensorA,tensorB
+
+     if((tensorA%Initialized .and. tensorB%Initialized)) then
+        equals=sum(abs(shape(tensorA%data)-shape(tensorB%data))).eq.ZERO
+     else
+        call ThrowException('Tensors_are_of_equal_Shape','Tensors not initialized',NoErrorCode,CriticalError)
+     endif
+
+   end function Tensors6_are_of_equal_Shape
+
 
 !##################################################################
 

@@ -33,7 +33,6 @@ Module PEPS_Class
      integer :: XLength,YLength
      type(PEPSTensor), allocatable :: TensorCollection(:,:)
      logical :: Initialized=.false.
-     logical, public, allocatable :: HasTensorChangedAt(:,:)
    contains
      procedure,public :: ScaleBy => ScalePEPSByFactor
      procedure,public :: GetTensorAt => GetPEPSTensorAtSite
@@ -46,7 +45,6 @@ Module PEPS_Class
      procedure,public :: ReduceBond => ReduceMaxPEPSBond
      procedure,public :: IsInitialized => Is_PEPS_Initialized
      procedure,public :: IsPEPSWellFormed => Integrity_Check_of_bonds
-     procedure,public :: CheckPointState => SetTensorsToUnchanged
   end type PEPS
 
   interface new_PEPS
@@ -95,7 +93,6 @@ Module PEPS_Class
     integer :: n,m
 
     allocate(this%TensorCollection(0:XLength+1,0:YLength+1))
-    allocate(this%HasTensorChangedAt(0:XLength+1,0:YLength+1))
 
     !Outside of boundary terms are unit tensors
     this%TensorCollection(0,:)=new_PEPSTensor(spin,integerONE,integerONE,integerONE,integerONE,ONE)
@@ -124,7 +121,7 @@ Module PEPS_Class
     enddo
     this%XLength=Xlength
     this%YLength=Ylength
-    this%HasTensorChangedAt=.true.
+
     this%Initialized=.true.
 
   end function new_PEPS_Random
@@ -150,8 +147,7 @@ Module PEPS_Class
      enddo
      this%XLength=Xlength
      this%YLength=Ylength
-     allocate(this%HasTensorChangedAt(0:XLength+1,0:YLength+1))
-     this%HasTensorChangedAt=.true.
+
      this%initialized=.true.
 
    end function new_PEPS_fromPEPS
@@ -175,8 +171,7 @@ Module PEPS_Class
      enddo
      lhs%XLength=Xlength
      lhs%YLength=Ylength
-     allocate(lhs%HasTensorChangedAt(0:XLength+1,0:YLength+1))
-     lhs%HasTensorChangedAt=.true.
+
      lhs%initialized=.true.
 
    end subroutine new_PEPS_fromAssignment
@@ -201,7 +196,6 @@ Module PEPS_Class
      enddo
      this%Xlength=0
      this%Ylength=0
-     deallocate(this%HasTensorChangedAt)
 
      this%Initialized=.false.
 
@@ -280,7 +274,6 @@ Module PEPS_Class
      if(thisPEPS%Initialized.and.aPEPSTensor%IsInitialized()) then
         if(Xposition.ge.1 .and. Xposition.le.thisPEPS%Xlength .and. Yposition.ge.1 .and. Yposition.le.thisPEPS%Ylength ) then
              thisPEPS%TensorCollection(Xposition,Yposition)=aPEPSTensor
-             thisPEPS%HasTensorChangedAt(Xposition,Yposition)=.true.
         else
              call ThrowException('SetPEPSTensorAtSite','Site is wrong index',Xposition,CriticalError)
         endif
@@ -382,25 +375,6 @@ Module PEPS_Class
 
 
 
-
-
-   subroutine SetTensorsToUnchanged(this,Xpos,Ypos)
-      class(PEPS),intent(INOUT) :: this
-      integer,intent(IN) :: Xpos
-      integer,intent(IN),optional :: Ypos
-
-     if(this%Initialized) then
-        if(Xpos.eq.ALLTENSORS) then
-           this%HasTensorChangedAt=.false.
-        else if (present(Ypos) ) then
-           this%HasTensorChangedAt(Xpos,Ypos)=.false.
-        else !Xpos is interpreted as a row...quite lame
-           this%HasTensorChangedAt(:,Xpos)=.false.
-        endif
-     else
-         call ThrowException('SetTensorsToUnchanged','PEPS not initialized',NoErrorCode,CriticalError)
-     endif
-   end subroutine SetTensorsToUnchanged
 
 
 

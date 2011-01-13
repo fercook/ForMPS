@@ -112,7 +112,6 @@ module MPSAlgorithms_Class
         if (present(returnOverlap)) then
             returnOverlap=overlap
         endif
-        If (Verbose) print *,'Total sweeps performed: ',sweep
     else
         call ThrowException('Overlap algorithm','MPS not initialized',NoErrorCode,CriticalError)
     endif
