@@ -88,11 +88,11 @@ Module MPS_Class
   function new_MPS_Template(length) result (this)
     integer,intent(IN) :: length
     type(MPS) :: this
-    integer :: n,spin=integerONE
+    integer :: n
 
     allocate(this%TensorCollection(0:length+1))
     do n=0,length+1
-        this%TensorCollection(n)=new_MPSTensor(spin,integerONE,integerONE,ONE)
+        this%TensorCollection(n)=new_MPSTensor(integerONE,integerONE,integerONE,ONE)
     enddo
     this%Length=length
     this%Initialized=.true.

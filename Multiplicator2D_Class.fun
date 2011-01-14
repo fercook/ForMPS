@@ -63,7 +63,6 @@ test SetCurrentRow
   call theEnvironment%PrepareRowAsMPO(1)
   call theEnvironment%PrepareRowAsMPO(2)
   aTensor=theEnvironment%RowsAsMPO(1)%GetTensorAt(1)
-  call aTensor%PrintDimensions('Dimensions from MPO as row')
   dims=[1,bond**2,bond**2,1]
   newdims=aTensor%GetDimensions()
   assert_true(newdims.equalvector.dims)
@@ -80,6 +79,7 @@ test UpperlowerMPSCreation
   type(Multiplicator2D) :: theEnvironment
   integer,parameter :: length=4,width=4,spin=2,bond=2
   type(MPO) :: anMPO
+  type(MPOTensor) :: anMPOTensor
   type(MPS) :: anMPS,approxMPS
   type(MPSTensor) :: oneTensor,anotherTensor
   logical,target :: matrixOfChanges(0:width+1,0:length+1)
@@ -110,17 +110,17 @@ test UpperlowerMPSCreation
   anotherTensor=approxMPS%GetTensorAt(2)
   assert_equal_within(oneTensor.absdiff.anotherTensor,0.0d0,1.0d-8)
 
-!  anMPS=theEnvironment%MPS_Below(0)
-!  call theEnvironment%PrepareRowAsMPO(1)
-!  anMPO=theEnvironment%RowsAsMPO(1)
-!  anMPS=anMPS.ApplyMPOTo.anMPO
-!  call anMPS%Canonize()
-!  approxMPS=Multiplicator2D_RowAsLowerMPS(theEnvironment,1)
-!  oneTensor=anMPS%GetTensorAt(2)
-!  anotherTensor=approxMPS%GetTensorAt(2)
-!  call oneTensor%PrintDimensions('Exact tensor dims:')
-!  call anotherTensor%PrintDimensions('Approx tensor dims:')
-!  assert_equal_within(oneTensor.absdiff.anotherTensor,0.0d0,1.0d-8)
+  anMPS=theEnvironment%MPS_Below(0)
+  call theEnvironment%PrepareRowAsMPO(1)
+  anMPO=theEnvironment%RowsAsMPO(1)
+  anMPS=anMPS.ApplyMPOTo.anMPO
+  call anMPS%Canonize()
+  approxMPS=Multiplicator2D_RowAsLowerMPS(theEnvironment,1)
+  oneTensor=anMPS%GetTensorAt(2)
+  anotherTensor=approxMPS%GetTensorAt(2)
+  call oneTensor%PrintDimensions('Exact tensor dims:')
+  call anotherTensor%PrintDimensions('Approx tensor dims:')
+  assert_equal_within(oneTensor.absdiff.anotherTensor,0.0d0,1.0d-8)
 
 end test
 

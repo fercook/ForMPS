@@ -34,7 +34,7 @@ MPSSOURCES = MPSTensor_Class.f90 MPOTensor_Class.f90 MPS_Class.f90 MPO_Class.f90
 PEPSSOURCES = PEPSTensor_Class.f90 PEPOTensor_Class.f90 PEPS_Class.f90 PEPO_Class.f90  Multiplicator2D_Class.f90 PEPSAlgorithms_Class.f90
 SOURCES = $(BASICSOURCES) $(MPSSOURCES) $(PEPSSOURCES)
 OBJS = $(SOURCES:.f90=.o)
-TESTED = Tensor MPSTensor MPOTensor MPS MPO Multiplicator PEPSTensor PEPOTensor PEPS PEPO MPSAlgorithms PEPSAlgorithms
+TESTED = Tensor MPSTensor MPOTensor MPS MPO Multiplicator PEPSTensor PEPOTensor PEPS PEPO Multiplicator2D MPSAlgorithms PEPSAlgorithms
 
 all: fullmake
 obj: object

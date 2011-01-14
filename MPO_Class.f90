@@ -72,8 +72,8 @@ Module MPO_Class
     integer :: n
 
     allocate(this%TensorCollection(0:length+1))
-    this%TensorCollection(0)=new_MPOTensor(spin,integerONE,integerONE)
-    this%TensorCollection(length+1)=new_MPOTensor(spin,integerONE,integerONE)
+    this%TensorCollection(0)=new_MPOTensor(spin,integerONE,integerONE,ONE)
+    this%TensorCollection(length+1)=new_MPOTensor(spin,integerONE,integerONE,ONE)
     this%TensorCollection(1)=new_MPOTensor(spin,integerONE,bond)
     this%TensorCollection(length)=new_MPOTensor(spin,bond,integerONE)
     do n=2,length-1
@@ -89,16 +89,17 @@ Module MPO_Class
   function new_MPO_Template(length) result (this)
     integer,intent(IN) :: length
     type(MPO) :: this
-    integer :: n,bond=integerONE,spin=integerONE
+    integer :: n
 
     allocate(this%TensorCollection(0:length+1))
     do n=0,length+1
-        this%TensorCollection(n)=new_MPOTensor(spin,bond,bond,ONE)
+        this%TensorCollection(n)=new_MPOTensor(integerONE,integerONE,integerONE,ONE)
     enddo
     this%Length=length
     this%Initialized=.true.
 
   end function new_MPO_Template
+
 !##################################################################
    function new_MPO_fromMPO (aMPO) result (this)
      class(MPO),intent(in) :: aMPO
@@ -122,7 +123,7 @@ Module MPO_Class
    subroutine new_MPO_fromAssignment(lhs,rhs)
      class(MPO),intent(out) :: lhs
      type(MPO),intent(in) :: rhs
-     integer  :: n,error,length,spinUP,SPINDOWN,bond
+     integer  :: n,error,length
 
      if(.not.rhs%initialized) then
          call ThrowException('new_MPO_fromAssignment','MPO not initialized',NoErrorCode,CriticalError)
