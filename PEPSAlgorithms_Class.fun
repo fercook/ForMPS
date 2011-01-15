@@ -26,6 +26,21 @@ teardown
 
 end teardown
 
+!test MPS_MemoryDrawn
+!
+!  type(Tensor3) :: atensor
+!type(Tensor1) :: avector
+!type(Tensor2) :: amatrix
+!
+!  print *,'Before requesting memory'
+!  aVector=New_Tensor(16*256*256)
+!  print *,'V'
+!  aMatrix=New_Tensor(16*256,256)
+!  print *,'M'
+!  aTensor=New_Tensor(256,256,16)
+!  print *,'After requesting memory'
+!
+!end test
 
 test OverlapAlgorithm
   type(PEPS) :: aPEPS
@@ -39,29 +54,40 @@ test OverlapAlgorithm
   print *,'PREVIOUS OVERLAP',overlap12
   assert_false(abs(overlap12)**2.eq.1.0d0)
 
-    print *,'About to NORMALIZE ----------'
+  print *,'About to NORMALIZE ----------'
   call Normalize(aPEPS)
   overlap12 = Overlap_PEPS(aPEPS,aPEPS)
   print *,'OVERLAP AFTER NORMALIZATION',overlap12
-!  assert_equal_within(abs(overlap12)**2,1.0d0,1.0d-8)
+!!  assert_equal_within(abs(overlap12)**2,1.0d0,1.0d-8)
 
   assert_false(WasThereError())
 
-!  error= aPEPS%Delete()
+  error= aPEPS%Delete()
+
+  aPEPS=new_PEPS(length,width,spin,bond)
+  call aPEPS%ScaleBy(ONE/(2.0d0)**(1.0d0/2.0d0))
+  overlap12 = Overlap_PEPS(aPEPS)
+  print *,'SECOND OVERLAP',overlap12
+
+  print *,'About to NORMALIZE ----------'
+  call Normalize(aPEPS)
+  overlap12 = Overlap_PEPS(aPEPS,aPEPS)
+  print *,'OVERLAP AFTER NORMALIZATION',overlap12
 
 end test
 
 test Progressive_truncation
   type(PEPS) :: aPEPS,smallPEPS
-  integer :: length=4,width=4,spin=2,bond=4, error
+  integer :: length=4,width=4,spin=2,bond=3, error
   complex(8) :: overlap12
   integer :: smallbond
 
   print *,' XXXXXXX HELLO TRUNCATION X----------'
   aPEPS=new_PEPS(length,width,spin,bond)
   print *,' XXXXXXX HELLO TRUNCATION 1----------'
-  call aPEPS%ScaleBy(ONE/(4.0d0)**(1.0d0/8.0d0))
+  call aPEPS%ScaleBy(ONE/(4.0d0)**(1.0d0/2.0d0))
   print *,' XXXXXXX HELLO TRUNCATION 2----------'
+  overlap12 = Overlap_PEPS(aPEPS,aPEPS)
   call Normalize(aPEPS)
   print *,' XXXXXXX HELLO TRUNCATION 3----------'
   do smallbond=bond,1,-1

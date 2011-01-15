@@ -157,7 +157,7 @@ Module MPS_Class
          call ThrowException('delete_MPS','Some error while deleting tensors !',error,CriticalError)
      endif
      this%length=0
-     deallocate(this%TensorCollection)
+     deallocate(this%TensorCollection,stat=error)
      this%Initialized=.false.
 
     end function delete_MPS

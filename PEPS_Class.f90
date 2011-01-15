@@ -197,6 +197,8 @@ Module PEPS_Class
      this%Xlength=0
      this%Ylength=0
 
+     deallocate(this%TensorCollection,stat=error)
+
      this%Initialized=.false.
 
     end function delete_PEPS

@@ -157,7 +157,7 @@ Module MPO_Class
      if (error.ne.Normal) then
          call ThrowException('delete_MPO','Some error while deleting tensors !',error,CriticalError)
      endif
-     deallocate(this%TensorCollection)
+     deallocate(this%TensorCollection,stat=error)
      this%length=0
      this%Initialized=.false.
 

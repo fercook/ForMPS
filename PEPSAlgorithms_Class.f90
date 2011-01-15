@@ -83,8 +83,8 @@ module PEPSAlgorithms_Class
         allocate(HasPEPSChangedAt(PEPSSize(1),PEPSSize(2)))
         HasPEPSChangedAt=.true.
 
-        smallMultiplicator = new_Multiplicator2D(smallPEPS,HasPEPSChangedAt=HasPEPSChangedAt)
-        bigMultiplicator = new_Multiplicator2D(bigPEPS,smallPEPS,HasPEPSChangedAt=HasPEPSChangedAt)
+        smallMultiplicator = new_Multiplicator2D(smallPEPS,MatrixToTrackChanges=HasPEPSChangedAt)
+        bigMultiplicator = new_Multiplicator2D(bigPEPS,smallPEPS,MatrixToTrackChanges=HasPEPSChangedAt)
 
         sweep=0
         !Start sweeping
@@ -190,15 +190,16 @@ module PEPSAlgorithms_Class
       type(Multiplicator2D) :: theEnvironment
       complex(8) :: theOverlap
       integer :: dims(2)
-    logical,allocatable,target :: HasPEPSChangedAt(:,:)
+      logical,allocatable,target :: HasPEPSChangedAt(:,:)
 
       print *,'Entry to Overlap'
       dims=onePEPS%GetSize()
       allocate(HasPEPSChangedAt(dims(1),dims(2)))
+      HasPEPSChangedAt=.true.
       if (present(anotherPEPS)) then
-          theEnvironment=new_Multiplicator2D(onePEPS, anotherPEPS,HasPEPSChangedAt=HasPEPSChangedAt)
+          theEnvironment=new_Multiplicator2D(onePEPS, anotherPEPS,MatrixToTrackChanges=HasPEPSChangedAt)
       else
-          theEnvironment=new_Multiplicator2D(onePEPS,HasPEPSChangedAt=HasPEPSChangedAt)
+          theEnvironment=new_Multiplicator2D(onePEPS,MatrixToTrackChanges=HasPEPSChangedAt)
       endif
       theOverlap = Overlap_PEPSAboveBelow(theEnvironment)
       call theEnvironment%Delete()

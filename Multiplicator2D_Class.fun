@@ -38,7 +38,7 @@ test up_down_boundaries_of_mult
 
   matrixOfChanges=.true.
   aPEPS=new_PEPS(width,length,spin,bond)
-  theEnvironment=new_Multiplicator2D(aPEPS,HasPEPSChangedAt=matrixOfChanges)
+  theEnvironment=new_Multiplicator2D(aPEPS,MatrixToTrackChanges=matrixOfChanges)
   call theEnvironment%SetMaxApproxBond(20)
   theTemplate=new_Tensor(integerONE,integerONE,integerONE,integerONE,ONE)
   aTensor=theEnvironment%BelowAt(2,0)
@@ -60,7 +60,7 @@ test SetCurrentRow
 
   matrixOfChanges = .true.
   aPEPS=new_PEPS(width,length,spin,bond)
-  theEnvironment=new_Multiplicator2D(aPEPS,HasPEPSChangedAt=matrixOfChanges)
+  theEnvironment=new_Multiplicator2D(aPEPS,MatrixToTrackChanges=matrixOfChanges)
   call theEnvironment%SetMaxApproxBond(20)
   call theEnvironment%PrepareRowAsMPO(1)
   call theEnvironment%PrepareRowAsMPO(2)
@@ -88,7 +88,7 @@ test UpperlowerMPSCreation
 
   matrixOfChanges=.true.
   aPEPS=new_PEPS(width,length,spin,bond)
-  theEnvironment=new_Multiplicator2D(aPEPS,HasPEPSChangedAt=matrixOfChanges)
+  theEnvironment=new_Multiplicator2D(aPEPS,MatrixToTrackChanges=matrixOfChanges)
   call theEnvironment%SetMaxApproxBond(20)
 
   anMPS=theEnvironment%MPS_Above(length+1)
@@ -141,7 +141,7 @@ test lateralEnvironments     !DIMENSIONAL ONLY TESTING OF LEFT AND RIGHT
 
   matrixOfChanges=.true.
   aPEPS=new_PEPS(width,length,spin,bond)
-  theEnvironment=new_Multiplicator2D(aPEPS,HasPEPSChangedAt=matrixOfChanges)
+  theEnvironment=new_Multiplicator2D(aPEPS,MatrixToTrackChanges=matrixOfChanges)
   call theEnvironment%SetMaxApproxBond(20)
 
   call theEnvironment%PrepareRowAsMPO(1)
@@ -205,7 +205,7 @@ test Multip_With2_PEPS
   aPEPS=new_PEPS(width,height,spin,bondSmall)
   aBigPEPS=new_PEPS(width,height,spin,bondBig)
   matrixOfChanges=.true.
-  theEnvironment = new_Multiplicator2D(aBigPEPS,aPEPS,HasPEPSChangedAt=matrixOfChanges)
+  theEnvironment = new_Multiplicator2D(aBigPEPS,aPEPS,MatrixToTrackChanges=matrixOfChanges)
   call theEnvironment%SetMaxApproxBond(20)
 
   aTensor= theEnvironment%LeftAt(1,1)

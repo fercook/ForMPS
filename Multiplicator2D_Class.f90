@@ -35,7 +35,7 @@ module Multiplicator2D_Class
   implicit none
   !private
 
-  integer,parameter :: DefaultApproximationBond=20
+  integer,parameter :: DefaultApproximationBond=8
 
     type, public :: Multiplicator2D
         !private
@@ -51,7 +51,7 @@ module Multiplicator2D_Class
         type(PEPS),pointer :: PEPS_Below => null()
         type(PEPO),pointer :: PEPO_Center => null()
         logical :: IsPEPOUsed=.false.
-        logical,pointer :: HasPEPSChangedAt(:,:) => null()
+        logical,pointer :: int_HasPEPSChangedAt(:,:) => null()
     contains
         procedure,public :: LeftAt => Multiplicator2D_Left
         procedure,public :: RightAt => Multiplicator2D_Right
@@ -99,11 +99,11 @@ contains
 !##################################################################
 !##################################################################
 
-  function new_Multiplicator2D_WithPEPSandPEPO(PEPS_A,PEPS_B,PEPO_C,HasPEPSChangedAt) result (this)
+  function new_Multiplicator2D_WithPEPSandPEPO(PEPS_A,PEPS_B,PEPO_C,MatrixToTrackChanges) result (this)
     class(PEPS),target,intent(IN) :: PEPS_A
     class(PEPS),target,intent(IN),optional :: PEPS_B
     class(PEPO),target,intent(IN),optional :: PEPO_C
-    logical,target,intent(INOUT) :: HasPEPSChangedAt(:,:)
+    logical,target,intent(INOUT) :: MatrixToTrackChanges(:,:)
     type(Multiplicator2D) :: this
     integer :: Lengths(2),XLength,YLength
 
@@ -144,7 +144,7 @@ contains
         endif
         this%Xlength = Xlength
         this%Ylength = Ylength
-        this%HasPEPSChangedAt => HasPEPSChangedAt
+        this%int_HasPEPSChangedAt => MatrixToTrackChanges
         this%Initialized = .true.
     else
         call ThrowException('new_Multiplicator2d','PEPS_A not initialized',NoErrorCode,CriticalError)
@@ -167,7 +167,7 @@ contains
         enddo
         if(this%RowMultiplicator%IsInitialized()) call this%RowMultiplicator%Delete()
         deallocate(this%MPS_Above,this%MPS_Below, this%RowsAsMPO)
-        this%HasPEPSChangedAt=> null()
+        this%int_HasPEPSChangedAt=> null()
 
         this%Initialized=.false.
     else
@@ -436,7 +436,7 @@ contains
      class(Multiplicator2D),intent(IN) :: this
      integer,intent(IN) :: row
 
-     hasThisRowChanged=any(this%HasPEPSChangedAt(:,row))
+     hasThisRowChanged=any(this%int_HasPEPSChangedAt(:,row))
 
   end function HasARowOfANY_PEPSChanged
 
@@ -446,7 +446,7 @@ contains
      class(Multiplicator2D),intent(IN) :: this
      integer,intent(IN) :: col,row
 
-     hasThisTensorChanged=this%HasPEPSChangedAt(col,row)
+     hasThisTensorChanged=this%int_HasPEPSChangedAt(col,row)
 
   end function HasATensorOfANY_PEPSChanged
 !#################################################################
@@ -455,7 +455,7 @@ contains
      class(Multiplicator2D),intent(INOUT) :: this
      integer,intent(IN) :: col,row
 
-     this%HasPEPSChangedAt(col,row)=.false.
+     this%int_HasPEPSChangedAt(col,row)=.false.
 
   end subroutine CheckpointALLPEPS
 

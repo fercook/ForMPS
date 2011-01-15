@@ -14,7 +14,7 @@ RM=rm
 FCOMP=ifort
 LINKER=ifort
 LINKFLAGS=
-DEBUGFLAG=-g
+DEBUGFLAG=-g -debug -save-temps
 endif
 
 ifeq ($(ARCH),Linux)
@@ -45,18 +45,18 @@ debug: debug
 #--------  HERE START THE USEFUL BITS
 
 object: $(SOURCES)
-	$(FCOMP) $(FLAGS) -c $?
+	$(FCOMP) $(FLAGS) $(DEBUGFLAG) -c $?
 
 fullmake: $(OBJS) main.o
 	${LINKER} $(OBJS) main.o ${LINKFLAGS} -L${LIBDIR}  -L${LAPACK} -l${LAPACK} -l${BLAS} -o $@_$(SYS)
 
 %.o: %.f90
-	$(FCOMP) $(FLAGS) -c $?
+	$(FCOMP) $(FLAGS) $(DEBUGFLAG) -c $?
 
 install:
 	cp  $(DIR)
 
-clean :
+clean:
 	@ ${RM} -rf *.o *.mod $(BINARIES) *.gcov *.gcda *.gcno *.dyn profiles/*
 	funit --clean
 #-----------------------------------------------------------------------
@@ -64,12 +64,12 @@ clean :
 testsuite: 
 	
 $(TESTED): $(OBJS)
-	$(FCOMP) -c $@.helper.f90
+	$(FCOMP) $(DEBUGFLAG) -c $@.helper.f90
 	funit $@_Class > TESTS/$@.test 
 	#gcov $@.f90
 	#./checkcoverage.sh
 	tail -n 5 TESTS/$@.test
 
-coverage):
+coverage:
 	./checkcoverage.sh
-      #
+

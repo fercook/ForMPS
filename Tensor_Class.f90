@@ -856,10 +856,14 @@ module Tensor_Class
    subroutine new_Tensor3_fromAssignment(lhs,rhs)
      class(Tensor3),intent(out) :: lhs
      type(Tensor3),intent(in) :: rhs
+     integer :: ierr
 
      if(lhs%Initialized) deallocate(lhs%data)
-     allocate(lhs%data(size(rhs%data,1),size(rhs%data,2),size(rhs%data,3)))
-     lhs%data=rhs%data
+     if (size(rhs%data,1)*size(rhs%data,2)*size(rhs%data,3).eq.256*256*16) then
+        print *,'Size of requested assignment is',size(rhs%data,1),size(rhs%data,2),size(rhs%data,3)
+        pause
+     endif
+     allocate(lhs%data,source=rhs%data,stat=ierr);   if(ierr /= 0) write(*,*) "Allocation error"
      lhs%Initialized=.true.
 
    end subroutine new_Tensor3_fromAssignment
