@@ -396,7 +396,6 @@ Module PEPS_Class
         if (newMaxBond.lt.thisPEPS%GetMaxBond()) then
             do Y=1,thisPEPS%YLength
                 do X=1,thisPEPS%XLength
-                    print *,X,Y
                     call newPEPS%TensorCollection(X,Y)%HOSVD(coreTensor,Umatrices,newMaxBond)
                     !Umatrices are ordered as LEFT/RIGHT/UP/DOWN
                     tempTensor=ApplyMatrixToBond(ApplyMatrixToBond(coreTensor,Umatrices(LEFT),LEFT),Umatrices(DOWN),DOWN)

@@ -19,7 +19,7 @@ test_suite PEPSAlgorithms_Class
 
 setup
   !Set testing mode
-  MaxErrorAllowed=CriticalError
+  MaxErrorAllowed=Warning
 end setup
 
 teardown
@@ -78,18 +78,13 @@ end test
 
 test Progressive_truncation
   type(PEPS) :: aPEPS,smallPEPS
-  integer :: length=4,width=4,spin=2,bond=3, error
+  integer :: length=4,width=4,spin=2,bond=4, error
   complex(8) :: overlap12
   integer :: smallbond
 
-  print *,' XXXXXXX HELLO TRUNCATION X----------'
   aPEPS=new_PEPS(length,width,spin,bond)
-  print *,' XXXXXXX HELLO TRUNCATION 1----------'
   call aPEPS%ScaleBy(ONE/(4.0d0)**(1.0d0/2.0d0))
-  print *,' XXXXXXX HELLO TRUNCATION 2----------'
-  overlap12 = Overlap_PEPS(aPEPS,aPEPS)
   call Normalize(aPEPS)
-  print *,' XXXXXXX HELLO TRUNCATION 3----------'
   do smallbond=bond,1,-1
       smallPEPS=ReduceMAXPEPSBond(aPEPS,smallbond)
       call Normalize(smallPEPS)
@@ -100,10 +95,10 @@ test Progressive_truncation
   assert_false(WasThereError())
 
 end test
-!
+
 !test  ApproximationAlgorithm
 !  type(PEPS) :: aPEPS, aBigPEPS
-!  integer :: length=4,width=4,spin=2,bondSmall=2,bondBig=4, error
+!  integer :: length=4,width=4,spin=2,bondSmall=2,bondBig=3, error
 !  real(8) :: overlap12
 !
 !  aBigPEPS=new_PEPS(width,length,spin,bondBig)
@@ -118,30 +113,6 @@ end test
 !  error= aBigPEPS%Delete()
 !  assert_false(WasThereError())
 !
-!end test
-
-!test ApproximationAlgorithm
-!  type(MPS) :: smallMPS,bigMPS
-!  integer :: length=20,spin=2,bondBig=40,bondSmall=2,site
-!  real(8) :: overlap12
-!  type(MPSTensor) :: localTensor
-!
-!  bigMPS=new_MPS(length,spin,bondBig)
-!  call bigMPS%Canonize()
-!  call bigMPS%SetNorm(ONE)
-!
-!  smallMPS=Approximate(bigMPS,bondSmall,overlap12)
-!  assert_equal_within(overlap12,1.0d0,1.0D-5)
-!
-!  print *,'Approximated overlap :',overlap12
-!  print *,'Big bond:',bondBig
-!  print *,'Small bond: ',smallMPS%GetMaxBond()
-!
-!  do site=1,smallMPS%GetSize()
-!    localTensor=smallMPS.TensorAt.site
-!    call localTensor%PrintDimensions('Dimensions of tensor')
-!    print *,site
-!  enddo
 !end test
 
 end test_suite

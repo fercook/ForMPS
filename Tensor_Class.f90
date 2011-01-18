@@ -35,7 +35,7 @@ module Tensor_Class
   public :: JoinIndicesOf,SplitIndexOf,TensorPad
   public :: CompactLeft,CompactRight,CompactBelow,SingularValueDecomposition
 
-  integer,parameter :: Max_Combined_Dimension = 10000000
+  integer,parameter :: Max_Combined_Dimension = 100000000
 
 !> \class Tensor (virtual)
 !! \brief
@@ -859,7 +859,7 @@ module Tensor_Class
      integer :: ierr
 
      if(lhs%Initialized) deallocate(lhs%data)
-     if (size(rhs%data,1)*size(rhs%data,2)*size(rhs%data,3).eq.256*256*16) then
+     if (size(rhs%data,1)*size(rhs%data,2)*size(rhs%data,3).gt.Max_Combined_Dimension) then
         print *,'Size of requested assignment is',size(rhs%data,1),size(rhs%data,2),size(rhs%data,3)
         pause
      endif

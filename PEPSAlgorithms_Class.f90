@@ -192,7 +192,6 @@ module PEPSAlgorithms_Class
       integer :: dims(2)
       logical,allocatable,target :: HasPEPSChangedAt(:,:)
 
-      print *,'Entry to Overlap'
       dims=onePEPS%GetSize()
       allocate(HasPEPSChangedAt(dims(1),dims(2)))
       HasPEPSChangedAt=.true.
@@ -211,7 +210,6 @@ module PEPSAlgorithms_Class
       real(8) :: theNorm
       integer :: TotalNumberOfTensors
 
-      print *,'Entry to Normalize'
       theNorm = abs(Overlap_PEPS(aPEPS))   !!!Notice I should not use **2
       TotalNumberOfTensors=product(aPEPS%GetSize())
       call aPEPS%ScaleBy(ONE/(theNorm**(0.5d0/TotalNumberOfTensors)))
