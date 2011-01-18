@@ -37,7 +37,7 @@ test type_creation_deletion
 
   anMPS=new_MPS(length,spin,bond)
   Prod=new_Multiplicator(anMPS)
-  overlap=(LeftAtSite(Prod,1)).xx.(Multiplicator_Right(Prod,2))
+  overlap=TensorTrace( (LeftAtSite(Prod,1))*(Multiplicator_Right(Prod,2)) )
   print *,overlap
   !matrix=(Multiplicator_Left_Clean(Prod,2)).x.(Multiplicator_Right_Clean(Prod,3))
   matrix=(Prod%LeftAt(2)).x.(RightAtSite(Prod,3))
@@ -48,7 +48,7 @@ test type_creation_deletion
   call Prod%Reset(RIGHT)
   matrix=(Multiplicator_Left(Prod,2)).x.(Prod%RightAt(3))
   call matrix%PrintDimensions()
-  overlap=(Multiplicator_Left(Prod,0)).xx.(Multiplicator_Right(Prod,1))
+  overlap=TensorTrace( (Multiplicator_Left(Prod,0))*(Multiplicator_Right(Prod,1)) )
   assert_equal_within(abs(overlap),1.0d0,1.0e-8)
 
   call Prod%delete()
@@ -102,7 +102,7 @@ test MultiplicatorMPOMPS
     NormalMult=new_Multiplicator(combinedMPOMPS,anotherMPS)
     MPOMult=new_Multiplicator(anMPS,anotherMPS,anMPO,YES)
     !Compute Overlaps
-    overlapCombined=NormalMult%LeftAt(0).xx.NormalMult%RightAt(1)
+    overlapCombined=TensorTrace( NormalMult%LeftAt(0)*NormalMult%RightAt(1) )
     overlapWithMPO=MPOMult%MPSLeftAt(0).xxx.MPOMult%MPSRightAt(1)
     assert_equal_within(abs(overlapCombined),abs(overlapWithMPO),1E-8)
     tempMPS=MPOMult%MPSLeftAt(3)

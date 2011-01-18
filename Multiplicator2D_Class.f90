@@ -35,7 +35,7 @@ module Multiplicator2D_Class
   implicit none
   !private
 
-  integer,parameter :: DefaultApproximationBond=20
+  integer,parameter :: DefaultApproximationBond=16
 
     type, public :: Multiplicator2D
         !private
@@ -51,6 +51,7 @@ module Multiplicator2D_Class
         type(PEPS),pointer :: PEPS_Below => null()
         type(PEPO),pointer :: PEPO_Center => null()
         logical :: IsPEPOUsed=.false.
+        logical,pointer :: int_HasPEPSChangedAt(:,:) => null()
     contains
         procedure,public :: LeftAt => Multiplicator2D_Left
         procedure,public :: RightAt => Multiplicator2D_Right
@@ -98,12 +99,14 @@ contains
 !##################################################################
 !##################################################################
 
-  function new_Multiplicator2D_WithPEPSandPEPO(PEPS_A,PEPS_B,PEPO_C) result (this)
-    class(PEPS),target,intent(INOUT) :: PEPS_A
-    class(PEPS),target,intent(INOUT),optional :: PEPS_B
+  function new_Multiplicator2D_WithPEPSandPEPO(PEPS_A,PEPS_B,PEPO_C,MatrixToTrackChanges) result (this)
+    class(PEPS),target,intent(IN) :: PEPS_A
+    class(PEPS),target,intent(IN),optional :: PEPS_B
     class(PEPO),target,intent(IN),optional :: PEPO_C
+    logical,target,intent(INOUT) :: MatrixToTrackChanges(:,:)
     type(Multiplicator2D) :: this
     integer :: Lengths(2),XLength,YLength
+
 
     if (PEPS_A%IsInitialized()) then
         Lengths=PEPS_A%GetSize()
@@ -141,9 +144,10 @@ contains
         endif
         this%Xlength = Xlength
         this%Ylength = Ylength
+        this%int_HasPEPSChangedAt => MatrixToTrackChanges
         this%Initialized = .true.
     else
-        call ThrowException('new_Multiplicator2d','PEPS not initialized',NoErrorCode,CriticalError)
+        call ThrowException('new_Multiplicator2d','PEPS_A not initialized',NoErrorCode,CriticalError)
     endif
   end function new_Multiplicator2D_WithPEPSandPEPO
 
@@ -161,8 +165,10 @@ contains
             if(this%MPS_Below(n)%IsInitialized()) error=this%MPS_Below(n)%Delete()
             if(this%RowsAsMPO(n)%IsInitialized()) error=this%RowsAsMPO(n)%Delete()
         enddo
-        call this%RowMultiplicator%Delete()
+        if(this%RowMultiplicator%IsInitialized()) call this%RowMultiplicator%Delete()
         deallocate(this%MPS_Above,this%MPS_Below, this%RowsAsMPO)
+        this%int_HasPEPSChangedAt=> null()
+
         this%Initialized=.false.
     else
         call ThrowException('Delete_Multiplicator','Multiplicator2D is already deleted',NoErrorCode,Warning)
@@ -304,14 +310,14 @@ contains
         class(Multiplicator2D),intent(INOUT),target  :: this
         integer,intent(IN) :: row
         type(MPS),pointer :: aRowAsMPSBelow
+        complex(8) :: normOfnewMPS
 
         if(this%Initialized) then
             if (.not. this%MPS_Below(row)%IsInitialized() ) then
                 call this%PrepareRowAsMPO(row)
                 this%MPS_Below(row) = this%LowerMPSAtRow(row-1) .applyMPOTo. this%RowsAsMPO(row)
-                call  this%MPS_Below(row)%Canonize()
-                this%LowerProductOfNorms=this%LowerProductOfNorms*this%MPS_Below(row)%GetNorm()
-                call this%MPS_Below(row)%SetNorm(ONE)
+                call  this%MPS_Below(row)%Canonize(normOfnewMPS)
+                this%LowerProductOfNorms=this%LowerProductOfNorms*normOfnewMPS
                 this%MPS_Below(row) = Approximate(this%MPS_Below(row), this%MaximumApproximationBond)
             endif
             aRowAsMPSBelow => this%MPS_Below(row)
@@ -327,14 +333,14 @@ contains
         class(Multiplicator2D),intent(INOUT),target  :: this
         integer,intent(IN) :: row
         type(MPS),pointer :: aRowAsMPSAbove
+        complex(8) :: normOfnewMPS
 
         if(this%Initialized) then
             if (.not. this%MPS_Above(row)%IsInitialized() ) then
                 call this%PrepareRowAsMPO(row)
                 this%MPS_Above(row) = this%RowsAsMPO(row) .applyMPOTo. this%UpperMPSAtRow(row+1)
-                call this%MPS_Above(row)%Canonize()
-                this%UpperProductOfNorms=this%UpperProductOfNorms*this%MPS_Above(row)%GetNorm()
-                call this%MPS_Above(row)%SetNorm(ONE)
+                call this%MPS_Above(row)%Canonize(normOfnewMPS)
+                this%UpperProductOfNorms=this%UpperProductOfNorms*normOfnewMPS
                 this%MPS_Above(row) = Approximate( this%MPS_Above(row), this%MaximumApproximationBond)
             endif
             aRowAsMPSAbove => this%MPS_Above(row)
@@ -371,18 +377,19 @@ contains
     function Overlap_PEPSAboveBelow(this) result(theOverlap)
         class(Multiplicator2D),intent(INOUT) :: this
         complex(8) :: theOverlap
-        type(MPS),pointer :: UpperMPS
+        type(MPS),pointer :: UpperMPS,LowerMPS
 
         if(this%Initialized) then
-            UpperMPS => Multiplicator2D_RowAsLowerMPS(this,1) !1=First row, forces computations of norms
-            theOverlap = this%UpperProductOfNorms * this%LowerProductOfNorms
+            UpperMPS => Multiplicator2D_RowAsUpperMPS(this,1)
+            LowerMPS => Multiplicator2D_RowAsLowerMPS(this,0)
+            theOverlap = overlap(UpperMPS,LowerMPS) * this%UpperProductOfNorms * this%LowerProductOfNorms
         else
             call ThrowException('Overlap_PEPSAboveBelow','Multiplicator not initialized',NoErrorCode,CriticalError)
         endif
 
     end function Overlap_PEPSAboveBelow
 
-!##################################################################gd2nv `q1    `
+!##################################################################    `
 
 !##################################################################
 !##################################################################
@@ -429,7 +436,7 @@ contains
      class(Multiplicator2D),intent(IN) :: this
      integer,intent(IN) :: row
 
-     hasThisRowChanged=any(this%PEPS_Above%HasTensorChangedAt(:,row)).or.any(this%PEPS_Below%HasTensorChangedAt(:,row))
+     hasThisRowChanged=any(this%int_HasPEPSChangedAt(:,row))
 
   end function HasARowOfANY_PEPSChanged
 
@@ -439,7 +446,7 @@ contains
      class(Multiplicator2D),intent(IN) :: this
      integer,intent(IN) :: col,row
 
-     hasThisTensorChanged=(this%PEPS_Above%HasTensorChangedAt(col,row)).or.(this%PEPS_Below%HasTensorChangedAt(col,row))
+     hasThisTensorChanged=this%int_HasPEPSChangedAt(col,row)
 
   end function HasATensorOfANY_PEPSChanged
 !#################################################################
@@ -448,12 +455,10 @@ contains
      class(Multiplicator2D),intent(INOUT) :: this
      integer,intent(IN) :: col,row
 
-     call this%PEPS_Above%CheckPointState(col,row)
-     call this%PEPS_Below%CheckPointState(col,row)
+     this%int_HasPEPSChangedAt(col,row)=.false.
 
   end subroutine CheckpointALLPEPS
 
 !#################################################################
-
 
 end module Multiplicator2D_Class

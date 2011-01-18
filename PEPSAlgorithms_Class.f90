@@ -1,3 +1,4 @@
+
 !!   Copyright 2010 Fernando M. Cucchietti
 !
 !    This file is part of ForMPS
@@ -35,10 +36,18 @@ module PEPSAlgorithms_Class
 
   implicit none
 
-    real(8) :: PSEUDOINVERSETOLERANCE = 1.0d-5
+    real(8) :: PSEUDOINVERSETOLERANCE = 1.0d-4
 
     interface Approximate
         module procedure Approximate_PEPS
+    end interface
+
+    interface Normalize
+        module procedure Normalize_PEPS
+    end interface
+
+    interface Overlap
+        module procedure Overlap_PEPS
     end interface
 
   contains
@@ -55,6 +64,7 @@ module PEPSAlgorithms_Class
     real(8) :: overlap
     integer :: siteX,siteY,sweep
     type(Tensor4) :: aTempTensor
+    logical,allocatable,target :: HasPEPSChangedAt(:,:)
 
     if(bigPEPS%IsInitialized()) then
 
@@ -64,11 +74,17 @@ module PEPSAlgorithms_Class
             smallPEPS = new_PEPS(bigPEPS)
             return
         else
-            smallPEPS= new_PEPS(PEPSSize(1),PEPSSize(2),PEPSSpin,newBondDimension)
+            call Normalize(bigPEPS)
+            smallPEPS = ReduceMAXPEPSBond(bigPEPS,newBondDimension) !new_PEPS(PEPSSize(1),PEPSSize(2),PEPSSpin,newBondDimension) !
+            call Normalize(smallPEPS)
+            !if( smallPEPS
         endif
 
-        smallMultiplicator = new_Multiplicator2D(smallPEPS)
-        bigMultiplicator = new_Multiplicator2D(bigPEPS,smallPEPS)
+        allocate(HasPEPSChangedAt(PEPSSize(1),PEPSSize(2)))
+        HasPEPSChangedAt=.true.
+
+        smallMultiplicator = new_Multiplicator2D(smallPEPS,MatrixToTrackChanges=HasPEPSChangedAt)
+        bigMultiplicator = new_Multiplicator2D(bigPEPS,smallPEPS,MatrixToTrackChanges=HasPEPSChangedAt)
 
         sweep=0
         !Start sweeping
@@ -78,32 +94,14 @@ module PEPSAlgorithms_Class
             !Sweep from 1,1 first to the right and then up
             do siteY=1,PEPSSize(2)
 	            do siteX=1,PEPSSize(1)
-	                print *,'Optimizing site ',siteX,',',siteY
 	                localTensor = smallPEPS%GetTensorAt(siteX,siteY)
 	                localPEPSDims = localTensor%GetDimensions()
-	                aTempTensor=smallMultiplicator%LeftAt(siteX-1,siteY)
-	                call aTempTensor%PrintDimensions('xxxxxxxx-------   0,1 dims LEFT small')
-	                aTempTensor=smallMultiplicator%RightAt(siteX+1,siteY)
-	                call aTempTensor%PrintDimensions('xxxxxxxx-------   2,1 dims RIGHT small')
-                    aTempTensor= smallMultiplicator%AboveAt(siteX,siteY+1)
-                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,2 dims ABOVE small')
-                    aTempTensor=smallMultiplicator%BelowAt(siteX,siteY-1)
-                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,0 dims BELOW small')
-                    aTempTensor=bigMultiplicator%LeftAt(siteX-1,siteY)
-                    call aTempTensor%PrintDimensions('xxxxxxxx-------   0,1 dims LEFT BIG')
-                    aTempTensor=bigMultiplicator%RightAt(siteX+1,siteY)
-                    call aTempTensor%PrintDimensions('xxxxxxxx-------   2,1 dims RIGHT BIG')
-                    aTempTensor=bigMultiplicator%AboveAt(siteX,siteY+1)
-                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,2 dims ABOVE BIG')
-                    aTempTensor=bigMultiplicator%BelowAt(siteX,siteY-1)
-                    call aTempTensor%PrintDimensions('xxxxxxxx-------   1,0 dims BELOW BIG')
-
                     localTensor = ComputePEPSOptimum ( smallMultiplicator%LeftAt(siteX-1,siteY), smallMultiplicator%RightAt(siteX+1,siteY), &
                         & smallMultiplicator%AboveAt(siteX,siteY+1), smallMultiplicator%BelowAt(siteX,siteY-1), &
                         & bigMultiplicator%LeftAt(siteX-1,siteY), bigMultiplicator%RightAt(siteX+1,siteY), &
                         & bigMultiplicator%AboveAt(siteX,siteY+1), bigMultiplicator%BelowAt(siteX,siteY-1), &
                         & bigPEPS%GetTensorAt(siteX,siteY), localPEPSDims )
-                        call smallPEPS%SetTensorAt(siteX,siteY,localTensor)
+                        call smallPEPS%SetTensorAt(siteX,siteY,localTensor)  ; HasPEPSChangedAt(siteX,siteY)=.true.
                 enddo
                 call smallMultiplicator%Reset(RIGHT)
                 call bigMultiplicator%Reset(RIGHT)
@@ -121,7 +119,7 @@ module PEPSAlgorithms_Class
                         & bigMultiplicator%LeftAt(siteX-1,siteY), bigMultiplicator%RightAt(siteX+1,siteY), &
                         & bigMultiplicator%AboveAt(siteX,siteY+1), bigMultiplicator%BelowAt(siteX,siteY-1), &
                         & bigPEPS%GetTensorAt(siteX,siteY) , localPEPSDims)
-                        call smallPEPS%SetTensorAt(siteX,siteY,localTensor)
+                        call smallPEPS%SetTensorAt(siteX,siteY,localTensor) ; HasPEPSChangedAt(siteX,siteY)=.true.
                 enddo
                 call smallMultiplicator%Reset(LEFT)
                 call bigMultiplicator%Reset(LEFT)
@@ -131,7 +129,6 @@ module PEPSAlgorithms_Class
             call bigMultiplicator%Reset(DOWN)
             !overlap=Abs(bigMultiplicator%FullContraction())**2
         enddo
-        print *,'---------------- Out of big loop ------------'
         call smallMultiplicator%Delete()
         call bigMultiplicator%Delete()
         if (present(returnOverlap)) then
@@ -139,7 +136,7 @@ module PEPSAlgorithms_Class
         endif
         If (Verbose) print *,'PEPS-Approximate/Total sweeps performed: ',sweep
     else
-        call ThrowException('Overlap algorithm','PEPS not initialized',NoErrorCode,CriticalError)
+        call ThrowException('PEPS-approximate algorithm','PEPS not initialized',NoErrorCode,CriticalError)
     endif
 
   end function Approximate_PEPS
@@ -161,37 +158,62 @@ module PEPSAlgorithms_Class
 
     print *,'About to contract 4 environments'
     smallMatrix=TensorTranspose( TensorTrace(  &
-                & ((smallE_left.xplus.smallE_Up).xplus.smallE_Right).xplus.smallE_Down, &
+                & ((smallE_left.xplus.smallE_Up).xplus.smallE_Right).xplus. TensorTranspose(smallE_Down, [2,1,3,4] ), &
                 &                           THIRDANDFOURTH )      )
 
     call smallMatrix%PrintDimensions('Small environment dims:')
 
-    aTempMatrix=aPEPSTensor%CompactBonds()
-    call aTempMatrix%PrintDimensions('PEPS Compacted dimensions:')
-
-    aTempMatrix=TensorTranspose( TensorTrace( &
-                & ((bigE_left.xplus.bigE_Up).xplus.bigE_Right).xplus.bigE_Down, &
-                                            THIRDANDFOURTH )      )
-    call aTempMatrix%PrintDimensions('Big Environment dimensions:')
     bigMatrixTimesVector=TensorTranspose( TensorTrace( &
-                & ((bigE_left.xplus.bigE_Up).xplus.bigE_Right).xplus.bigE_Down, &
+                & ((bigE_left.xplus.bigE_Up).xplus.bigE_Right).xplus. TensorTranspose( bigE_Down, [2,1,3,4] ), &
                                             THIRDANDFOURTH )      ) .x. aPEPSTensor%CompactBonds()
 
     print *,'Environments computed'
 
-    call bigMatrixTimesVector%PrintDimensions('Big environment dims:')
+!    call bigMatrixTimesVector%PrintDimensions('Big environment dims:')
 
-    call smallMatrix%Print('Small matrix data:')
-    call bigMatrixTimesVector%Print('Big matrix*vector data:')
+!    call smallMatrix%Print('Small matrix data:')
+!    call bigMatrixTimesVector%Print('Big matrix*vector data:')
 
     newTensor= new_PEPSTensor(  &
        & SplitIndexOf(   &
        & SolveLinearProblem(smallMatrix, bigMatrixTimesVector, PSEUDOINVERSETOLERANCE ), newDims )  &
        &                      )
-
+!        call newTensor%Print('New Tensor data:')
   end function ComputePEPSOptimum
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+  function Overlap_PEPS(onePEPS, anotherPEPS) result(theOverlap)
+      class(PEPS),intent(INOUT) :: onePEPS
+      class(PEPS),intent(INOUT),optional :: anotherPEPS
+      type(Multiplicator2D) :: theEnvironment
+      complex(8) :: theOverlap
+      integer :: dims(2)
+      logical,allocatable,target :: HasPEPSChangedAt(:,:)
+
+      dims=onePEPS%GetSize()
+      allocate(HasPEPSChangedAt(dims(1),dims(2)))
+      HasPEPSChangedAt=.true.
+      if (present(anotherPEPS)) then
+          theEnvironment=new_Multiplicator2D(onePEPS, anotherPEPS,MatrixToTrackChanges=HasPEPSChangedAt)
+      else
+          theEnvironment=new_Multiplicator2D(onePEPS,MatrixToTrackChanges=HasPEPSChangedAt)
+      endif
+      theOverlap = Overlap_PEPSAboveBelow(theEnvironment)
+      call theEnvironment%Delete()
+
+  end function Overlap_PEPS
+
+  subroutine Normalize_PEPS(aPEPS)
+      class(PEPS),intent(INOUT) :: aPEPS
+      real(8) :: theNorm
+      integer :: TotalNumberOfTensors
+
+      theNorm = abs(Overlap_PEPS(aPEPS))   !!!Notice I should not use **2
+      TotalNumberOfTensors=product(aPEPS%GetSize())
+      call aPEPS%ScaleBy(ONE/(theNorm**(0.5d0/TotalNumberOfTensors)))
+
+  end subroutine Normalize_PEPS
 
 end module PEPSAlgorithms_Class

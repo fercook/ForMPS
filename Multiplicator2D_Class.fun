@@ -31,12 +31,15 @@ end teardown
 test up_down_boundaries_of_mult
   type(PEPS) :: aPEPS
   type(Multiplicator2D) :: theEnvironment
-  integer :: length=4,width=4,spin=2,bond=3
+  integer,parameter :: length=4,width=4,spin=2,bond=3
   type(Tensor4) :: theTemplate
   type(Tensor4) :: aTensor
+  logical :: matrixOfChanges(0:width+1,0:length+1)
 
+  matrixOfChanges=.true.
   aPEPS=new_PEPS(width,length,spin,bond)
-  theEnvironment=new_Multiplicator2D(aPEPS)
+  theEnvironment=new_Multiplicator2D(aPEPS,MatrixToTrackChanges=matrixOfChanges)
+  call theEnvironment%SetMaxApproxBond(20)
   theTemplate=new_Tensor(integerONE,integerONE,integerONE,integerONE,ONE)
   aTensor=theEnvironment%BelowAt(2,0)
   assert_equal_within(aTensor.absdiff.theTemplate,0.0d0,1.0d-8)
@@ -49,39 +52,52 @@ end test
 test SetCurrentRow
   type(PEPS) :: aPEPS
   type(Multiplicator2D) :: theEnvironment
-  integer :: length=4,width=4,spin=2,bond=3
+  integer,parameter :: length=4,width=4,spin=2,bond=3
   type(MPOTensor) :: aTensor,correctTensor
   type(PEPSTensor) :: aPEPSt
+  integer :: dims(4),newdims(4)
+  logical,target :: matrixOfChanges(0:width+1,0:length+1)
 
+  matrixOfChanges = .true.
   aPEPS=new_PEPS(width,length,spin,bond)
-  theEnvironment=new_Multiplicator2D(aPEPS)
+  theEnvironment=new_Multiplicator2D(aPEPS,MatrixToTrackChanges=matrixOfChanges)
+  call theEnvironment%SetMaxApproxBond(20)
   call theEnvironment%PrepareRowAsMPO(1)
   call theEnvironment%PrepareRowAsMPO(2)
   aTensor=theEnvironment%RowsAsMPO(1)%GetTensorAt(1)
-  assert_true(aTensor%GetDimensions().equalvector.[1,bond**2,bond**2,1])
+  dims=[1,bond**2,bond**2,1]
+  newdims=aTensor%GetDimensions()
+  assert_true(newdims.equalvector.dims)
   aTensor=theEnvironment%RowsAsMPO(2)%GetTensorAt(3)
-  assert_true(aTensor%GetDimensions().equalvector.[bond**2,bond**2,bond**2,bond**2])
-
+  dims=[bond**2,bond**2,bond**2,bond**2]
+  newdims=aTensor%GetDimensions()
+  assert_true(newdims.equalvector.dims)
+  print *,'Set row test finished'
 end test
 
 
 test UpperlowerMPSCreation
   type(PEPS) :: aPEPS
   type(Multiplicator2D) :: theEnvironment
-  integer :: length=4,width=4,spin=2,bond=2
+  integer,parameter :: length=4,width=4,spin=2,bond=2
   type(MPO) :: anMPO
+  type(MPOTensor) :: anMPOTensor
   type(MPS) :: anMPS,approxMPS
   type(MPSTensor) :: oneTensor,anotherTensor
+  logical,target :: matrixOfChanges(0:width+1,0:length+1)
 
+  matrixOfChanges=.true.
   aPEPS=new_PEPS(width,length,spin,bond)
-  theEnvironment=new_Multiplicator2D(aPEPS)
+  theEnvironment=new_Multiplicator2D(aPEPS,MatrixToTrackChanges=matrixOfChanges)
+  call theEnvironment%SetMaxApproxBond(20)
 
   anMPS=theEnvironment%MPS_Above(length+1)
   call theEnvironment%PrepareRowAsMPO(length)
-  anMPO=theEnvironment%RowsAsMPO(length)
+  anMPO=new_MPO(length)
+  anMPO=new_MPO(theEnvironment%RowsAsMPO(length))
+
   anMPS=anMPO.ApplyMPOTo.anMPS
   call anMPS%Canonize()
-  call anMPS%SetNorm(ONE)
   approxMPS=Multiplicator2D_RowAsUpperMPS(theEnvironment,length)
   oneTensor=anMPS%GetTensorAt(2)
   anotherTensor=approxMPS%GetTensorAt(2)
@@ -92,7 +108,6 @@ test UpperlowerMPSCreation
   anMPO=theEnvironment%RowsAsMPO(length-1)
   anMPS=anMPO.ApplyMPOTo.anMPS
   call anMPS%Canonize()
-  call anMPS%SetNorm(ONE)
   approxMPS=Multiplicator2D_RowAsUpperMPS(theEnvironment,length-1)
   oneTensor=anMPS%GetTensorAt(2)
   anotherTensor=approxMPS%GetTensorAt(2)
@@ -103,7 +118,6 @@ test UpperlowerMPSCreation
   anMPO=theEnvironment%RowsAsMPO(1)
   anMPS=anMPS.ApplyMPOTo.anMPO
   call anMPS%Canonize()
-  call anMPS%SetNorm(ONE)
   approxMPS=Multiplicator2D_RowAsLowerMPS(theEnvironment,1)
   oneTensor=anMPS%GetTensorAt(2)
   anotherTensor=approxMPS%GetTensorAt(2)
@@ -116,15 +130,19 @@ end test
 test lateralEnvironments     !DIMENSIONAL ONLY TESTING OF LEFT AND RIGHT
   type(PEPS) :: aPEPS
   type(Multiplicator2D) :: theEnvironment
-  integer :: length=4,width=4,spin=2,bond=2
+  integer,parameter :: length=4,width=4,spin=2,bond=2
   type(Tensor4) :: aTensor
   type(MPO) :: anMPO
   type(MPS) :: aboveMPS,belowMPS
   type(MPSTensor) :: aboveMPSTensor,belowMPSTensor
   type(MPOTensor) :: anMPOTensor
+  integer :: dims(4),newdims(4),dims3(3),newdims3(3)
+  logical,target :: matrixOfChanges(0:width+1,0:length+1)
 
+  matrixOfChanges=.true.
   aPEPS=new_PEPS(width,length,spin,bond)
-  theEnvironment=new_Multiplicator2D(aPEPS)
+  theEnvironment=new_Multiplicator2D(aPEPS,MatrixToTrackChanges=matrixOfChanges)
+  call theEnvironment%SetMaxApproxBond(20)
 
   call theEnvironment%PrepareRowAsMPO(1)
   anMPO=theEnvironment%RowsAsMPO(1)
@@ -135,37 +153,60 @@ test lateralEnvironments     !DIMENSIONAL ONLY TESTING OF LEFT AND RIGHT
   anMPOTensor = anMPO%GetTensorAt(1)
   aboveMPSTensor = aboveMPS%GetTensorAt(1)
   belowMPSTensor = belowMPS%GetTensorAt(1)
-  assert_true(anMPOTensor%GetDimensions().equalvector.[1,bond**2,bond**2,1])
-  assert_true(aboveMPSTensor%GetDimensions().equalvector.[1,bond**2,bond**2])
-  assert_true(belowMPSTensor%GetDimensions().equalvector.[1,1,1])
+  dims=[1,bond**2,bond**2,1]
+  newdims=anMPOTensor%GetDimensions()
+  assert_true(dims.equalvector.newdims)
+  dims3=[1,bond**2,bond**2]
+  newdims3=aboveMPSTensor%GetDimensions()
+  assert_true(dims3.equalvector.newdims3)
+  dims3=[1,1,1]
+  newdims3=belowMPSTensor%GetDimensions()
+  assert_true(dims3.equalvector.newdims3)
 
   aTensor= theEnvironment%LeftAt(2,3)
-  assert_true(aTensor%GetDimensions().equalvector.[bond**4,bond**2,bond,bond])
+  dims=[bond**4,bond**2,bond,bond]
+  newdims=aTensor%GetDimensions()
+  assert_true(dims.equalvector.newdims)
   aTensor= theEnvironment%RightAt(3,3)
-  assert_true(aTensor%GetDimensions().equalvector.[bond**2,bond**4,bond,bond])
+  dims=[bond**2,bond**4,bond,bond]
+  newdims=aTensor%GetDimensions()
+  assert_true(newdims.equalvector.dims)
 
   aTensor= theEnvironment%LeftAt(2,2)
-  assert_true(aTensor%GetDimensions().equalvector.[bond**2,bond**4,bond,bond])
+  dims=[bond**2,bond**4,bond,bond]
+  newdims=aTensor%GetDimensions()
+  assert_true(newdims.equalvector.dims)
   aTensor= theEnvironment%RightAt(3,2)
-  assert_true(aTensor%GetDimensions().equalvector.[bond**4,bond**2,bond,bond])
+  dims=[bond**4,bond**2,bond,bond]
+  newdims=aTensor%GetDimensions()
+  assert_true(newdims.equalvector.dims)
 
   aTensor= theEnvironment%LeftAt(2,1)
-  assert_true(aTensor%GetDimensions().equalvector.[1,bond**4,bond,bond])
+  dims=[1,bond**4,bond,bond]
+  newdims=aTensor%GetDimensions()
+  assert_true(newdims.equalvector.dims)
   aTensor= theEnvironment%RightAt(3,1)
-  assert_true(aTensor%GetDimensions().equalvector.[bond**4,1,bond,bond])
+  dims=[bond**4,1,bond,bond]
+  newdims=aTensor%GetDimensions()
+  assert_true(newdims.equalvector.dims)
 
 end test
 
 test Multip_With2_PEPS
   type(PEPS) :: aPEPS, aBigPEPS
-  integer :: height=4,width=4,spin=2,bondSmall=2,bondBig=3, error
+  integer,parameter :: height=4,width=4,spin=2,bondSmall=2,bondBig=3
+  integer:: error
   real(8) :: overlap12
   type(Multiplicator2D) :: theEnvironment
   type(Tensor4) :: aTensor
+  integer :: dims(4),newdims(4)
+  logical :: matrixOfChanges(0:width+1,0:height+1)
 
   aPEPS=new_PEPS(width,height,spin,bondSmall)
   aBigPEPS=new_PEPS(width,height,spin,bondBig)
-  theEnvironment = new_Multiplicator2D(aBigPEPS,aPEPS)
+  matrixOfChanges=.true.
+  theEnvironment = new_Multiplicator2D(aBigPEPS,aPEPS,MatrixToTrackChanges=matrixOfChanges)
+  call theEnvironment%SetMaxApproxBond(20)
 
   aTensor= theEnvironment%LeftAt(1,1)
   call aTensor%PrintDimensions('1-1 Left Dimensions')
@@ -175,13 +216,17 @@ test Multip_With2_PEPS
   call aTensor%PrintDimensions('1-0 Below Dimensions')
   aTensor= theEnvironment%RightAt(2,1)
   call aTensor%PrintDimensions('2-1 Right Dimensions')
-
+!
   aTensor= theEnvironment%LeftAt(2,2)
   call aTensor%PrintDimensions('Left Dimensions')
-  assert_true(aTensor%GetDimensions().equalvector.[bondSMall*BondBig,min((bondSMall*BondBig)**2,theEnvironment%GetMaxApproxBond()),bondBig,bondSmall])
+  dims=[bondSMall*BondBig,min((bondSMall*BondBig)**2,theEnvironment%GetMaxApproxBond()),bondBig,bondSmall]
+  newdims=aTensor%GetDimensions()
+  assert_true(dims.equalvector.newdims)
   aTensor= theEnvironment%RightAt(3,2)
   call aTensor%PrintDimensions('Right Dimensions')
-  assert_true(aTensor%GetDimensions().equalvector.[min((bondSMall*BondBig)**2,theEnvironment%GetMaxApproxBond()),bondSMall*BondBig,bondBig,bondSmall])
+  dims=[min((bondSMall*BondBig)**2,theEnvironment%GetMaxApproxBond()),bondSMall*BondBig,bondBig,bondSmall]
+  newdims=aTensor%GetDimensions()
+  assert_true(dims.equalvector.newdims)
 
   assert_false(WasThereError())
 

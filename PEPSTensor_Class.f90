@@ -31,7 +31,6 @@ module PEPSTensor_Class
 !###############################
   type,public,extends(Tensor5) :: PEPSTensor
      private
-     integer :: spin,DLeft,DRight,DUp,DDown
    contains
      procedure,public :: getDRight => DRight_PEPSTensor
      procedure,public :: getDLeft => DLeft_PEPSTensor
@@ -41,8 +40,10 @@ module PEPSTensor_Class
      procedure,public :: getSpin => Spin_PEPSTensor
      procedure,public :: PrintDimensions => Print_PEPSTensor_Dimensions
      procedure,public :: ApplyOperator => Apply_Operator_To_PEPS_Spin_Dimension
+     procedure,public :: ApplyMatrixToBond => Apply_Matrix_To_PEPS
      procedure,public :: Collapse => Collapse_PEPS_Into_Tensor4
      procedure,public :: CompactBonds => CompactPEPSBondDimensions
+     procedure,public :: HOSVD => HighOrderSVDofPEPS
   end type PEPSTensor
 
 !###############################
@@ -58,12 +59,12 @@ module PEPSTensor_Class
      module procedure new_PEPSTensor_fromAssignment
   end interface
 
-!  interface operator (.times.)
-!     module procedure PEPSTensor_times_matrix, matrix_times_PEPSTensor
-!  end interface
-
   interface operator (.apply.)
      module procedure Apply_Operator_To_PEPS_Spin_Dimension
+  end interface
+
+  interface ApplyMatrixToBond
+     module procedure Apply_Matrix_To_PEPS
   end interface
 
   interface CollapsePEPS
@@ -88,12 +89,6 @@ module PEPSTensor_Class
      type(PEPSTensor) :: this
 
      this=new_Tensor(DLeft,DRight,Dup,DDown,spin)
-     !initialize internal variables
-     this%spin=spin
-     this%DLeft=DLeft
-     this%DRight=DRight
-     this%DUp=DUp
-     this%DDown=DDown
 
    end function new_PEPSTensor_Random
 
@@ -113,12 +108,6 @@ module PEPSTensor_Class
         JoinedData(:,:,:,:,2)=originalDataDOWN
 
         this=new_Tensor(JoinedData)
-        !initialize internal variables
-        this%spin=2
-        this%DLeft=upDims(1)
-        this%DRight=upDims(2)
-        this%DUp=upDims(3)
-        this%DDown=upDims(4)
 
       else
         call ThrowException('new_PEPSTensor_with_SplitData','Up and down data have different size',upDims(1)-downDims(2),CriticalError)
@@ -132,12 +121,6 @@ module PEPSTensor_Class
      type(PEPSTensor) :: this
 
      this=new_Tensor(DLeft,DRight,DUp,DDown,spin,constant)
-     !initialize internal variables
-     this%spin=spin
-     this%DLeft=DLeft
-     this%DRight=DRight
-     this%DUp=DUp
-     this%DDown=DDown
 
    end function new_PEPSTensor_withConstant
 
@@ -147,12 +130,6 @@ module PEPSTensor_Class
      type(PEPSTensor) this
 
      this=new_Tensor(tensor)
-     !initialize internal variables
-     this%spin=tensor%spin
-     this%DLeft=tensor%DLeft
-     this%DRight=tensor%DRight
-     this%DUp=tensor%DUp
-     this%DDown=tensor%DDown
 
    end function new_PEPSTensor_fromPEPSTensor
 
@@ -163,29 +140,14 @@ module PEPSTensor_Class
 
      lhs=new_Tensor(rhs)
 
-     lhs%spin=rhs%spin
-     lhs%DLeft=rhs%DLeft
-     lhs%DRight=rhs%DRight
-     lhs%DUp=rhs%DUp
-     lhs%DDown=rhs%DDown
-
    end subroutine new_PEPSTensor_fromAssignment
 
 !##################################################################
    function new_PEPSTensor_fromTensor5 (tensor) result (this)
      type(Tensor5),intent(in) :: tensor
      type(PEPSTensor) this
-     integer :: dims(5)
 
      this=new_Tensor(tensor)
-     dims=tensor%GetDimensions()
-     !initialize internal variables
-     this%spin=dims(5)
-     this%DLeft=dims(1)
-     this%DRight=dims(2)
-     this%DUp=dims(3)
-     this%DDown=dims(4)
-
 
    end function new_PEPSTensor_fromTensor5
 
@@ -202,13 +164,6 @@ module PEPSTensor_Class
      newDims(whichDimIsDown)=4
      newDims(whichDimIsSpin)=5
      this=TensorTranspose(tensor,newDims)
-     newDims=tensor%GetDimensions()
-     !initialize internal variables
-     this%spin=newDims(5)
-     this%DLeft=newDims(1)
-     this%DRight=newDims(2)
-     this%DUp=newDims(3)
-     this%DDown=newDims(4)
 
    end function new_PEPSTensor_fromTensor5_Transposed
 
@@ -219,12 +174,14 @@ module PEPSTensor_Class
 !##################################################################
    integer function spin_PEPSTensor(this) result(s)
      class(PEPSTensor),intent(IN) :: this
+     integer :: dims(5)
 
     if(.not.(this%IsInitialized())) then
         call ThrowException('spin_PEPSTensor','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        s=this%spin
+        dims=this%GetDimensions()
+        s=dims(5)
      endif
 
    end function spin_PEPSTensor
@@ -232,24 +189,28 @@ module PEPSTensor_Class
 
    integer function DLeft_PEPSTensor(this) result(DL)
      class(PEPSTensor),intent(IN) :: this
+     integer :: dims(5)
 
      if(.not.(this%IsInitialized())) then
         call ThrowException('DLeft_PEPS','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        DL=this%DLeft
+        dims=this%GetDimensions()
+        DL=dims(1)
      endif
 
    end function DLeft_PEPSTensor
 !##################################################################
    integer function DRight_PEPSTensor(this) result(DR)
      class(PEPSTensor),intent(IN) :: this
+     integer :: dims(5)
 
      if(.not.(this%IsInitialized())) then
         call ThrowException('DRight_PEPS','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        DR=this%DRight
+        dims=this%GetDimensions()
+        DR=dims(2)
      endif
 
    end function DRight_PEPSTensor
@@ -258,12 +219,14 @@ module PEPSTensor_Class
 
    integer function DUp_PEPSTensor(this) result(DU)
      class(PEPSTensor),intent(IN) :: this
+     integer :: dims(5)
 
      if(.not.(this%IsInitialized())) then
         call ThrowException('DUp_PEPS','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        DU=this%DUp
+        dims=this%GetDimensions()
+        DU=dims(3)
      endif
 
    end function DUp_PEPSTensor
@@ -271,25 +234,29 @@ module PEPSTensor_Class
 !##################################################################
    integer function DDown_PEPSTensor(this) result(DD)
      class(PEPSTensor),intent(IN) :: this
+     integer :: dims(5)
 
      if(.not.(this%IsInitialized())) then
         call ThrowException('DDown_PEPS','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        DD=this%DDown
+        dims=this%GetDimensions()
+        DD=dims(4)
      endif
 
    end function DDown_PEPSTensor
 !##################################################################
 
    integer function Get_MaxBondDimensionPEPSTensor(this) result(maxDimension)
-     class(PEPSTensor),intent(IN) :: this   !!<<TYPE>>!!
+     class(PEPSTensor),intent(IN) :: this
+     integer :: dims(5)
 
      if(.not.(this%IsInitialized())) then
         call ThrowException('Get_MaxBondDimensionPEPSTensor','Tensor not initialized',NoErrorCode,Warning)
         return
      else
-        maxDimension=max(this%DRight,this%DLeft,this%DUp,this%DDown)
+        dims=this%GetDimensions()
+        maxDimension=maxval(dims)
      endif
 
    end function Get_MaxBondDimensionPEPSTensor
@@ -325,14 +292,8 @@ module PEPSTensor_Class
 
      opDims=anOperator%GetDimensions()
      if(this%IsInitialized()) then
-        if(opDims(1).eq.this%spin.and.opDims(2).eq.this%spin) then
+        if(opDims(1).eq.this%getSpin().and.opDims(2).eq.this%getSpin()) then
            aTensor = new_Tensor(this*anOperator)
-           tensorDims=aTensor%GetDimensions()
-           aTensor%spin=tensorDims(5)
-           aTensor%DLeft=tensorDims(1)
-           aTensor%DRight=tensorDims(2)
-           aTensor%DUp=tensorDims(3)
-           aTensor%DDown=tensorDims(4)
         else
            call ThrowException('Apply_Operator_To_Spin_Dimension','Operator is not of the right size',opDims(1)-opDims(2),CriticalError)
         endif
@@ -341,6 +302,33 @@ module PEPSTensor_Class
      endif
 
    end function Apply_Operator_To_PEPS_Spin_Dimension
+
+
+
+   function Apply_Matrix_To_PEPS(this,aMatrix,whichDimension) result(aTensor)
+     class(PEPSTensor),intent(IN) :: this
+     type(PEPSTensor) :: aTensor
+     class(Tensor2),intent(IN) :: aMatrix
+     integer :: whichDimension
+
+     if(this%IsInitialized()) then
+        select case(whichDimension)
+            case(LEFT)
+                aTensor=nModeProduct(aMatrix,this,FIRST)
+            case(RIGHT)
+                aTensor=nModeProduct(aMatrix,this,SECOND)
+            case(UP)
+                aTensor=nModeProduct(aMatrix,this,THIRD)
+            case(DOWN)
+                aTensor=nModeProduct(aMatrix,this,FOURTH)
+            case default
+                call ThrowException('Apply_Matrix_To_PEPS','dim must be LEFT/RIGHT/UP/DOWN',whichDimension,CriticalError)
+        end select
+     else
+        call ThrowException('Apply_Matrix_To_PEPS','Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+
+   end function Apply_Matrix_To_PEPS
 
 
 !##################################################################
@@ -398,6 +386,31 @@ module PEPSTensor_Class
     end function CompactPEPSBondDimensions
 
 !##################################################################
+
+    subroutine HighOrderSVDofPEPS(aPEPS,CoreTensor,UMatrices,newBondDim)
+        class(PEPSTensor),intent(IN) :: aPEPS
+        integer,intent(IN),optional :: newBondDim
+        type(Tensor2) ,intent(OUT):: UMatrices(LEFT:DOWN)
+        type(Tensor2) :: U(5)
+        type(PEPSTensor), intent(OUT) :: CoreTensor
+        type(PEPSTensor) :: TempTensor
+        type(Tensor2) :: SpinUMatrix
+
+        if(aPEPS%Isinitialized()) then
+            if (present(newBondDim) ) then
+                call SingularValueDecomposition(aPEPS,TempTensor,U, newBondDim)
+            else
+                call SingularValueDecomposition(aPEPS,TempTensor,U)
+            endif
+            !The spin dimension is not decomposed and returned as is
+            CoreTensor=nModeProduct(U(5),TempTensor,FIFTH)
+            !Return order is Left-Right-Up-Down
+            UMatrices=U(1:4)
+        else
+            call ThrowException('HighOrderSVDofPEPS','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end subroutine HighOrderSVDofPEPS
 
 
 end module PEPSTensor_Class

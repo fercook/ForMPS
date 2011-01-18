@@ -30,12 +30,13 @@ end teardown
 test PEPO_creation_deletion
    type(PEPO) :: aPEPO
    type(PEPOTensor) :: aTensor
-   integer :: dims(6)
+   integer :: dims(6),RIGHTdims(6)
 
     aPEPO=new_PEPO(4,4,2,4)
     aTensor=GetPEPOTensorAtSite(aPEPO,2,4)
     dims=aTensor%GetDimensions()
-    assert_true(dims.equalvector.[4,4,1,4,2,2])
+    RIGHTdims=[4,4,1,4,2,2]
+    assert_true(dims.equalvector.RIGHTdims)
     assert_false(WasThereError())
     Print *,'PEPO_creation_deletion'
     assert_equal(aPEPO%delete(),Normal)

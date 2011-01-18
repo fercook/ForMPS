@@ -42,8 +42,7 @@ module MPSAlgorithms_Class
 
     if(mps1%IsInitialized().and.mps2%IsInitialized()) then
         aMultiplicator = new_Multiplicator(mps1,mps2)
-        Overlap=(LeftAtSite(aMultiplicator,0)).xx.(RightAtSite(aMultiplicator,1))
-        Overlap=Overlap*(mps1%GetNorm())*(mps2%GetNorm())
+        Overlap=TensorTrace( (LeftAtSite(aMultiplicator,0))*(RightAtSite(aMultiplicator,1)) )
     else
         call ThrowException('Overlap algorithm','MPS not initialized',NoErrorCode,CriticalError)
     endif
@@ -81,7 +80,7 @@ module MPSAlgorithms_Class
 
         smallMultiplicator = new_Multiplicator(smallMPS)
         bigMultiplicator = new_Multiplicator(bigMPS,smallMPS)
-        overlap=abs((LeftAtSite(bigMultiplicator,0)).xx.(RightAtSite(bigMultiplicator,1)))**2
+        overlap=abs(TensorTrace( (LeftAtSite(bigMultiplicator,0))*(RightAtSite(bigMultiplicator,1)) ) )**2
 
         sweep=0
         !Start sweeping
@@ -106,14 +105,13 @@ module MPSAlgorithms_Class
             enddo
             call smallMultiplicator%Reset(LEFT)
             call bigMultiplicator%Reset(LEFT)
-            overlap=abs((LeftAtSite(bigMultiplicator,0)).xx.(RightAtSite(bigMultiplicator,1)))**2
+            overlap=abs(TensorTrace( (LeftAtSite(bigMultiplicator,0))*(RightAtSite(bigMultiplicator,1)) ) )**2
         enddo
         call smallMultiplicator%Delete()
         call bigMultiplicator%Delete()
         if (present(returnOverlap)) then
             returnOverlap=overlap
         endif
-        If (Verbose) print *,'Total sweeps performed: ',sweep
     else
         call ThrowException('Overlap algorithm','MPS not initialized',NoErrorCode,CriticalError)
     endif

@@ -39,6 +39,7 @@ module Multiplicator_Class
         type(MPS),pointer :: MPS_Above => null()
         type(MPS),pointer :: MPS_Below => null()
     contains
+        procedure,public :: IsInitialized => Is_Multiplicator_init
         procedure,public :: LeftAt => Multiplicator_Left
         procedure,public :: RightAt => Multiplicator_Right
         procedure,public :: Reset => Reset_Multiplicator
@@ -238,6 +239,13 @@ contains
             call ThrowException('new_Multiplicator_two_MPS','MPS not initialized',NoErrorCode,CriticalError)
         endif
     end function Multiplicator_Right
+
+
+
+    logical function Is_Multiplicator_init(this) result(AmIInit)
+        class(Multiplicator),intent(IN) :: this
+        AmIInit=this%Initialized
+    end function
 
 !##################################################################
 !##################################################################
