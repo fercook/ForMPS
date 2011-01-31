@@ -66,8 +66,9 @@ Module PEPO_Class
   function new_PEPO_Random(Xlength,YLength,spin,bond) result (this)
     integer,intent(IN) :: Xlength,YLength,bond,spin
     type(PEPO) :: this
-    integer :: n,m
+    integer :: n,m,error
 
+    if (this%Initialized) error=this%delete()
     allocate(this%TensorCollection(0:Xlength+1,0:Ylength+1))
     Allocate(this%BondList(0:XLength+1,0:YLength+1,LEFT:DOWN) )
     !Outside of boundary terms are unit tensors
@@ -193,6 +194,7 @@ Module PEPO_Class
             endif
         enddo
      enddo
+     deallocate(this%TensorCollection)
      this%Xlength=0
      this%Ylength=0
      deallocate(this%BondList)

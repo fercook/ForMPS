@@ -37,6 +37,7 @@ OBJS = $(SOURCES:.f90=.o)
 TESTED = Tensor MPSTensor MPOTensor MPS MPO Multiplicator PEPSTensor PEPOTensor PEPS PEPO Multiplicator2D MPSAlgorithms PEPSAlgorithms
 
 all: fullmake
+ising: IsingTest
 obj: object
 exec: executable
 test: $(TESTED) 
@@ -55,6 +56,10 @@ fullmake: $(OBJS) main.o
 
 install:
 	cp  $(DIR)
+
+IsingTest: $(OBJS) Ising_helper.f90 Ising_tester.f90
+	$(FCOMP) $(FLAGS) $(DEBUGFLAG) -c Ising_helper.f90
+	$(FCOMP) $(FLAGS) $(DEBUGFLAG) $(OBJS) Ising_helper.o Ising_tester.f90 ${LINKFLAGS} -o IsingTest
 
 clean:
 	@ ${RM} -rf *.o *.mod $(BINARIES) *.gcov *.gcda *.gcno *.dyn profiles/*

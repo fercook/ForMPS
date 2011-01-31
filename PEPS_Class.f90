@@ -90,7 +90,9 @@ Module PEPS_Class
   function new_PEPS_Random(XLength,YLength,spin,bond) result (this)
     integer,intent(IN) :: XLength,YLength,bond,spin
     type(PEPS) :: this
-    integer :: n,m
+    integer :: n,m,error
+
+    if (this%Initialized) error=this%delete()
 
     allocate(this%TensorCollection(0:XLength+1,0:YLength+1))
 

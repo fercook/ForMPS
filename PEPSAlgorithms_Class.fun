@@ -96,23 +96,9 @@ test Progressive_truncation
 
 end test
 
-!test  ApproximationAlgorithm
-!  type(PEPS) :: aPEPS, aBigPEPS
-!  integer :: length=4,width=4,spin=2,bondSmall=2,bondBig=3, error
-!  real(8) :: overlap12
-!
-!  aBigPEPS=new_PEPS(width,length,spin,bondBig)
-!  call Normalize(aBigPEPS)
-!
-!  print *,'About to approximate ---------'
-!  aPEPS=Approximate(aBigPEPS,bondSmall,overlap12)
-!  print *, 'Approximation overlaps to :', overlap12
-!  assert_false(abs(overlap12)**2.eq.1.0d0)
-!
-!  error= aPEPS%Delete()
-!  error= aBigPEPS%Delete()
-!  assert_false(WasThereError())
-!
-!end test
+
+test ExpectationValueHamiltonian
+
+end test
 
 end test_suite
