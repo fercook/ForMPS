@@ -45,6 +45,7 @@ Module PEPO_Class
      procedure,public :: GetSpin => GetPEPOSpin
      procedure,public :: GetMaxBond => GetMaxPEPOBond
      procedure,public :: GetBondAt => GetPEPOBond
+     procedure,public :: PrintBondDimensions => PrintPEPODimensionsMap
      procedure,public :: IsInitialized => Is_PEPO_Initialized
   end type PEPO
 
@@ -318,6 +319,43 @@ Module PEPO_Class
         endif
     end function Apply_PEPO_To_PEPS
 
+
+
+
+
+
+
+subroutine PrintPEPODimensionsMap(aPEPO)
+    class(PEPO),intent(IN) :: aPEPO
+    integer :: x,y,length
+    integer,allocatable :: dims(:)
+!    character(LEN=20),parameter :: upaboveFormat='(A,I2)'
+
+    print *,'PEPO dims:'
+    print *,'========='
+
+    length=2*aPEPO%XLength
+    allocate (dims(length))
+
+    do y=aPEPO%Ylength,1,-1
+        do x=1,aPEPO%XLength
+            dims(x)=aPEPO%TensorCollection(x,y)%GetDUp()
+        enddo
+        write(*,'(2x,<length>(I2,6x))'), (dims(x),x=1,aPEPO%XLength)
+        do x=1,aPEPO%XLength
+            dims(2*x-1)=aPEPO%TensorCollection(x,y)%GetDLeft()
+            dims(2*x)=aPEPO%TensorCollection(x,y)%GetDRight()
+        enddo
+        write(*,'(<length>(I2," H",I2," -"))') (dims(x),x=1,2*aPEPO%XLength)
+        !'(I2,"100x ",I2,"-")'), dims(1),dims(2),dims(3),dims(4),dims(5),dims(6),dims(7),dims(8)
+        do x=1,aPEPO%XLength
+            dims(x)=aPEPO%TensorCollection(x,y)%GetDDown()
+        enddo
+        write(*,'(2x,<length>(I2,6x))'), (dims(x),x=1,aPEPO%XLength)
+        write(*,'(2x,<length>(A2,6x))'), ('|',x=1,aPEPO%XLength)
+    enddo
+
+end subroutine
 
  end module PEPO_Class
 

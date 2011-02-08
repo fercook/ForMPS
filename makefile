@@ -9,12 +9,13 @@ SYS = MacOSX-x86-64
 LAPACK=-framework vecLib
 #-L$MKLPATH -I$MKLINCLUDE -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lpthread
 BLAS=
-FLAGS=$(LAPACK)
+FLAGS=$(LAPACK) -Wl,-stack_size -Wl,0x40000000
 RM=rm
 FCOMP=ifort
 LINKER=ifort
 LINKFLAGS=
-DEBUGFLAG=-g -debug -save-temps
+DEBUGFLAG=-profile-functions -profile-loops=all
+#-g -debug -save-temps -profile-functions
 endif
 
 ifeq ($(ARCH),Linux)

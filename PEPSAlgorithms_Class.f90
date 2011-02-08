@@ -78,9 +78,13 @@ module PEPSAlgorithms_Class
             smallPEPS = new_PEPS(bigPEPS)
             return
         else
+            print *,'inside AP'
             call Normalize(bigPEPS)
+            print *,'normalized B_PEPS'
             smallPEPS = ReduceMAXPEPSBond(bigPEPS,newBondDimension) !new_PEPS(PEPSSize(1),PEPSSize(2),PEPSSpin,newBondDimension) !
+            print *,'reduced bond'
             call Normalize(smallPEPS)
+            print *,'normalized S_PEPS'
             !if( smallPEPS
         endif
 
@@ -90,6 +94,7 @@ module PEPSAlgorithms_Class
         smallMultiplicator = new_Multiplicator2D(smallPEPS,MatrixToTrackChanges=HasPEPSChangedAt)
         bigMultiplicator = new_Multiplicator2D(bigPEPS,smallPEPS,MatrixToTrackChanges=HasPEPSChangedAt)
 
+        print *,'Max sweeping:',MaxSweeps
         sweep=0
         !Start sweeping
         !overlap=Abs(bigMultiplicator%FullContraction())**2
@@ -98,6 +103,7 @@ module PEPSAlgorithms_Class
             !Sweep from 1,1 first to the right and then up
             do siteY=1,PEPSSize(2)
 	            do siteX=1,PEPSSize(1)
+	                print *,'Optimizing site :',siteX,siteY
 	                localTensor = smallPEPS%GetTensorAt(siteX,siteY)
 	                localPEPSDims = localTensor%GetDimensions()
                     localTensor = ComputePEPSOptimum ( smallMultiplicator%LeftAt(siteX-1,siteY), smallMultiplicator%RightAt(siteX+1,siteY), &

@@ -44,6 +44,7 @@ Module PEPS_Class
      procedure,public :: GetBondAt => GetPEPSBond
      procedure,public :: ReduceBond => ReduceMaxPEPSBond
      procedure,public :: IsInitialized => Is_PEPS_Initialized
+     procedure,public :: PrintBondDimensions => PrintPEPSBondDimensionsMap
      procedure,public :: IsPEPSWellFormed => Integrity_Check_of_bonds
   end type PEPS
 
@@ -479,6 +480,39 @@ Module PEPS_Class
      endif
    end function Integrity_Check_of_bonds
 
+
+
+subroutine PrintPEPSBondDimensionsMap(aPEPS)
+    class(PEPS),intent(IN) :: aPEPS
+    integer :: x,y,length
+    integer,allocatable :: dims(:)
+!    character(LEN=20),parameter :: upaboveFormat='(A,I2)'
+
+    print *,'PEPS dims:'
+    print *,'========='
+
+    length=2*aPEPS%XLength
+    allocate (dims(length))
+
+    do y=aPEPS%Ylength,1,-1
+        do x=1,aPEPS%XLength
+            dims(x)=aPEPS%TensorCollection(x,y)%GetDUp()
+        enddo
+        write(*,'(2x,<length>(I2,6x))'), (dims(x),x=1,aPEPS%XLength)
+        do x=1,aPEPS%XLength
+            dims(2*x-1)=aPEPS%TensorCollection(x,y)%GetDLeft()
+            dims(2*x)=aPEPS%TensorCollection(x,y)%GetDRight()
+        enddo
+        write(*,'(<length>(I2," H",I2," -"))') (dims(x),x=1,2*aPEPS%XLength)
+        !'(I2,"100x ",I2,"-")'), dims(1),dims(2),dims(3),dims(4),dims(5),dims(6),dims(7),dims(8)
+        do x=1,aPEPS%XLength
+            dims(x)=aPEPS%TensorCollection(x,y)%GetDDown()
+        enddo
+        write(*,'(2x,<length>(I2,6x))'), (dims(x),x=1,aPEPS%XLength)
+        write(*,'(2x,<length>(A2,6x))'), ('|',x=1,aPEPS%XLength)
+    enddo
+
+end subroutine PrintPEPSBondDimensionsMap
 
  end module PEPS_Class
 

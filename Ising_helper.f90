@@ -36,8 +36,8 @@ subroutine prepareIsingPEPO(aPEPO,Xsize,Ysize,tau,field)
     integer,intent(IN) :: Xsize,Ysize
     type(PEPOTensor) :: localTensor
     complex(8),allocatable :: localMatrix(:,:,:,:,:,:)
-    complex(8) :: identity(2,2),pauliZ(2,2),pauliX(2,2),A(0:1,2,2),AL(0:1,1,2),AR(0:1,2,1)
-    complex(8) :: spinPart(0:1,0:1,2,2)
+    complex(8) :: identity(2,2),pauliZ(2,2),pauliX(2,2),A(2,2,2),AL(2,1,2),AR(2,2,1)
+    complex(8) :: spinPart(2,2,2,2)
     integer :: n,m
     integer,parameter :: BondDim=2,SpinDim=2
     real(8) :: cosht,sinht,coshtH,sinhtH
@@ -53,24 +53,22 @@ subroutine prepareIsingPEPO(aPEPO,Xsize,Ysize,tau,field)
     pauliX=ZERO;   pauliX(1,2)=ONE;  pauliX(2,1)=ONE
 
     A=ZERO
-        A(0,1,1)=cosht;    A(0,2,2)=sinht
-        A(1,1,2)=sinht;    A(1,2,1)=cosht
+        A(1,1,1)=cosht;    A(1,2,2)=sinht
+        A(2,1,2)=sinht;    A(2,2,1)=cosht
 
     AL=ZERO;   AR=ZERO;
-        AL(0,1,1)=cosht;  AL(0,1,2)=ZERO
-        AL(1,1,1)=ZERO;   AL(1,1,2)=sinht
+        AL(1,1,1)=cosht;  AL(1,1,2)=ZERO
+        AL(2,1,1)=ZERO;   AL(2,1,2)=sinht
 
-        AR(0,1,1)=ONE;    AR(0,2,1)=ZERO
-        AR(1,1,1)=ZERO;   AR(1,2,1)=ONE
+        AR(1,1,1)=ONE;    AR(1,2,1)=ZERO
+        AR(2,1,1)=ZERO;   AR(2,2,1)=ONE
 
-    spinPart(0,0,:,:)=matmul(coshtH*identity-sinhtH*pauliX,coshtH*identity-sinhtH*pauliX)
-    spinPart(0,1,:,:)=matmul(coshtH*identity-sinhtH*pauliX,coshtH*pauliZ-sinhtH*matmul(pauliZ,pauliX))
-    spinPart(1,0,:,:)=matmul(coshtH*pauliZ-sinhtH*matmul(pauliZ,pauliX),coshtH*identity-sinhtH*pauliX)
-    spinPart(1,1,:,:)=matmul(coshtH*pauliZ-sinhtH*matmul(pauliZ,pauliX),coshtH*pauliZ-sinhtH*matmul(pauliZ,pauliX))
+    spinPart(1,1,:,:)=cosht*identity-sinhtH*pauliX
+    spinPart(1,2,:,:)=cosht*pauliZ-sinhtH*matmul(pauliZ,pauliX)
+    spinPart(2,1,:,:)=cosht*pauliZ-sinhtH*matmul(pauliZ,pauliX)
+    spinPart(2,2,:,:)=cosht*identity-sinhtH*pauliX
 
-    print *,' pepo being restarted'
     aPEPO=new_PEPO(Xsize,Ysize,SpinDim,BondDim)
-    print *,' fine'
     if (allocated(localMatrix)) deallocate(localMatrix)
     !First do boundary terms
     !left-bottom corner
@@ -144,146 +142,6 @@ subroutine prepareIsingPEPO(aPEPO,Xsize,Ysize,tau,field)
 
 end subroutine prepareIsingPEPO
 
-
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-subroutine prepareIsingHamiltonianROW(theH,Xsize,Ysize,field,row)
-    type(PEPO),intent(INOUT) :: theH
-    real(8),intent(IN) :: field
-    integer,intent(IN) :: Xsize,Ysize,row
-    type(PEPOTensor) :: localTensor
-    complex(8),allocatable :: localMatrix(:,:,:,:,:,:)
-    integer,parameter :: BondDim=3,SpinDim=3
-    integer :: n,m
-    complex(8) :: identity(2,2),pauliZ(2,2),pauliX(2,2)
-    complex(8) :: A(0:SpinDim-1,0:BondDim-1,0:BondDim-1),AL(0:SpinDim-1,0:0,0:BondDim-1),AR(0:SpinDim-1,0:BondDim-1,0:0)
-    complex(8) :: AIdentity(1,1,1)
-    complex(8) :: spinPart(0:SpinDim-1,1,2,2)
-
-
-    identity=ZERO;  identity(1,1)=ONE; identity(2,2)=ONE
-
-    pauliZ=ZERO;   pauliZ(1,1)=ONE;  pauliZ(2,2)=-ONE
-
-    pauliX=ZERO;   pauliX(1,2)=ONE;  pauliX(2,1)=ONE
-
-    A=ZERO    !BondDim-1 = 2
-        A(0,0,0)=ONE;       A(0,2,2)=ONE
-        A(1,0,1)=ONE;       A(1,1,2)=ONE
-        A(2,0,2)=field
-
-    AL=ZERO;   AR=ZERO;
-        AL(0,0,0)=ONE;      AL(1,0,1)=ONE;  AL(2,0,2)=field;
-        AR(0,2,0)=ONE;      AR(1,1,0)=ONE; AR(2,0,0)=field;
-
-    AIdentity=ONE
-
-    spinpart=ZERO
-    spinPart(0,1,:,:)=identity
-    spinPart(1,1,:,:)=pauliZ
-    spinPart(2,1,:,:)=pauliX
-
-    !Prepare an identity PEPO
-    theH=new_PEPO(Xsize,Ysize,SpinDim,BondDim)
-    allocate(localMatrix(2,2,integerONE,integerONE,integerONE,integerONE))
-    localMatrix(:,:,1,1,1,1)=identity
-    localTensor=new_PEPOTensor(localMatrix)
-    do m=1,Ysize
-      do n=1,Xsize
-        call theH%SetTensorAt(n,m,localTensor)
-      enddo
-    enddo
-
-    deallocate(localMatrix)
-    allocate(localMatrix(2,2,integerONE,BondDim,integerONE,integerONE))
-    call fillOutMatrix(localMatrix,AL,AIdentity,spinPart)
-    localTensor=new_PEPOTensor(localMatrix)
-    call theH%SetTensorAt(1,row,localTensor)
-    deallocate(localMatrix)
-    allocate(localMatrix(2,2,BondDim,integerONE,integerONE,integerONE))
-    call fillOutMatrix(localMatrix,AR,AIdentity,spinPart)
-    localTensor=new_PEPOTensor(localMatrix)
-    call theH%SetTensorAt(Xsize,row,localTensor)
-    deallocate(localMatrix)
-    allocate(localMatrix(2,2,BondDim,BondDim,integerONE,integerONE))
-    call fillOutMatrix(localMatrix,A,AIdentity,spinPart)
-    localTensor=new_PEPOTensor(localMatrix)
-    do n=2,Xsize-1
-        call theH%SetTensorAt(n,row,localTensor)
-    enddo
-end subroutine prepareIsingHamiltonianROW
-
-
-subroutine prepareIsingHamiltonianCOL(theH,Xsize,Ysize,field,col)
-    type(PEPO),intent(INOUT) :: theH
-    real(8),intent(IN) :: field
-    integer,intent(IN) :: Xsize,Ysize,col
-    type(PEPOTensor) :: localTensor
-    complex(8),allocatable :: localMatrix(:,:,:,:,:,:)
-    integer,parameter :: BondDim=3,SpinDim=3
-    integer :: n,m
-    complex(8) :: identity(2,2),pauliZ(2,2),pauliX(2,2)
-    complex(8) :: A(0:SpinDim-1,0:BondDim-1,0:BondDim-1),AL(0:SpinDim-1,0:0,0:BondDim-1),AR(0:SpinDim-1,0:BondDim-1,0:0)
-    complex(8) :: AIdentity(1,1,1)
-    complex(8) :: spinPart(1,0:SpinDim-1,2,2)
-
-
-    identity=ZERO;  identity(1,1)=ONE; identity(2,2)=ONE
-
-    pauliZ=ZERO;   pauliZ(1,1)=ONE;  pauliZ(2,2)=-ONE
-
-    pauliX=ZERO;   pauliX(1,2)=ONE;  pauliX(2,1)=ONE
-
-    A=ZERO    !BondDim-1 = 2
-        A(0,0,0)=ONE;       A(0,2,2)=ONE
-        A(1,0,1)=ONE;       A(1,1,2)=ONE
-        A(2,0,2)=field
-
-    AL=ZERO;   AR=ZERO;
-        AL(0,0,0)=ONE;      AL(1,0,1)=ONE;  AL(2,0,2)=field;
-        AR(0,2,0)=ONE;      AR(1,1,0)=ONE;  AR(2,0,0)=field;
-
-    Aidentity=ONE
-
-    spinPart(1,0,:,:)=identity
-    spinPart(1,1,:,:)=pauliZ
-    spinPart(1,2,:,:)=pauliX
-
-    !Prepare an identity PEPO
-    theH=new_PEPO(Xsize,Ysize,SpinDim,BondDim)
-    allocate(localMatrix(2,2,integerONE,integerONE,integerONE,integerONE))
-    localMatrix(:,:,1,1,1,1)=identity
-    localTensor=new_PEPOTensor(localMatrix)
-    do m=1,Ysize
-      do n=1,Xsize
-        call theH%SetTensorAt(n,m,localTensor)
-      enddo
-    enddo
-
-    deallocate(localMatrix)
-    allocate(localMatrix(2,2,integerONE,integerONE,BondDim,integerONE))
-    call fillOutMatrix(localMatrix,AIdentity,AL,spinPart)
-    localTensor=new_PEPOTensor(localMatrix)
-    call theH%SetTensorAt(col,1,localTensor)
-    deallocate(localMatrix)
-    allocate(localMatrix(2,2,integerONE,integerONE,integerONE,BondDim))
-    call fillOutMatrix(localMatrix,AIdentity,AR,spinPart)
-    localTensor=new_PEPOTensor(localMatrix)
-    call theH%SetTensorAt(col,Ysize,localTensor)
-    deallocate(localMatrix)
-    allocate(localMatrix(2,2,integerONE,integerONE,BondDim,BondDim))
-    call fillOutMatrix(localMatrix,AIdentity,A,spinPart)
-    localTensor=new_PEPOTensor(localMatrix)
-    do n=2,Ysize-1
-        call theH%SetTensorAt(col,n,localTensor)
-    enddo
-end subroutine prepareIsingHamiltonianCOL
-
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 subroutine fillOutMatrix2D(matrix,Xtensor,Ytensor,operators)
@@ -307,7 +165,7 @@ subroutine fillOutMatrix2D(matrix,Xtensor,Ytensor,operators)
          do u=1,YTensorDims(3)!Right is up
           do n=1,XTensorDims(1)
            do m=1,YTensorDims(1)
-             matrix(i,j,l,r,u,d)=matrix(i,j,l,r,u,d)+XTensor(n,l,r)*YTensor(m,u,d)*operators(n,m,i,j)
+             matrix(i,j,l,r,u,d)=matrix(i,j,l,r,u,d)+XTensor(n,l,r)*YTensor(m,d,u)*operators(n,m,i,j)
            enddo
           enddo
          enddo
@@ -322,22 +180,210 @@ end subroutine fillOutMatrix2D
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-subroutine evolvePEPS(aPEPS,PEPOEvolver,BondDimension)
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+subroutine prepareIsingHamiltonianROW(theH,Xsize,Ysize,field,row)
+    type(PEPO),intent(INOUT) :: theH
+    real(8),intent(IN) :: field
+    integer,intent(IN) :: Xsize,Ysize,row
+    type(PEPOTensor) :: localTensor
+    complex(8),allocatable :: localMatrix(:,:,:,:,:,:)
+    integer,parameter :: BondDim=3,OperatorDim=3,SpinDim=2
+    integer :: n,m,k
+    complex(8) :: identity(2,2),pauliZ(2,2),pauliX(2,2)
+    complex(8) :: A(OperatorDim,BondDim,BondDim),AL(OperatorDim,1,BondDim),AR(OperatorDim,BondDim,1)
+    complex(8) :: AIdentity(1,1,1)
+    complex(8) :: spinPart(OperatorDim,2,2)
+
+
+    identity=ZERO;  identity(1,1)=ONE; identity(2,2)=ONE
+    pauliZ=ZERO;   pauliZ(1,1)=ONE;  pauliZ(2,2)=-ONE
+    pauliX=ZERO;   pauliX(1,2)=ONE;  pauliX(2,1)=ONE
+
+    spinPart(1,:,:)=identity; spinPart(2,:,:)=PauliZ; spinPart(3,:,:)=PauliX
+    A=ZERO    !BondDim = 2
+        A(1,1,1)=ONE;       A(1,3,3)=ONE
+        A(2,1,2)=ONE;       A(2,2,3)=-ONE
+        A(3,1,3)=field
+    AL=ZERO;   AR=ZERO;
+        AL(1,1,1)=ONE;      AL(2,1,2)=ONE;  AL(3,1,3)=field;
+        AR(1,3,1)=ONE;      AR(2,2,1)=-ONE;  AR(3,1,1)=field;
+    !Prepare an identity PEPO
+    theH=new_PEPO(Xsize,Ysize,SpinDim,BondDim)
+    allocate(localMatrix(2,2,integerONE,integerONE,integerONE,integerONE))
+    localMatrix(:,:,1,1,1,1)=identity
+    localTensor=new_PEPOTensor(localMatrix)
+    do m=1,Ysize
+      do n=1,Xsize
+        call theH%SetTensorAt(n,m,localTensor)
+      enddo
+    enddo
+
+    !Now set the row to have the Ising Hamiltonian
+    deallocate(localMatrix)
+    allocate(localMatrix(SpinDim,SpinDim,integerONE, BondDim,integerONE,integerONE))
+    localMatrix=ZERO
+    do n=1,1
+      do m=1,BondDim
+        do k=1,OperatorDim
+          localMatrix(:,:,n,m,1,1)=localMatrix(:,:,n,m,1,1)+AL(k,n,m)*spinPart(k,:,:)
+        enddo
+      enddo
+    enddo
+    localTensor=new_PEPOTensor(localMatrix)
+    call theH%SetTensorAt(1,row,localTensor)
+
+    deallocate(localMatrix)
+    allocate(localMatrix(SpinDim,SpinDim,BondDim,integerONE,integerONE,integerONE))
+    localMatrix=ZERO
+    do n=1,BondDim
+      do m=1,1
+        do k=1,OperatorDim
+          localMatrix(:,:,n,m,1,1)=localMatrix(:,:,n,m,1,1)+AR(k,n,m)*spinPart(k,:,:)
+        enddo
+      enddo
+    enddo
+    localTensor=new_PEPOTensor(localMatrix)
+    call theH%SetTensorAt(Xsize,row,localTensor)
+
+    deallocate(localMatrix)
+    allocate(localMatrix(SpinDim,SpinDim,BondDim,BondDim,integerONE,integerONE))
+    localMatrix=ZERO
+    do n=1,BondDim
+      do m=1,BondDim
+        do k=1,OperatorDim
+          localMatrix(:,:,n,m,1,1)=localMatrix(:,:,n,m,1,1)+A(k,n,m)*spinPart(k,:,:)
+        enddo
+      enddo
+    enddo
+    localTensor=new_PEPOTensor(localMatrix)
+    do n=2,Xsize-1
+        call theH%SetTensorAt(n,row,localTensor)
+    enddo
+
+end subroutine prepareIsingHamiltonianROW
+
+
+subroutine prepareIsingHamiltonianCOL(theH,Xsize,Ysize,field,col)
+    type(PEPO),intent(INOUT) :: theH
+    real(8),intent(IN) :: field
+    integer,intent(IN) :: Xsize,Ysize,col
+    type(PEPOTensor) :: localTensor
+    complex(8),allocatable :: localMatrix(:,:,:,:,:,:)
+    integer,parameter :: BondDim=3,OperatorDim=3,SpinDim=2
+    integer :: n,m,k
+    complex(8) :: identity(2,2),pauliZ(2,2),pauliX(2,2)
+    complex(8) :: A(OperatorDim,BondDim,BondDim),AL(OperatorDim,1,BondDim),AR(OperatorDim,BondDim,1)
+    complex(8) :: spinPart(OperatorDim,2,2)
+
+
+    identity=ZERO;  identity(1,1)=ONE; identity(2,2)=ONE
+    pauliZ=ZERO;   pauliZ(1,1)=ONE;  pauliZ(2,2)=-ONE
+    pauliX=ZERO;   pauliX(1,2)=ONE;  pauliX(2,1)=ONE
+
+    spinPart(1,:,:)=identity; spinPart(2,:,:)=PauliZ; spinPart(3,:,:)=PauliX
+    A=ZERO
+        A(1,1,1)=ONE;       A(1,3,3)=ONE
+        A(2,1,2)=ONE;       A(2,2,3)=-ONE
+        A(3,1,3)=field
+    AL=ZERO;   AR=ZERO;
+        AL(1,1,1)=ONE;      AL(2,1,2)=ONE;  AL(3,1,3)=field;
+        AR(1,3,1)=ONE;      AR(2,2,1)=-ONE;  AR(3,1,1)=field;
+    !Prepare an identity PEPO
+    theH=new_PEPO(Xsize,Ysize,SpinDim,BondDim)
+    allocate(localMatrix(2,2,integerONE,integerONE,integerONE,integerONE))
+    localMatrix(:,:,1,1,1,1)=identity
+    localTensor=new_PEPOTensor(localMatrix)
+    do m=1,Ysize
+      do n=1,Xsize
+        call theH%SetTensorAt(n,m,localTensor)
+      enddo
+    enddo
+
+    !Now set the col to have the Ising Hamiltonian
+    deallocate(localMatrix)
+    allocate(localMatrix(SpinDim,SpinDim,integerONE,integerONE,BondDim,integerONE))
+    localMatrix=ZERO
+    do n=1,1
+      do m=1,BondDim
+        do k=1,OperatorDim
+          localMatrix(:,:,1,1,m,n)=localMatrix(:,:,1,1,m,n)+AL(k,n,m)*spinPart(k,:,:)
+        enddo
+      enddo
+    enddo
+    localTensor=new_PEPOTensor(localMatrix)
+    call theH%SetTensorAt(col,1,localTensor)
+
+    deallocate(localMatrix)
+    allocate(localMatrix(SpinDim,SpinDim,integerONE,integerONE,integerONE,BondDim))
+    localMatrix=ZERO
+    do n=1,BondDim
+      do m=1,1
+        do k=1,OperatorDim
+          localMatrix(:,:,1,1,m,n)=localMatrix(:,:,1,1,m,n)+AR(k,n,m)*spinPart(k,:,:)
+        enddo
+      enddo
+    enddo
+    localTensor=new_PEPOTensor(localMatrix)
+    call theH%SetTensorAt(col,Ysize,localTensor)
+
+    deallocate(localMatrix)
+    allocate(localMatrix(SpinDim,SpinDim,integerONE,integerONE,BondDim,BondDim))
+    localMatrix=ZERO
+    do n=1,BondDim
+      do m=1,BondDim
+        do k=1,OperatorDim
+          localMatrix(:,:,1,1,m,n)=localMatrix(:,:,1,1,m,n)+A(k,n,m)*spinPart(k,:,:)
+        enddo
+      enddo
+    enddo
+    localTensor=new_PEPOTensor(localMatrix)
+    do n=2,Ysize-1
+        call theH%SetTensorAt(col,n,localTensor)
+    enddo
+
+end subroutine prepareIsingHamiltonianCOL
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+subroutine evolvePEPS(aPEPS,PEPOEvolver,BondDimension,preEnergy)
     type(PEPS),intent(INOUT) :: aPEPS
     type(PEPO),intent(IN) :: PEPOEvolver
+    real(8),intent(OUT),optional :: preEnergy
     type(PEPS) :: tempPEPS
     integer,intent(IN) :: BondDimension
     integer :: error
 
     tempPEPS=PEPOEvolver.applyPEPOTo.aPEPS
+    if (present(preEnergy)) preEnergy=real(ComputeIsingEnergy(tempPEPS,4,4,0.2d0)/overlap_PEPS(tempPEPS,tempPEPS))
     aPEPS=ReduceMAXPEPSBond(tempPEPS,BondDimension)
     error = tempPEPS%delete()
     call Normalize(aPEPS)
 
 end subroutine evolvePEPS
 
+subroutine evolvePEPSApprox(aPEPS,PEPOEvolver,BondDimension,preEnergy)
+    type(PEPS),intent(INOUT) :: aPEPS
+    type(PEPO),intent(IN) :: PEPOEvolver
+    real(8),intent(OUT),optional :: preEnergy
+    type(PEPS) :: tempPEPS
+    integer,intent(IN) :: BondDimension
+    integer :: error
+
+    tempPEPS=PEPOEvolver.applyPEPOTo.aPEPS
+    if (present(preEnergy)) preEnergy=real(ComputeIsingEnergy(tempPEPS,4,4,0.2d0)/overlap_PEPS(tempPEPS,tempPEPS))
+    aPEPS=Approximate_PEPS(tempPEPS,BondDimension)
+    error = tempPEPS%delete()
+    call Normalize(aPEPS)
+
+end subroutine evolvePEPSApprox
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
@@ -350,11 +396,11 @@ real(8) function ComputeIsingEnergy(aPEPS,Xsize,Ysize,field) result(energy)
 
     energy=0.0d0
     do row=1,Ysize
-        call prepareIsingHamiltonianROW(lineHamiltonian,Xsize,Ysize,field,row)
+        call prepareIsingHamiltonianROW(lineHamiltonian,Xsize,Ysize,field/2.0d0,row)
         energy=energy+ExpectationValue(aPEPS,lineHamiltonian)
     enddo
     do col=1,Xsize
-        call prepareIsingHamiltonianCOL(lineHamiltonian,Xsize,Ysize,field,col)
+        call prepareIsingHamiltonianCOL(lineHamiltonian,Xsize,Ysize,field/2.0d0,col)
         energy=energy+ExpectationValue(aPEPS,lineHamiltonian)
     enddo
 

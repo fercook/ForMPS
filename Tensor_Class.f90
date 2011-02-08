@@ -60,6 +60,7 @@ module Tensor_Class
     procedure,public :: print => print_Tensor1
     procedure,public :: PrintDimensions => Print_Tensor1_Dimensions
     procedure,public :: Norm => Norm_Of_Tensor1
+    procedure,public :: Prod => Product_Of_Tensor1
     procedure,public :: IsInitialized => Is_Tensor1_init !Commented out because of Ifort bug
     procedure,public :: Delete => delete_Tensor1
 !    final :: delete_Tensor1
@@ -82,6 +83,7 @@ module Tensor_Class
     procedure,public :: print => print_Tensor2
     procedure,public :: PrintDimensions => Print_Tensor2_Dimensions
     procedure,public :: Norm => Norm_Of_Tensor2
+    procedure,public :: Prod => Product_Of_Tensor2
     procedure,public :: IsInitialized => Is_Tensor2_init !Commented out because of Ifort bug
     procedure,public :: Delete => delete_Tensor2
 !    final :: delete_Tensor2
@@ -103,6 +105,7 @@ module Tensor_Class
     procedure,public :: print => print_Tensor3
     procedure,public :: PrintDimensions => Print_Tensor3_Dimensions
     procedure,public :: Norm => Norm_Of_Tensor3
+    procedure,public :: Prod => Product_Of_Tensor3
     procedure,public :: IsInitialized => Is_Tensor3_init !Commented out because of Ifort bug
     procedure,public :: Delete => delete_Tensor3
 !    final :: delete_Tensor3
@@ -122,6 +125,7 @@ module Tensor_Class
     procedure,public :: print => print_Tensor4
     procedure,public :: PrintDimensions => Print_Tensor4_Dimensions
     procedure,public :: Norm => Norm_Of_Tensor4
+    procedure,public :: Prod => Product_Of_Tensor4
     procedure,public :: IsInitialized => Is_Tensor4_init !Commented out because of Ifort bug
     procedure,public :: Delete => delete_Tensor4
 !    final :: delete_Tensor4
@@ -142,6 +146,7 @@ module Tensor_Class
      procedure,public :: print => print_Tensor5
      procedure,public :: PrintDimensions => Print_Tensor5_Dimensions
      procedure,public :: Norm => Norm_Of_Tensor5
+     procedure,public :: Prod => Product_Of_Tensor5
      procedure,public :: IsInitialized => Is_Tensor5_init !Commented out because of Ifort bug
      procedure,public :: Delete => delete_Tensor5
 !     final :: delete_Tensor5
@@ -156,6 +161,7 @@ module Tensor_Class
     procedure,public :: print => print_Tensor6
     procedure,public :: PrintDimensions => Print_Tensor6_Dimensions
     procedure,public :: Norm => Norm_Of_Tensor6
+    procedure,public :: Prod => Product_Of_Tensor6
     procedure,public :: IsInitialized => Is_Tensor6_init !Commented out because of Ifort bug
     procedure,public :: Delete => delete_Tensor6
 !    final :: delete_Tensor6
@@ -1354,6 +1360,80 @@ end function Is_Tensor6_Init
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
+   real(8) function Product_Of_Tensor1(this)
+     class(Tensor1),intent(IN) :: this
+
+     if(this%Initialized) then
+        Product_Of_Tensor1=(product(this%data))
+     else
+        call ThrowException('Product_Of_Tensor1','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+   end function Product_Of_Tensor1
+
+   real(8) function Product_Of_Tensor2(this)
+     class(Tensor2),intent(IN) :: this
+
+     if(this%Initialized) then
+        Product_Of_Tensor2=(product(this%data))
+     else
+        call ThrowException('Product_Of_Tensor2','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+   end function Product_Of_Tensor2
+
+   real(8) function Product_Of_Tensor3(this)
+     class(Tensor3),intent(IN) :: this
+
+     if(this%Initialized) then
+        Product_Of_Tensor3=(product(this%data))
+     else
+        call ThrowException('Product_Of_Tensor3','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+   end function Product_Of_Tensor3
+
+   real(8) function Product_Of_Tensor4(this)
+     class(Tensor4),intent(IN) :: this
+
+     if(this%Initialized) then
+        Product_Of_Tensor4=(product(this%data))
+     else
+        call ThrowException('Product_Of_Tensor4','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+   end function Product_Of_Tensor4
+
+   real(8) function Product_Of_Tensor5(this)
+     class(Tensor5),intent(IN) :: this
+
+     if(this%Initialized) then
+        Product_Of_Tensor5=(product(this%data))
+     else
+        call ThrowException('Product_Of_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+   end function Product_Of_Tensor5
+
+   real(8) function Product_Of_Tensor6(this)
+     class(Tensor6),intent(IN) :: this
+
+     if(this%Initialized) then
+        Product_Of_Tensor6=(product(this%data))
+     else
+        call ThrowException('Product_Of_Tensor6','Tensor not initialized',NoErrorCode,CriticalError)
+        return
+     endif
+
+   end function Product_Of_Tensor6
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
    function number_times_Tensor1(constant, aTensor) result(this)
      complex(8),intent(IN) :: constant
      class(Tensor1),intent(IN) :: aTensor

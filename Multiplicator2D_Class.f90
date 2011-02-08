@@ -35,7 +35,7 @@ module Multiplicator2D_Class
   implicit none
   !private
 
-  integer,parameter :: DefaultApproximationBond=16
+  integer,parameter :: DefaultApproximationBond=1000
 
     type, public :: Multiplicator2D
         !private
