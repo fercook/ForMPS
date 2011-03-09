@@ -47,10 +47,19 @@ test PEPS_Reduce_Bound_Dim
 
     aPEPS=new_PEPS(4,4,2,4)
     smallPEPS=ReduceMAXPEPSBond(aPEPS,3)
-
     assert_equal(smallPEPS%GetMaxBond(),3)
     assert_true(smallPEPS%IsPEPSWellFormed())
     assert_true(aPEPS%IsPEPSWellFormed())
 end test
+
+test PEPS_Canonization_Routines
+    type(PEPS) :: aPEPS,smallPEPS
+
+    aPEPS=new_PEPS(4,4,2,5)
+    smallPEPS=aPEPS
+    call smallPEPS%CanonizeAt(1,1,HORIZONTAL,6,6)
+    call smallPEPS%PrintBondDimensions()
+end test
+
 
 end test_suite

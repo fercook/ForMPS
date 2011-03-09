@@ -55,7 +55,11 @@ module Constants
   integer,parameter,dimension(2) :: FourthAndThird = [4,3]
 
   enum,bind(C)
-  enumerator :: LEFT, RIGHT, UP, DOWN
+  enumerator :: NOWHERE,LEFT, RIGHT, UP, DOWN
+  end enum
+
+  enum,bind(C)
+  enumerator :: HORIZONTAL,VERTICAL
   end enum
 
   integer,parameter :: No = 0
@@ -63,7 +67,8 @@ module Constants
   integer,parameter :: DONOTCONJUGATE=NO
   integer,parameter :: UNDEFINED = -999
   integer,parameter :: ALLTENSORS = 1313789
-  
+  integer,parameter :: NOLIMIT = 9999999
+
   logical,parameter :: Verbose = .true.
 
   interface operator (.equalvector.)
@@ -85,5 +90,21 @@ module Constants
         AreEqual=.false.
      endif
    end function
+
+   integer function DirectionOppositeTo(aDirection) result(theOpposite)
+      integer, intent(IN) :: aDirection
+
+      select case (aDirection)
+         case (UP)
+            theOpposite=DOWN
+         case (DOWN)
+            theOpposite=UP
+         case (LEFT)
+            theOpposite=RIGHT
+         case (RIGHT)
+            theOpposite=LEFT
+      end select
+   end function DirectionOppositeTo
+
 
 end module Constants

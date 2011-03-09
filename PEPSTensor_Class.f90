@@ -38,11 +38,14 @@ module PEPSTensor_Class
      procedure,public :: getDDown => DDown_PEPSTensor
      procedure,public :: getMaxBondDimension => Get_MaxBondDimensionPEPSTensor
      procedure,public :: getSpin => Spin_PEPSTensor
+     procedure,public :: getBonds => Get_PEPSBondList
      procedure,public :: PrintDimensions => Print_PEPSTensor_Dimensions
      procedure,public :: ApplyOperator => Apply_Operator_To_PEPS_Spin_Dimension
      procedure,public :: ApplyMatrixToBond => Apply_Matrix_To_PEPS
      procedure,public :: Collapse => Collapse_PEPS_Into_Tensor4
      procedure,public :: CompactBonds => CompactPEPSBondDimensions
+     procedure,public :: CollapseAllIndicesBut => CollapsePEPSandSpinIndicesBut
+     procedure,public :: JoinSpinWith => JoinPEPSSpinWithBond
      procedure,public :: HOSVD => HighOrderSVDofPEPS
   end type PEPSTensor
 
@@ -52,7 +55,7 @@ module PEPSTensor_Class
   interface new_PEPSTensor
      module procedure new_PEPSTensor_Random,new_PEPSTensor_fromPEPSTensor, &
           & new_PEPSTensor_withConstant, new_PEPSTensor_with_SplitData, &
-          & new_PEPSTensor_fromTensor5, new_PEPSTensor_fromTensor5_Transposed
+          & new_PEPSTensor_fromTensor5, new_PEPSTensor_fromTensor5_Transposed,new_PEPSTensor_fromTensor3
   end interface
 
   interface assignment (=)
@@ -65,6 +68,10 @@ module PEPSTensor_Class
 
   interface ApplyMatrixToBond
      module procedure Apply_Matrix_To_PEPS
+  end interface
+
+  interface ApplyMPOToBond
+     module procedure Apply_Tensor4_To_PEPS
   end interface
 
   interface CollapsePEPS
@@ -167,8 +174,35 @@ module PEPSTensor_Class
 
    end function new_PEPSTensor_fromTensor5_Transposed
 
+!##################################################################
+   function new_PEPSTensor_fromTensor3(tensor,whichDimIsSpin,whichDirectionBondsGo) result (this)
+      type(Tensor3),intent(in) :: tensor
+      integer, intent(IN) :: whichDimIsSpin,whichDirectionBondsGo
+      type(PEPSTensor) :: this
+      integer :: newDims(5),oldDims(3),reorderedDims(3)
 
+      oldDims=tensor%GetDimensions()
+      !Find in which order the tensor has to enter so that the spin is in the last dimension
+      reorderedDims=[1,2,3]
+      reorderedDims(whichDimIsSpin)=3
+      reorderedDims(3)=whichDimIsSpin
 
+      if (whichDirectionBondsGo.eq.HORIZONTAL) then
+         newDims(1)=oldDims(reorderedDims(1))
+         newDims(2)=oldDims(reorderedDims(2))
+         newDims(3)=integerONE
+         newDims(4)=integerONE
+      else if (whichDirectionBondsGo.eq.VERTICAL) then
+         newDims(1)=integerONE
+         newDims(2)=integerONE
+         newDims(3)=oldDims(reorderedDims(1))
+         newDims(4)=oldDims(reorderedDims(2))
+      endif
+      newDims(5)=oldDims(reorderedDims(3))
+
+      this=TensorReshape( TensorTranspose(tensor,reorderedDims) , newDims)
+
+   end function new_PEPSTensor_fromTensor3
 !##################################################################
 !###########       Accessor methods
 !##################################################################
@@ -186,7 +220,21 @@ module PEPSTensor_Class
 
    end function spin_PEPSTensor
 !##################################################################
+   function Get_PEPSBondList(this) result(bonds)
+     class(PEPSTensor),intent(IN) :: this
+     integer :: dims(5)
+     integer :: bonds(4)
 
+     if(.not.(this%IsInitialized())) then
+        call ThrowException('DLeft_PEPS','Tensor not initialized',NoErrorCode,Warning)
+        return
+     else
+        dims=this%GetDimensions()
+        bonds=dims(1:4)
+     endif
+
+   end function Get_PEPSBondList
+!##################################################################
    integer function DLeft_PEPSTensor(this) result(DL)
      class(PEPSTensor),intent(IN) :: this
      integer :: dims(5)
@@ -331,6 +379,32 @@ module PEPSTensor_Class
    end function Apply_Matrix_To_PEPS
 
 
+   function Apply_Tensor4_To_PEPS(this,aTensor4,whichBondInPEPS) result(aNewPEPS)
+      class(PEPSTensor),intent(IN) :: this
+      class(Tensor4),intent(IN) :: aTensor4 !Tensor is assumed in convention L/R/U/D
+      integer,intent(IN) :: whichBondInPEPS
+      type(PEPSTensor) :: aNewPEPS
+
+      if(this%IsInitialized()) then
+        select case(whichBondInPEPS)
+            case(LEFT)
+               aNewPEPS=new_PEPSTensor( TensorTranspose ( MultAndCollapse ( TensorTranspose(aTensor4,[4,1,2,3]), TensorTranspose(this,[1,4,2,3,5]) ), [3,4,1,2,5]) )
+            case(RIGHT)
+                aNewPEPS=new_PEPSTensor( TensorTranspose( MultAndCollapse ( TensorTranspose(aTensor4,[1,4,2,3]), TensorTranspose(this,[4,1,2,3,5]) ), [3,4,2,1,5]) )
+            case(UP)
+                aNewPEPS=new_PEPSTensor(                  MultAndCollapse ( TensorTranspose(aTensor4,[2,3,4,1]), TensorTranspose(this,[2,3,1,4,5]) ) )
+            case(DOWN)
+                aNewPEPS=new_PEPSTensor( TensorTranspose( MultAndCollapse ( TensorTranspose(aTensor4,[2,3,1,4]), TensorTranspose(this,[2,3,4,1,5]) ), [1,2,4,3,5]) )
+            case default
+                call ThrowException('Apply_Matrix_To_PEPS','dim must be LEFT/RIGHT/UP/DOWN',whichBondInPEPS,CriticalError)
+        end select
+     else
+        call ThrowException('ApplyMPOToBond','Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+
+   end function Apply_Tensor4_To_PEPS
+
+
 !##################################################################
 !##################################################################
 !##################################################################
@@ -373,6 +447,35 @@ module PEPSTensor_Class
 
 !##################################################################
 
+   function CollapsePEPSandSpinIndicesBut(aPEPS,survivingIndex) result(aMAtrix)
+      class(PEPSTensor),intent(IN) :: aPEPS
+      integer,intent(IN) :: survivingIndex
+      type(Tensor2) :: aMatrix
+      type(Tensor2) :: tensorAsMatrix
+
+      if(aPEPS%Isinitialized()) then
+         select case (survivingIndex)
+            case(LEFT)
+               tensorAsMatrix=JoinIndicesOf(TensorTranspose(aPEPS,[5,1,2,3,4]))
+            case(RIGHT)
+               tensorAsMatrix=JoinIndicesOf(TensorTranspose(aPEPS,[1,5,2,3,4]))
+            case(UP)
+               tensorAsMatrix=JoinIndicesOf(TensorTranspose(aPEPS,[1,2,5,3,4]))
+            case(DOWN)
+               tensorAsMatrix=JoinIndicesOf(TensorTranspose(aPEPS,[1,2,3,5,4]))
+            case default
+               call ThrowException('CollapsePEPSandSpinIndicesBut','Index must be L/R/U/D',NoErrorCode,CriticalError)
+         end select
+         aMatrix= TensorTranspose(tensorAsMatrix) * Conjugate(tensorAsMatrix) !Result matrix is [ index,conjg(index) ]
+
+      else
+         call ThrowException('CollapsePEPSandSpinIndicesBut','Tensor not initialized',NoErrorCode,CriticalError)
+      endif
+
+   end function CollapsePEPSandSpinIndicesBut
+
+!##################################################################
+
     function CompactPEPSBondDimensions(aPEPS) result(aMatrix)
         class(PEPSTensor),intent(IN) :: aPEPS
         type(Tensor2) :: aMatrix
@@ -387,17 +490,44 @@ module PEPSTensor_Class
 
 !##################################################################
 
-    subroutine HighOrderSVDofPEPS(aPEPS,CoreTensor,UMatrices,newBondDim)
+    function JoinPEPSSpinWithBond(aPEPS,whichDirection) result(aTensor)
         class(PEPSTensor),intent(IN) :: aPEPS
-        integer,intent(IN),optional :: newBondDim
+        integer,intent(IN) :: whichDirection
+        type(Tensor4) :: aTensor
+
+        if(aPEPS%Isinitialized()) then
+          select case (whichDirection)
+            case (LEFT)
+               aTensor=Flatten(aPEPS,[1,5],[2],[3],[4])
+            case (RIGHT)
+               aTensor=Flatten(aPEPS,[1],[2,5],[3],[4])
+            case (UP)
+               aTensor=Flatten(aPEPS,[1],[2],[3,5],[4])
+            case (DOWN)
+               aTensor=Flatten(aPEPS,[1],[2],[3],[4,5])
+          end select
+        else
+            call ThrowException('CompactPEPSBondDimensions','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function JoinPEPSSpinWithBond
+
+!##################################################################
+
+    subroutine HighOrderSVDofPEPS(aPEPS,CoreTensor,UMatrices,maxBondDim)
+        class(PEPSTensor),intent(IN) :: aPEPS
+        integer,intent(IN),optional :: maxBondDim(4)
         type(Tensor2) ,intent(OUT):: UMatrices(LEFT:DOWN)
         type(Tensor2) :: U(5)
         type(PEPSTensor), intent(OUT) :: CoreTensor
         type(PEPSTensor) :: TempTensor
         type(Tensor2) :: SpinUMatrix
+        integer :: newBondDim(5)
 
         if(aPEPS%Isinitialized()) then
-            if (present(newBondDim) ) then
+            if (present(maxBondDim) ) then
+                newBondDim(1:4)=maxBondDim
+                newBondDim(5)=aPEPS%GetSpin()
                 call SingularValueDecomposition(aPEPS,TempTensor,U, newBondDim)
             else
                 call SingularValueDecomposition(aPEPS,TempTensor,U)

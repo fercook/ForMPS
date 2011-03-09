@@ -36,6 +36,7 @@ module Tensor_Class
   public :: CompactLeft,CompactRight,CompactBelow,SingularValueDecomposition
 
   integer,parameter :: Max_Combined_Dimension = 100000000
+  real(8),parameter :: DefaultToleranceForPseudoInverse=1.0d-10
 
 !> \class Tensor (virtual)
 !! \brief
@@ -218,7 +219,8 @@ module Tensor_Class
 
   interface MultAndCollapse
     module procedure MultAndCollapse_Tensor3_Tensor4, MultAndCollapse_Tensor5_Tensor6, &
-        & MultAndCollapse_Tensor5_Tensor5, MultAndCollapse_Tensor3_Tensor3, MultAndCollapse_Tensor4_Tensor4
+        & MultAndCollapse_Tensor5_Tensor5, MultAndCollapse_Tensor3_Tensor3, MultAndCollapse_Tensor4_Tensor4, &
+        & MultAndCollapse_Tensor4_Tensor5
   end interface
 
   interface assignment (=)
@@ -252,7 +254,7 @@ module Tensor_Class
   end interface
 
   interface JoinIndicesOf
-  	module procedure JoinIndicesOfTensor3,JoinIndicesOfTensor4 !,JoinTwoIndicesOfTensor4
+  	module procedure JoinIndicesOfTensor3,JoinIndicesOfTensor4, JoinIndicesOfTensor5 !,JoinTwoIndicesOfTensor4
   end interface
 
   interface SplitIndexOf
@@ -277,6 +279,18 @@ module Tensor_Class
 
   interface TensorTrace
     module procedure Tensor2Trace,Tensor3Trace,Tensor4Trace
+  end interface
+
+  interface TensorSqrt
+    module procedure Tensor2Sqrt
+  end interface
+
+  interface TensorReshape
+   module procedure TensorReshape3To5,TensorReshape2To3
+  end interface
+
+  interface Flatten
+   module procedure Tensor4FromJoinedTensor5
   end interface
 
   interface CompactLeft
@@ -309,6 +323,14 @@ module Tensor_Class
     module procedure SolveLinearProblem_LAPACK_matrix, SolveLinearProblem_LAPACK_vector
     !SolveLinearProblem_Netlib,SolveLinearProblem_NNLSNasa,SolveLinearProblem_CACM66
   end interface
+
+   interface TakeDiagonalPart
+     module procedure TakeDiagonalTensor2
+   end interface
+
+   interface PseudoInverseDiagonal
+     module Procedure Tensor2PseudoInverseDiagonal
+   end interface
 
 !######################################################################################
 !######################################################################################
@@ -1289,7 +1311,7 @@ end function Is_Tensor6_Init
      class(Tensor1),intent(IN) :: this
 
 	 if(this%Initialized) then
-	    Norm_Of_Tensor1=sum(abs(this%data))
+	    Norm_Of_Tensor1=sum(abs(this%data)**2)
 	 else
    		call ThrowException('Norm_Of_Tensor1','Tensor not initialized',NoErrorCode,CriticalError)
         return
@@ -1301,7 +1323,7 @@ end function Is_Tensor6_Init
      class(Tensor2),intent(IN) :: this
 
      if(this%Initialized) then
-        Norm_Of_Tensor2=sum(abs(this%data))
+        Norm_Of_Tensor2=sum(abs(this%data)**2)
      else
         call ThrowException('Norm_Of_Tensor2','Tensor not initialized',NoErrorCode,CriticalError)
         return
@@ -1313,7 +1335,7 @@ end function Is_Tensor6_Init
      class(Tensor3),intent(IN) :: this
 
      if(this%Initialized) then
-        Norm_Of_Tensor3=sum(abs(this%data))
+        Norm_Of_Tensor3=sum(abs(this%data)**2)
      else
         call ThrowException('Norm_Of_Tensor3','Tensor not initialized',NoErrorCode,CriticalError)
         return
@@ -1325,7 +1347,7 @@ end function Is_Tensor6_Init
      class(Tensor4),intent(IN) :: this
 
      if(this%Initialized) then
-        Norm_Of_Tensor4=sum(abs(this%data))
+        Norm_Of_Tensor4=sum(abs(this%data)**2)
      else
         call ThrowException('Norm_Of_Tensor4','Tensor not initialized',NoErrorCode,CriticalError)
         return
@@ -1337,7 +1359,7 @@ end function Is_Tensor6_Init
      class(Tensor5),intent(IN) :: this
 
      if(this%Initialized) then
-        Norm_Of_Tensor5=sum(abs(this%data))
+        Norm_Of_Tensor5=sum(abs(this%data)**2)
      else
         call ThrowException('Norm_Of_Tensor5','Tensor not initialized',NoErrorCode,CriticalError)
         return
@@ -1349,7 +1371,7 @@ end function Is_Tensor6_Init
      class(Tensor6),intent(IN) :: this
 
      if(this%Initialized) then
-        Norm_Of_Tensor6=sum(abs(this%data))
+        Norm_Of_Tensor6=sum(abs(this%data)**2)
      else
         call ThrowException('Norm_Of_Tensor6','Tensor not initialized',NoErrorCode,CriticalError)
         return
@@ -2773,7 +2795,68 @@ end function Is_Tensor6_Init
 
     end function MultAndCollapse_Tensor4_Tensor4
 
+
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+
+   function MultAndCollapse_Tensor4_Tensor5(aTensor4,aTensor5) result(theResult)
+      class(tensor4),intent(IN) :: aTensor4
+      class(tensor5),intent(IN) :: aTensor5
+      type(tensor5) :: theResult
+      integer :: dims_Of_t4(4),dims_Of_t5(5),new_Dims(5)
+      integer :: sumIndex,newIndex1,NewIndex2
+      integer :: a4,b4,c4,d4,a5,b5,c5,d5,e5
+      complex(8) :: ctemp
+
+      if(.not.(aTensor4%Initialized).or..not.(aTensor5%Initialized)) then
+         call ThrowException('MultAndCollapse44','Tensor not initialized',NoErrorCode,CriticalError)
+         return
+      endif
+
+      dims_Of_t4=shape(aTensor4%data)
+      dims_Of_t5=shape(aTensor5%data)
+
+      if(dims_Of_t4(1).ne.dims_Of_t5(1)) then
+         call ThrowException('MultAndCollapse45','Contracted index is not equal on tensors', &
+           & dims_Of_t4(1)-dims_Of_t5(1),CriticalError)
+         return
+      endif
+
+      new_dims(1)=dims_Of_t4(2)*dims_Of_t5(2) !b4*b5
+      new_dims(2)=dims_Of_t4(3)*dims_Of_t5(3) !c4*c5
+      new_dims(3)=dims_Of_t4(4)               !d4
+      new_dims(4)=dims_Of_t5(4)               !d5
+      new_dims(5)=dims_Of_t5(5)               !e5
+      theResult=new_Tensor(new_dims(1),new_dims(2),new_dims(3),new_dims(4),new_dims(5),ZERO)
+
+      do e5=1,dims_of_t5(5)
+      do d5=1,dims_of_t5(4)
+      do d4=1,dims_Of_t4(4)
+      do c4=1,dims_Of_t4(3)
+      do c5=1,dims_of_t5(3)
+            newIndex2=c5+(c4-1)*dims_of_t5(3)
+            do b4=1,dims_Of_t4(2)
+               do b5=1,dims_Of_t5(2)
+                  newIndex1=b5+(b4-1)*dims_Of_t5(2)
+                  ctemp=ZERO
+                  do sumIndex=1,dims_Of_T4(1)
+                     ctemp=ctemp+aTensor4%data(sumIndex,b4,c4,d4)*aTensor5%data(sumIndex,b5,c5,d5,e5)
+                  enddo
+                  theResult%data(newIndex1,newIndex2,d4,d5,e5)=ctemp
+               enddo
+            enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+!
+   end function
+
+
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
 
     function Mirror_Compact_Tensor5(upTensor,downTensor,boundIndex) result(theResult)
         class(Tensor5),intent(IN) :: upTensor,downTensor
@@ -3343,6 +3426,84 @@ end function JoinIndicesOfTensor4
 
     end function JoinIndicesOfTensor5
 
+
+
+    function Tensor4FromJoinedTensor5(this,reqDim1,reqDim2,reqDim3,reqDim4) result(aTensor)
+        class(Tensor5),intent(IN) :: this
+        type(Tensor4) :: aTensor
+        integer,intent(IN) :: reqDim1(:),reqDim2(:),reqDim3(:),reqDim4(:)
+        integer :: dims(5),newdims(4),currDim
+        integer :: x1,x2,x3,x4,x5,i,j,n
+        integer :: yVec(4),xVec(5)
+        !From T5 to T4, 2 is the max number of 4 dims that can be put together
+        integer :: reorderedDims(4,0:2)
+
+        if(this%Initialized) then
+            dims=shape(this%data)
+            newDims=integerONE
+            !Ugly code follows. How to write this cleaner while kepping the interface?
+            currDim=1
+            reorderedDims(currDim,0)=size(reqDim1)
+            do n=1,reorderedDims(currDim,0)
+                newDims(currDim)=newDims(currDim)*dims(reqDim1(n))
+                reorderedDims(currDim,n)=reqDim1(n)
+            enddo
+            !2
+            currDim=2
+            reorderedDims(currDim,0)=size(reqDim2)
+            do n=1,reorderedDims(currDim,0)
+                newDims(currDim)=newDims(currDim)*dims(reqDim2(n))
+                reorderedDims(currDim,n)=reqDim2(n)
+            enddo
+            !3
+            currDim=3
+            reorderedDims(currDim,0)=size(reqDim3)
+            do n=1,reorderedDims(currDim,0)
+                newDims(currDim)=newDims(currDim)*dims(reqDim3(n))
+                reorderedDims(currDim,n)=reqDim3(n)
+            enddo
+            !4
+            currDim=4
+            reorderedDims(currDim,0)=size(reqDim4)
+            do n=1,reorderedDims(currDim,0)
+                newDims(currDim)=newDims(currDim)*dims(reqDim4(n))
+                reorderedDims(currDim,n)=reqDim4(n)
+            enddo
+
+            if(product(dims).eq.product(newdims)) then
+                aTensor=new_Tensor( newdims(1),newdims(2),newdims(3),newdims(4) , ZERO )
+                do x5=1,dims(5)
+                 xVec(5)=x5
+                 do x4=1,dims(4)
+                  xVec(4)=x4
+                  do x3=1,dims(3)
+                   xVec(3)=x3
+                   do x2=1,dims(2)
+                    xVec(2)=x2
+                    do x1=1,dims(1)
+                     xVec(1)=x1
+                     do i=1,4
+                       yVec(i)=xVec(reorderedDims(i,1))
+                       do j=2,reorderedDims(i,0)
+                        yVec(i)=yVec(i)+(xVec(reorderedDims(i,j))-1)*dims(reorderedDims(i,j-1))
+                       enddo
+                     enddo
+                     !Finally assign data
+                     aTensor%data(yVec(1),yVec(2),yVec(3),yVec(4))=this%data(x1,x2,x3,x4,x5)
+                    enddo
+                   enddo
+                  enddo
+                 enddo
+                enddo
+            else
+                call ThrowException('Tensor4FromJoinedTensor5','Dims look incorrect',NoErrorCode,CriticalError)
+            endif
+        else
+            call ThrowException('Tensor4FromJoinedTensor5','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function Tensor4FromJoinedTensor5
+
 !##################################################################
 
     function SplitIndicesOfTensor2in5(this,dims) result(aTensor)
@@ -3358,8 +3519,41 @@ end function JoinIndicesOfTensor4
         endif
 
     end function SplitIndicesOfTensor2in5
+!##################################################################
+
+    function TensorReshape3To5(this,dims) result(aTensor)
+        class(Tensor3),intent(IN) :: this
+        type(Tensor5) :: aTensor
+        integer,intent(IN) :: dims(5)
+
+        if(this%Initialized) then
+            aTensor=new_Tensor( dims(1), dims(2), dims(3), dims(4), dims(5) , ZERO )
+            aTensor%data=reshape(this%data, dims )
+        else
+            call ThrowException('TensorReshape3To5','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function TensorReshape3To5
 
 !##################################################################
+    function TensorReshape2To3(this,dims) result(aTensor)
+        class(Tensor2),intent(IN) :: this
+        type(Tensor3) :: aTensor
+        integer,intent(IN) :: dims(3)
+
+        if(this%Initialized) then
+            aTensor=new_Tensor( dims(1), dims(2), dims(3) , ZERO )
+            aTensor%data=reshape(this%data, dims )
+        else
+            call ThrowException('TensorReshape2To3','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function TensorReshape2To3
+
+!#################
+
+
+
 
 function Take_Slice_Of_Tensor4(this,range1,range2,range3,range4) result (aTensor)
     integer,intent(IN) :: range1(2),range2(2),range3(2),range4(2)
@@ -3464,6 +3658,28 @@ function Take_Slice_Of_Tensor5(this,range1,range2,range3,range4,range5) result (
 end function Take_Slice_Of_Tensor5
 
 !##################################################################
+
+   function TakeDiagonalTensor2(this) result(aDiagonalTensor)
+      class(tensor2),intent(IN) :: this
+      type(tensor2) :: aDiagonalTensor
+      integer :: dims(2),n
+
+      if(this%Initialized) then
+         dims=shape(this%data)
+         aDiagonalTensor=new_Tensor(dims(1),dims(2),ZERO)
+         do n=1,minval(dims)
+            aDiagonalTensor%data(n,n)=this%data(n,n)
+         enddo
+      else
+         call ThrowException('TakeDiagonalTensor2','Tensor not initialized',NoErrorCode,CriticalError)
+      endif
+
+   end function TakeDiagonalTensor2
+
+
+
+!##################################################################
+
 
 function SplitIndexOfTensor2(this,WhichIndex,Partition) result (aTensor)
     integer,intent(IN) :: WhichIndex(:),Partition
@@ -3781,7 +3997,7 @@ function TensorTranspose5(this,permutation) result(thisTransposed)
    integer :: dims(5),newdims(5),n
 
    if(this%Initialized) then
-        if(120.eq.permutation(1)*permutation(2)*permutation(3)*permutation(4)*permutation(5).and.15.eq.sum(permutation)) then
+        if(120.eq.product(permutation).and.15.eq.sum(permutation)) then
             dims=shape(this%data)
             do n=1,size(dims)
                 newdims(permutation(n))=dims(n)
@@ -3818,6 +4034,41 @@ function TensorTranspose6(this,permutation) result(thisTransposed)
    endif
    return
 end function TensorTranspose6
+
+!##################################################################
+function Tensor2Sqrt(this) result(theSqrt)
+    class(Tensor2),intent(IN) :: this
+    type(tensor2) :: theSqrt
+
+    if(this%Initialized) then
+        theSqrt=new_Tensor(ONE*sqrt(abs(this%data)))
+     else
+        call ThrowException('Tensor2Sqrt','Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+end function Tensor2Sqrt
+
+function Tensor2PseudoInverseDiagonal(this,inTolerance) result(theInverse)
+   class(Tensor2),intent(IN) :: this
+   type(Tensor2) :: theInverse
+   real(8),intent(IN),optional :: inTolerance
+   real(8) :: Tolerance
+   integer :: dims(2),n
+
+   if(this%Initialized) then
+        if (present(inTolerance)) then
+            Tolerance=inTolerance
+        else
+            Tolerance=DefaultToleranceForPseudoInverse
+        endif
+        dims=shape(this%data)
+        theInverse=new_Tensor(dims(1),dims(2),ZERO)
+        do n=1,minval(dims)
+            if(abs(this%data(n,n)).gt.Tolerance) theInverse%data(n,n)=ONE/this%data(n,n)
+        enddo
+     else
+        call ThrowException('Tensor2PseudoInverseDiagonal','Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+end function Tensor2PseudoInverseDiagonal
 
 !##################################################################
 
@@ -4139,7 +4390,7 @@ end function Tensor4Trace
     class(Tensor3),intent(IN) :: this
     class(Tensor3),intent(OUT) :: Sigma
     type(Tensor2),intent(OUT) :: U(3)
-    integer,intent(IN),optional :: RankTruncation
+    integer,intent(IN),optional :: RankTruncation(3)
     type(Tensor2) :: Unfolding,UnfoldedSigma,VTFromUnfolding
     integer :: n,dims(2)
 
@@ -4151,7 +4402,7 @@ end function Tensor4Trace
     if (present(RankTruncation)) then
         do n=1,3
             dims=shape(U(n)%data)
-            U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation)])
+            U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation(n))])
         enddo
     endif
     Sigma=nModeProduct(ConjugateTranspose(U(3)), &
@@ -4169,7 +4420,7 @@ end function Tensor4Trace
     class(Tensor4),intent(IN) :: this
     class(Tensor4),intent(OUT) :: Sigma
     type(Tensor2),intent(OUT) :: U(4)
-    integer,intent(IN),optional :: RankTruncation
+    integer,intent(IN),optional :: RankTruncation(4)
     type(Tensor2) :: Unfolding,UnfoldedSigma,VTFromUnfolding
     integer :: n,dims(2)
 
@@ -4180,7 +4431,7 @@ end function Tensor4Trace
     if (present(RankTruncation)) then
         do n=1,4
             dims=shape(U(n)%data)
-            U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation)])
+            U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation(n))])
         enddo
     endif
     Sigma=nModeProduct(ConjugateTranspose(U(4)), &
@@ -4197,7 +4448,7 @@ end function Tensor4Trace
     class(Tensor5),intent(IN) :: this
     class(Tensor5),intent(OUT) :: Sigma
     type(Tensor2),intent(OUT) :: U(5)
-    integer,intent(IN),optional :: RankTruncation
+    integer,intent(IN),optional :: RankTruncation(5)
     type(Tensor2) :: Unfolding,UnfoldedSigma,VTFromUnfolding
     integer :: n,dims(2)
 
@@ -4208,7 +4459,7 @@ end function Tensor4Trace
     if (present(RankTruncation)) then
         do n=1,5
             dims=shape(U(n)%data)
-            U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation)])
+            U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation(n))])
         enddo
     endif
     Sigma=nModeProduct(ConjugateTranspose(U(5)), &
