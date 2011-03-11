@@ -4319,7 +4319,7 @@ end function Tensor4Trace
      type(Tensor2),intent(OUT) :: U,Sigma,vTransposed
      complex(8),allocatable :: CopyOfInput(:,:) !This extra copy is here because ZGESDD destroys the input matrix
      real(8),allocatable :: DiagonalPart(:)
-     integer :: LeftDimension,RightDimension
+     integer :: LeftDimension,RightDimension,leadingVTDimension
      integer :: Error=Normal
      !Lapack ugly variables
      integer :: Lwork,LRWork,LIWork,info,idx
@@ -4330,18 +4330,19 @@ end function Tensor4Trace
 
      !Prepare matrices according to input dimensions
      LeftDimension=size(this%data,1); RightDimension=size(this%data,2)
-     U=new_Tensor(LeftDimension,min(LeftDimension,RightDimension),ZERO)
-     Sigma=new_Tensor(min(LeftDimension,RightDimension),min(LeftDimension,RightDimension),ZERO)
-     vTransposed=new_Tensor(min(LeftDimension,RightDimension),RightDimension,ZERO)
-     allocate(DiagonalPart(min(LeftDimension,RightDimension)))
+     leadingVTDimension=min(LeftDimension,RightDimension)
+     U=new_Tensor(LeftDimension,leadingVTDimension,ZERO)
+     Sigma=new_Tensor(leadingVTDimension,leadingVTDimension,ZERO)
+     vTransposed=new_Tensor(leadingVTDimension,RightDimension,ZERO)
+     allocate(DiagonalPart(leadingVTDimension))
      !This doubling of memory allocation is because ZGESDD destroys the input matrix
      allocate (CopyOfInput(LeftDimension,RightDimension))
      CopyOfInput=this%data
 
      !Recommended values of memory allocation from LAPACK documentation
-     LWork=(Min(LeftDimension,RightDimension)*(Min(LeftDimension,RightDimension)+2)+Max(LeftDimension,RightDimension))
-     LRWork=5*Min(LeftDimension,RightDimension)*(Min(LeftDimension,RightDimension)+1)
-     LIWork=8*Min(LeftDimension,RightDimension)
+     LWork=(leadingVTDimension*(leadingVTDimension+2)+leadingVTDimension)
+     LRWork=5*leadingVTDimension*(leadingVTDimension+1)
+     LIWork=8*leadingVTDimension
 
      allocate(Work(LWork),RWork(LRWork),IWork(LIWork),STAT=Error)
      If (Error.ne.Normal) then
@@ -4352,7 +4353,7 @@ end function Tensor4Trace
      !And find out the optimum work storage, otherwise it returns an error
      LWork=-1
      call ZGESDD(JOBZ, LeftDimension, RightDimension, CopyOfInput, LeftDimension, DiagonalPart, U%data, &
-          & LeftDimension,vTransposed%data,min(LeftDimension,RightDimension),WORK,LWORK,RWORK,IWORK,Error )
+          & LeftDimension,vTransposed%data,leadingVTDimension,WORK,LWORK,RWORK,IWORK,Error )
      If (Error.ne.Normal) then
         call ThrowException('SingularValueDecomposition','Lapack search call returned error in ZGESDD',Error,CriticalError)
         return
@@ -4363,7 +4364,7 @@ end function Tensor4Trace
      deallocate(Work)
      Allocate(Work(LWork))
      call ZGESDD(JOBZ, LeftDimension, RightDimension, CopyOfInput, LeftDimension, DiagonalPart, U%data, &
-          & LeftDimension,vTransposed%data,min(LeftDimension,RightDimension),WORK,LWORK,RWORK,IWORK,Error )
+          & LeftDimension,vTransposed%data,leadingVTDimension,WORK,LWORK,RWORK,IWORK,Error )
      If (Error.ne.Normal) then
         call ThrowException('SingularValueDecomposition','Lapack returned error in ZGESDD',Error,CriticalError)
         return
