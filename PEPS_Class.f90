@@ -468,34 +468,29 @@ Module PEPS_Class
 
       if (direction.eq.HORIZONTAL) then
          do x=1,siteX-1
-            print *,'col canon:',x
             call aPEPS%Canonize_FullCol(x,RIGHT,MaxLongitudinalBond,MaxTransverseBond)
          enddo
          do x=aPEPS%XLength,siteX+1,-1
-            print *,'col canon:',x
             call aPEPS%Canonize_FullCol(x,LEFT,MaxLongitudinalBond,MaxTransverseBond)
          enddo
-         call aPEPS%PrintBondDimensions()
          do y=1,siteY-1
-            print *,'site canon:',y
-            call aPEPS%Canonize_Site(siteX,y,DOWN,MaxTransverseBond)
+            call aPEPS%Canonize_Site(siteX,y,UP,MaxTransverseBond**2)
          enddo
          do y=aPEPS%YLength,siteY+1,-1
-         print *,'site canon:',y
-            call aPEPS%Canonize_Site(siteX,y,UP,MaxTransverseBond)
+            call aPEPS%Canonize_Site(siteX,y,DOWN,MaxTransverseBond**2)
          enddo
        else if (direction.eq.VERTICAL) then
          do y=1,siteY-1
-            call aPEPS%Canonize_FullRow(y,DOWN,MaxLongitudinalBond,MaxTransverseBond)
-         enddo
-         do y=aPEPS%YLength,siteY+1,-1
             call aPEPS%Canonize_FullRow(y,UP,MaxLongitudinalBond,MaxTransverseBond)
          enddo
+         do y=aPEPS%YLength,siteY+1,-1
+            call aPEPS%Canonize_FullRow(y,DOWN,MaxLongitudinalBond,MaxTransverseBond)
+         enddo
          do x=1,siteX-1
-            call aPEPS%Canonize_Site(x,siteY,LEFT,MaxTransverseBond)
+            call aPEPS%Canonize_Site(x,siteY,RIGHT,MaxTransverseBond**2)
          enddo
          do x=aPEPS%XLength,siteX+1,-1
-            call aPEPS%Canonize_Site(x,siteY,RIGHT,MaxTransverseBond)
+            call aPEPS%Canonize_Site(x,siteY,LEFT,MaxTransverseBond**2)
          enddo
        else
          call ThrowException('CanonizePEPSAtSite','Direction must be HORIZONTAL or VERTICAL',NoErrorCode,CriticalError)
@@ -551,7 +546,7 @@ Module PEPS_Class
             call aPEPS%SetTensorAt(x+1,whichRow,tempPEPSTensor)
          endif
          !and now push matrix first, tensor comes later (this reduces cost because matrix is truncated)
-         if (whichRow.gt.1 .and. whichRow.lt.aPEPS%YLength) then
+         if (IsPositionInsidePEPS(aPEPS,x,whichRow+deltaY) ) then
             tempPEPSTensor=ApplyMatrixToBond(aPEPS%TensorCollection(x,whichRow+deltaY), &
                & TensorTranspose(Umatrices(directionToPush)),DirectionOppositeTo(directionToPush))
             tempPEPSTensor=ApplyMPOToBond(tempPEPSTensor,pushTensor,DirectionOppositeTo(directionToPush))
@@ -602,23 +597,16 @@ Module PEPS_Class
          !keep track of growing bonds near borders
          BondLimits(directionToPush)=BondSizes(directionToPush)
          BondLimits(DirectionOppositeTo(directionToPush))= min(MaxLongitudinalBond, spin*BondSizes(DirectionOppositeTo(directionToPush)) )
-
          call tempTensor4%SVD(pushTensor,Umatrices,BondLimits)
          !Recover the down matrix into the push tensor
-         call pushTensor%PrintDimensions('Push tensor dims')
-         do n=LEFT,DOWN
-            print *,'dir',n
-            call Umatrices(n)%PrintDimensions('Umatrix dims')
-         enddo
          pushTensor=nModeProduct(Umatrices(DOWN),pushTensor,[DOWN])
-         print *,'pushtensor absorbed'
          !Push the unitary matrices, first above
          if (y.lt.aPEPS%YLength) then
             tempPEPSTensor=ApplyMatrixToBond(aPEPS%TensorCollection(WhichCol,y+1),TensorTranspose(Umatrices(UP)),DOWN)
             call aPEPS%SetTensorAt(WhichCol,y+1,tempPEPSTensor)
          endif
          !and now push matrix first, tensor comes later (this reduces cost because matrix is truncated)
-         if (WhichCol.gt.1 .and. WhichCol.lt.aPEPS%XLength) then
+         if (IsPositionInsidePEPS(aPEPS,WhichCol+deltaX,y)) then
             tempPEPSTensor=ApplyMatrixToBond(aPEPS%TensorCollection(WhichCol+deltaX,y), &
                & TensorTranspose(Umatrices(directionToPush)),DirectionOppositeTo(directionToPush))
             tempPEPSTensor=ApplyMPOToBond(tempPEPSTensor,pushTensor,DirectionOppositeTo(directionToPush))
@@ -631,12 +619,11 @@ Module PEPS_Class
             tempPEPSTensor=new_PEPSTensor(tempTensor3, 3, HORIZONTAL)
          else if (directionToPush.eq.RIGHT) then
             tempTensor3 = TensorReshape( Umatrices(LEFT), &
-               &  [ BondSizes(LEFT), spin, BondLimits(RIGHT) ] )
+               &  [ BondSizes(LEFT), spin, BondLimits(LEFT) ] )
             tempPEPSTensor=new_PEPSTensor(tempTensor3, 2, HORIZONTAL)
          endif
          call aPEPS%SetTensorAt(WhichCol,y,tempPEPSTensor)
       enddo
-
    end subroutine CanonizePEPSCol
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -656,14 +643,14 @@ Module PEPS_Class
       do direction=LEFT,DOWN
          if (direction.ne.directionToPush) coreTensor=ApplyMatrixToBond(coreTensor,Umatrices(direction),direction)
       enddo
-
-      !!!TODO the following in Tensor_Class
       NormMatrix=TakeDiagonalPart(coreTensor%CollapseAllIndicesBut(directionToPush))
       SqrtOfNormMatrix=TensorSqrt(NormMatrix)
+
+      NormMatrix=PseudoInverseDiagonal(SqrtOfNormMatrix)
       coreTensor=ApplyMatrixToBond(coreTensor,PseudoInverseDiagonal(SqrtOfNormMatrix),directionToPush)
       call aPEPS%SetTensorAt(siteX,siteY,coreTensor)
 
-      !Finally push the norm matrix to the neighbor tensor
+      !Finally push the U and then the norm matrix to the neighbor tensor
       select case (directionToPush)
          case (UP)
             deltaR=[0,1]
@@ -674,9 +661,10 @@ Module PEPS_Class
          case (RIGHT)
             deltaR=[1,0]
       end select
-      tempTensor=aPEPS%TensorCollection(siteX+deltaR(1),siteY+deltaR(2))
-      tempTensor=ApplyMatrixToBond(tempTensor,SqrtOfNormMatrix,DirectionOppositeTo(directionToPush))
       if (IsPositionInsidePEPS(aPEPS,siteX+deltaR(1),siteY+deltaR(2))) then
+         tempTensor=aPEPS%TensorCollection(siteX+deltaR(1),siteY+deltaR(2))
+         tempTensor=ApplyMatrixToBond(tempTensor,TensorTranspose(Umatrices(directionToPush)),DirectionOppositeTo(directionToPush))
+         tempTensor=ApplyMatrixToBond(tempTensor,SqrtOfNormMatrix,DirectionOppositeTo(directionToPush))
          call aPEPS%SetTensorAt(siteX+deltaR(1),siteY+deltaR(2),tempTensor)
       endif
 

@@ -52,12 +52,20 @@ test PEPS_Reduce_Bound_Dim
     assert_true(aPEPS%IsPEPSWellFormed())
 end test
 
-test PEPS_Canonization_Routines
+
+
+test PEPS_Canonization_Routines_Basic
     type(PEPS) :: aPEPS,smallPEPS
+    type(PEPSTensor) :: aTensor
+    integer :: dims(4)
 
     aPEPS=new_PEPS(4,4,2,5)
     smallPEPS=aPEPS
-    call smallPEPS%CanonizeAt(1,1,HORIZONTAL,6,6)
+    call smallPEPS%CanonizeAt(3,2,HORIZONTAL,6,6)
+    dims=[4,2,36,16]
+    aTensor=smallPEPS%GetTensorAt(3,2)
+    assert_true(aTensor%GetBonds().equalvector.dims)
+    assert_true(smallPEPS%IsPEPSWellFormed())
     call smallPEPS%PrintBondDimensions()
 end test
 

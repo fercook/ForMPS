@@ -887,10 +887,10 @@ module Tensor_Class
      integer :: ierr
 
      if(lhs%Initialized) deallocate(lhs%data)
-     if (size(rhs%data,1)*size(rhs%data,2)*size(rhs%data,3).gt.Max_Combined_Dimension) then
-        print *,'Size of requested assignment is',size(rhs%data,1),size(rhs%data,2),size(rhs%data,3)
-        pause
-     endif
+!     if (size(rhs%data,1)*size(rhs%data,2)*size(rhs%data,3).gt.Max_Combined_Dimension) then
+!        print *,'Size of requested assignment is',size(rhs%data,1),size(rhs%data,2),size(rhs%data,3)
+!        pause
+!     endif
      allocate(lhs%data,source=rhs%data,stat=ierr);   if(ierr /= 0) write(*,*) "Allocation error"
      lhs%Initialized=.true.
 
@@ -1148,7 +1148,7 @@ end function Is_Tensor6_Init
 
      if((this%Initialized)) then
         if (present(message)) write(*,'(A)'),message
-        write(*,'("Vector Dimension:",I6)'), size(this%data,1)
+        write(*,'("Vector Dimension:",I9)'), size(this%data,1)
      else
         call ThrowException('Print Tensor','Tensor not initialized',NoErrorCode,Warning)
         return
@@ -1162,7 +1162,7 @@ end function Is_Tensor6_Init
 
      if((this%Initialized)) then
         if (present(message)) write(*,'(A)'),message
-        write(*,'("Matrix Dimensions:",I4," x",I4)'),size(this%data,1),size(this%data,2)
+        write(*,'("Matrix Dimensions:",I7," x",I7)'),size(this%data,1),size(this%data,2)
      else
         call ThrowException('Print Tensor2','Tensor not initialized',NoErrorCode,Warning)
         return
@@ -4330,9 +4330,9 @@ end function Tensor4Trace
 
      !Prepare matrices according to input dimensions
      LeftDimension=size(this%data,1); RightDimension=size(this%data,2)
-     U=new_Tensor(LeftDimension,LeftDimension,ZERO)
-     Sigma=new_Tensor(LeftDimension,RightDimension,ZERO)
-     vTransposed=new_Tensor(RightDimension,RightDimension,ZERO)
+     U=new_Tensor(LeftDimension,min(LeftDimension,RightDimension),ZERO)
+     Sigma=new_Tensor(min(LeftDimension,RightDimension),min(LeftDimension,RightDimension),ZERO)
+     vTransposed=new_Tensor(min(LeftDimension,RightDimension),RightDimension,ZERO)
      allocate(DiagonalPart(min(LeftDimension,RightDimension)))
      !This doubling of memory allocation is because ZGESDD destroys the input matrix
      allocate (CopyOfInput(LeftDimension,RightDimension))
@@ -4352,7 +4352,7 @@ end function Tensor4Trace
      !And find out the optimum work storage, otherwise it returns an error
      LWork=-1
      call ZGESDD(JOBZ, LeftDimension, RightDimension, CopyOfInput, LeftDimension, DiagonalPart, U%data, &
-          & LeftDimension,vTransposed%data,RightDimension,WORK,LWORK,RWORK,IWORK,Error )
+          & LeftDimension,vTransposed%data,min(LeftDimension,RightDimension),WORK,LWORK,RWORK,IWORK,Error )
      If (Error.ne.Normal) then
         call ThrowException('SingularValueDecomposition','Lapack search call returned error in ZGESDD',Error,CriticalError)
         return
@@ -4363,7 +4363,7 @@ end function Tensor4Trace
      deallocate(Work)
      Allocate(Work(LWork))
      call ZGESDD(JOBZ, LeftDimension, RightDimension, CopyOfInput, LeftDimension, DiagonalPart, U%data, &
-          & LeftDimension,vTransposed%data,RightDimension,WORK,LWORK,RWORK,IWORK,Error )
+          & LeftDimension,vTransposed%data,min(LeftDimension,RightDimension),WORK,LWORK,RWORK,IWORK,Error )
      If (Error.ne.Normal) then
         call ThrowException('SingularValueDecomposition','Lapack returned error in ZGESDD',Error,CriticalError)
         return

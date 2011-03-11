@@ -42,6 +42,7 @@ module PEPSTensor_Class
      procedure,public :: PrintDimensions => Print_PEPSTensor_Dimensions
      procedure,public :: ApplyOperator => Apply_Operator_To_PEPS_Spin_Dimension
      procedure,public :: ApplyMatrixToBond => Apply_Matrix_To_PEPS
+     procedure,public :: ApplyMPOToBond => Apply_Tensor4_To_PEPS
      procedure,public :: Collapse => Collapse_PEPS_Into_Tensor4
      procedure,public :: CompactBonds => CompactPEPSBondDimensions
      procedure,public :: CollapseAllIndicesBut => CollapsePEPSandSpinIndicesBut

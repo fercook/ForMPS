@@ -99,6 +99,36 @@ test Progressive_truncation
 end test
 
 
+
+test PEPS_Canonization_Routines
+    type(PEPS) :: aPEPS,smallPEPS
+    type(PEPSTensor) :: aTensor
+    integer :: dims(4)
+    complex(8) :: overlapBS
+
+    aPEPS=new_PEPS(4,4,2,2)
+    call Normalize(aPEPS)
+    smallPEPS=aPEPS
+    call smallPEPS%CanonizeAt(2,2,VERTICAL,6,6)
+    overlapBS=Overlap_PEPS(aPEPS,smallPEPS)
+    print *, 'overlap BTW peps and Canonized PEPS (EXACT): ',abs(overlapBS)**2
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-9)
+
+    aPEPS=new_PEPS(4,4,2,3)
+    call Normalize(aPEPS)
+    smallPEPS=aPEPS
+    print *,'About to canonize...'
+    call smallPEPS%CanonizeAt(2,2,VERTICAL,6,6)
+    overlapBS=Overlap_PEPS(aPEPS,smallPEPS)
+    print *, 'overlap BTW peps and Canonized PEPS (small bond): ',abs(overlapBS)**2
+    !assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-9)
+
+
+end test
+
+
+
+
 test ExptValueProdHamilt
     type(PEPO) :: theH
     type(PEPS) :: theState
@@ -115,8 +145,6 @@ test ExptValueProdHamilt
     complex(8) :: A(OperatorDim,BondDim,BondDim),AL(OperatorDim,integerONE,BondDim),AR(OperatorDim,BondDim,integerONE)
     complex(8) :: AIdentity(1,1,1),spinPart(OperatorDim,2,2)
     real(8) :: energy,overlap12
-
-    print *,'Setting up PEPO'
 
     identity=ZERO;  identity(1,1)=ONE; identity(2,2)=ONE
     pauliZ=ZERO;   pauliZ(1,1)=ONE;  pauliZ(2,2)=-ONE
@@ -173,8 +201,6 @@ test ExptValueLocalSumHamtn
     complex(8) :: A(OperatorDim,BondDim,BondDim),AL(OperatorDim,integerONE,BondDim),AR(OperatorDim,BondDim,integerONE)
     complex(8) :: AIdentity(1,1,1),spinPart(OperatorDim,2,2)
     real(8) :: energy,overlap12
-
-    print *,'Setting up PEPO'
 
     identity=ZERO;  identity(1,1)=ONE; identity(2,2)=ONE
     pauliZ=ZERO;   pauliZ(1,1)=ONE;  pauliZ(2,2)=-ONE
@@ -248,7 +274,7 @@ test ExptValueLocalSumHamtn
     call theH%SetTensorAt(2,1,localTensor)
     call theH%SetTensorAt(3,1,localTensor)
 
-    call theH%PrintBondDimensions()
+    !call theH%PrintBondDimensions()
 
     !Now generate PEPS cos(theta/2) |0> + sin(theta/2) |1> in each site (product state)
     allocate(localState(SpinDim,integerONE,integerONE,integerONE,integerONE))
@@ -292,8 +318,6 @@ test ExptValueHamiltonian
     complex(8) :: A(OperatorDim, BondDim, BondDim),AL( OperatorDim, integerONE, BondDim),AR( OperatorDim, BondDim, integerONE)
     complex(8) :: AIdentity(1,1,1),spinPart( OperatorDim,2,2)
     real(8) :: energy,overlap12
-
-    print *,'Setting up PEPO'
 
     identity=ZERO;  identity(1,1)=ONE; identity(2,2)=ONE
     pauliZ=ZERO;   pauliZ(1,1)=ONE;  pauliZ(2,2)=-ONE
@@ -359,7 +383,7 @@ test ExptValueHamiltonian
     call theH%SetTensorAt(2,row,localTensor)
     call theH%SetTensorAt(3,row,localTensor)
 
-    call theH%PrintBondDimensions()
+    !call theH%PrintBondDimensions()
 
     !Now generate PEPS cos(theta/2) |0> + sin(theta/2) |1> in each site (product state)
     allocate(localState(SpinDim,integerONE,integerONE,integerONE,integerONE))
@@ -401,8 +425,6 @@ test ExptValueHamiltonianCol
     complex(8) :: A(OperatorDim, BondDim, BondDim),AL( OperatorDim, integerONE, BondDim),AR( OperatorDim, BondDim, integerONE)
     complex(8) :: AIdentity(1,1,1),spinPart( OperatorDim,2,2)
     real(8) :: energy,overlap12
-
-    print *,'Setting up PEPO'
 
     identity=ZERO;  identity(1,1)=ONE; identity(2,2)=ONE
     pauliZ=ZERO;   pauliZ(1,1)=ONE;  pauliZ(2,2)=-ONE
@@ -468,7 +490,7 @@ test ExptValueHamiltonianCol
     call theH%SetTensorAt(col,2,localTensor)
     call theH%SetTensorAt(col,3,localTensor)
 
-    call theH%PrintBondDimensions()
+    !call theH%PrintBondDimensions()
 
     !Now generate PEPS cos(theta/2) |0> + sin(theta/2) |1> in each site (product state)
     allocate(localState(SpinDim,integerONE,integerONE,integerONE,integerONE))

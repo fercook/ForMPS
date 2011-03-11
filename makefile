@@ -14,7 +14,8 @@ RM=rm
 FCOMP=ifort
 LINKER=ifort
 LINKFLAGS=
-DEBUGFLAG=-profile-functions -profile-loops=all
+DEBUGFLAG=-g -debug -save-temps
+# -profile-functions -profile-loops=all
 #-g -debug -save-temps -profile-functions
 endif
 

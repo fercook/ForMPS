@@ -44,7 +44,7 @@ program Ising_tester
     implicit none
 
     integer,parameter :: Xsize=4,Ysize=4
-    integer,parameter :: BondDimension = 2, SpinDim = 2
+    integer,parameter :: BondDimension = 2, SpinDim = 2, LongitudinalBond=6,TransverseBond=6
     integer :: numberOfSteps,numberOfStepHalvings,error
     integer :: problemCount
     type(PEPS) :: thePEPS
@@ -86,7 +86,8 @@ program Ising_tester
 
     print *,'Creating new PEPS object...'
     thePEPS=new_PEPS(Xsize,Ysize,SpinDim,BondDimension)
-    call Normalize(thePEPS)
+    call thePEPS%CanonizeAt(3,1,VERTICAL,LongitudinalBond,TransverseBond)
+    call thePEPS%PrintBondDimensions('Initial PEPS diagram:')
     energy = ComputeIsingEnergy(thePEPS,Xsize,Ysize,hField)
     print *,'Starting energy (random):',energy
     print *,'Starting up engines...'
@@ -105,7 +106,7 @@ program Ising_tester
         do step=1,numberOfSteps !-1 !One less because 2nd order Suzuki is used
             !print *,step,' of',numberOfSteps
             preEnergy=energy
-            call evolvePEPSApprox(thePEPS,currentPEPO,BondDimension)
+            call evolvePEPSCanonical(thePEPS,currentPEPO,LongitudinalBond,TransverseBond)
             ElapsedTime = ElapsedTime +tau
             energy = ComputeIsingEnergy(thePEPS,Xsize,Ysize,hField)
             if(  (energy-preEnergy).gt.1.0d-4) problemCount=problemCount+1

@@ -385,6 +385,23 @@ subroutine evolvePEPSApprox(aPEPS,PEPOEvolver,BondDimension,preEnergy)
 
 end subroutine evolvePEPSApprox
 
+
+subroutine evolvePEPSCanonical(aPEPS,PEPOEvolver,LongitudinalBond,TransverseBond,preEnergy)
+    type(PEPS),intent(INOUT) :: aPEPS
+    type(PEPO),intent(IN) :: PEPOEvolver
+    real(8),intent(OUT),optional :: preEnergy
+    type(PEPS) :: tempPEPS
+    integer,intent(IN) :: LongitudinalBond,TransverseBond
+    integer :: error
+
+    tempPEPS=PEPOEvolver.applyPEPOTo.aPEPS
+    if (present(preEnergy)) preEnergy=real(ComputeIsingEnergy(tempPEPS,4,4,0.2d0)/overlap_PEPS(tempPEPS,tempPEPS))
+    call tempPEPS%CanonizeAt(3,1,VERTICAL,LongitudinalBond,TransverseBond)
+    aPEPS=tempPEPS
+    error = tempPEPS%delete()
+
+end subroutine evolvePEPSCanonical
+
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 real(8) function ComputeIsingEnergy(aPEPS,Xsize,Ysize,field) result(energy)
@@ -396,10 +413,12 @@ real(8) function ComputeIsingEnergy(aPEPS,Xsize,Ysize,field) result(energy)
 
     energy=0.0d0
     do row=1,Ysize
+        if (verbose) print *,'Computing energy, row:',row
         call prepareIsingHamiltonianROW(lineHamiltonian,Xsize,Ysize,field/2.0d0,row)
         energy=energy+ExpectationValue(aPEPS,lineHamiltonian)
     enddo
     do col=1,Xsize
+        if (verbose) print *,'Computing energy, col:',col
         call prepareIsingHamiltonianCOL(lineHamiltonian,Xsize,Ysize,field/2.0d0,col)
         energy=energy+ExpectationValue(aPEPS,lineHamiltonian)
     enddo
