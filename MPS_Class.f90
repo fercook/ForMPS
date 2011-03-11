@@ -186,6 +186,8 @@ Module MPS_Class
     aMPS%TensorCollection(site-1)=MPSTensor_times_matrix(aMPS%TensorCollection(site-1),canonizingMatrix)
   end subroutine LeftCanonizeMPS_AtSite
 
+
+
   subroutine RightCanonizeMPS_AtSite(aMPS,site)
     class(MPS),intent(INOUT) :: aMPS
     integer,intent(IN) :: site
@@ -218,13 +220,13 @@ Module MPS_Class
         do n=1,aMPS%length
             call aMPS%RightCanonizeAtSite(n)
         enddo
-        if (present(Norm)) Norm=Norm*aMPS%TensorCollection(aMPS%length+1)%Norm()
+        if (present(Norm)) Norm=Norm*aMPS%TensorCollection(aMPS%length+1)%Prod()
         aMPS%TensorCollection(aMPS%length+1) = new_MPSTensor(integerONE,integerONE,integerONE,ONE)
         !Now canonize to the left and end at first site
         do n=aMPS%length,1,-1
             call aMPS%LeftCanonizeAtSite(n)
         enddo
-        if (present(Norm)) Norm=Norm*aMPS%TensorCollection(0)%Norm()
+        if (present(Norm)) Norm=Norm*aMPS%TensorCollection(0)%Prod()
         aMPS%TensorCollection(0) = new_MPSTensor(integerONE,integerONE,integerONE,ONE)
     else
         call ThrowException('CanonizeMPS','MPS not initialized',NoErrorCode,CriticalError)

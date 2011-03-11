@@ -91,5 +91,37 @@ test HOSVD_of_PEPS
 
 end test
 
+test Multiplication_By_MPO
+   type(PEPSTensor) :: aPEPSt,newPEPSt
+   type(Tensor4) :: aTensor
+   integer :: spinT=2, bondL=2, bondR=2,bondU=2,bondD=2, dims(4),correctDims(4)
+
+    aPEPSt=new_PEPSTensor(SpinT,BondL,BondR,bondU,bondD)
+
+    aTensor=new_Tensor(3,2,4,5)
+    newPEPSt=ApplyMPOToBond(aPEPSt,aTensor,LEFT)
+    dims=newPEPSt%getBonds()
+    correctDims=[3,2,8,10]
+    assert_true(dims.equalvector.correctDims)
+
+    aTensor=new_Tensor(2,3,4,5)
+    newPEPSt=ApplyMPOToBond(aPEPSt,aTensor,RIGHT)
+    dims=newPEPSt%getBonds()
+    correctDims=[2,3,8,10]
+    assert_true(dims.equalvector.correctDims)
+
+    aTensor=new_Tensor(3,4,5,2)
+    newPEPSt=ApplyMPOToBond(aPEPSt,aTensor,UP)
+    dims=newPEPSt%getBonds()
+    correctDims=[6,8,5,2]
+    assert_true(dims.equalvector.correctDims)
+
+    aTensor=new_Tensor(3,4,2,5)
+    newPEPSt=ApplyMPOToBond(aPEPSt,aTensor,DOWN)
+    dims=newPEPSt%getBonds()
+    correctDims=[6,8,2,5]
+    assert_true(dims.equalvector.correctDims)
+end test
+
 end test_suite
 

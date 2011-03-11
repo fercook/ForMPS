@@ -9,12 +9,14 @@ SYS = MacOSX-x86-64
 LAPACK=-framework vecLib
 #-L$MKLPATH -I$MKLINCLUDE -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lpthread
 BLAS=
-FLAGS=$(LAPACK)
+FLAGS=$(LAPACK) -Wl,-stack_size -Wl,0x40000000
 RM=rm
 FCOMP=ifort
 LINKER=ifort
 LINKFLAGS=
 DEBUGFLAG=-g -debug -save-temps
+# -profile-functions -profile-loops=all
+#-g -debug -save-temps -profile-functions
 endif
 
 ifeq ($(ARCH),Linux)
@@ -37,6 +39,7 @@ OBJS = $(SOURCES:.f90=.o)
 TESTED = Tensor MPSTensor MPOTensor MPS MPO Multiplicator PEPSTensor PEPOTensor PEPS PEPO Multiplicator2D MPSAlgorithms PEPSAlgorithms
 
 all: fullmake
+ising: IsingTest
 obj: object
 exec: executable
 test: $(TESTED) 
@@ -55,6 +58,10 @@ fullmake: $(OBJS) main.o
 
 install:
 	cp  $(DIR)
+
+IsingTest: $(OBJS) Ising_helper.f90 Ising_tester.f90
+	$(FCOMP) $(FLAGS) $(DEBUGFLAG) -c Ising_helper.f90
+	$(FCOMP) $(FLAGS) $(DEBUGFLAG) $(OBJS) Ising_helper.o Ising_tester.f90 ${LINKFLAGS} -o IsingTest
 
 clean:
 	@ ${RM} -rf *.o *.mod $(BINARIES) *.gcov *.gcda *.gcno *.dyn profiles/*

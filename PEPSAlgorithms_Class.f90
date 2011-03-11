@@ -50,6 +50,10 @@ module PEPSAlgorithms_Class
         module procedure Overlap_PEPS
     end interface
 
+    interface ExpectationValue
+        module procedure Expectation_Value_PEPS_PEPO
+    end interface
+
   contains
 
 !*****************************************************************************
@@ -74,9 +78,13 @@ module PEPSAlgorithms_Class
             smallPEPS = new_PEPS(bigPEPS)
             return
         else
+            print *,'inside AP'
             call Normalize(bigPEPS)
+            print *,'normalized B_PEPS'
             smallPEPS = ReduceMAXPEPSBond(bigPEPS,newBondDimension) !new_PEPS(PEPSSize(1),PEPSSize(2),PEPSSpin,newBondDimension) !
+            print *,'reduced bond'
             call Normalize(smallPEPS)
+            print *,'normalized S_PEPS'
             !if( smallPEPS
         endif
 
@@ -86,6 +94,7 @@ module PEPSAlgorithms_Class
         smallMultiplicator = new_Multiplicator2D(smallPEPS,MatrixToTrackChanges=HasPEPSChangedAt)
         bigMultiplicator = new_Multiplicator2D(bigPEPS,smallPEPS,MatrixToTrackChanges=HasPEPSChangedAt)
 
+        print *,'Max sweeping:',MaxSweeps
         sweep=0
         !Start sweeping
         !overlap=Abs(bigMultiplicator%FullContraction())**2
@@ -94,6 +103,7 @@ module PEPSAlgorithms_Class
             !Sweep from 1,1 first to the right and then up
             do siteY=1,PEPSSize(2)
 	            do siteX=1,PEPSSize(1)
+	                print *,'Optimizing site :',siteX,siteY
 	                localTensor = smallPEPS%GetTensorAt(siteX,siteY)
 	                localPEPSDims = localTensor%GetDimensions()
                     localTensor = ComputePEPSOptimum ( smallMultiplicator%LeftAt(siteX-1,siteY), smallMultiplicator%RightAt(siteX+1,siteY), &
@@ -185,8 +195,8 @@ module PEPSAlgorithms_Class
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
   function Overlap_PEPS(onePEPS, anotherPEPS) result(theOverlap)
-      class(PEPS),intent(INOUT) :: onePEPS
-      class(PEPS),intent(INOUT),optional :: anotherPEPS
+      class(PEPS),intent(IN) :: onePEPS
+      class(PEPS),intent(IN),optional :: anotherPEPS
       type(Multiplicator2D) :: theEnvironment
       complex(8) :: theOverlap
       integer :: dims(2)
@@ -204,6 +214,32 @@ module PEPSAlgorithms_Class
       call theEnvironment%Delete()
 
   end function Overlap_PEPS
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+  function Expectation_Value_PEPS_PEPO(onePEPS, aPEPO, anotherPEPS) result(theOverlap)
+      class(PEPS),intent(IN) :: onePEPS
+      class(PEPO),intent(IN) :: aPEPO
+      class(PEPS),intent(IN),optional :: anotherPEPS
+      type(Multiplicator2D) :: theEnvironment
+      complex(8) :: theOverlap
+      integer :: dims(2)
+      logical,allocatable,target :: HasPEPSChangedAt(:,:)
+
+      dims=onePEPS%GetSize()
+      allocate(HasPEPSChangedAt(dims(1),dims(2)))
+      HasPEPSChangedAt=.true.
+      if (present(anotherPEPS)) then
+          theEnvironment=new_Multiplicator2D(onePEPS, anotherPEPS,aPEPO,MatrixToTrackChanges=HasPEPSChangedAt)
+      else
+          theEnvironment=new_Multiplicator2D(onePEPS, PEPO_C=aPEPO, MatrixToTrackChanges=HasPEPSChangedAt)
+      endif
+      theOverlap = Overlap_PEPSAboveBelow(theEnvironment)
+      call theEnvironment%Delete()
+
+  end function Expectation_Value_PEPS_PEPO
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
   subroutine Normalize_PEPS(aPEPS)
       class(PEPS),intent(INOUT) :: aPEPS

@@ -25,6 +25,9 @@ Module PEPS_Class
 
   implicit none
 
+
+  integer,parameter :: MaxBondDefaultForPEPSCanonization = 10
+
 !###############################
 !#####  The class main object
 !###############################
@@ -44,7 +47,12 @@ Module PEPS_Class
      procedure,public :: GetBondAt => GetPEPSBond
      procedure,public :: ReduceBond => ReduceMaxPEPSBond
      procedure,public :: IsInitialized => Is_PEPS_Initialized
+     procedure,public :: PrintBondDimensions => PrintPEPSBondDimensionsMap
      procedure,public :: IsPEPSWellFormed => Integrity_Check_of_bonds
+     procedure,public :: CanonizeAt => CanonizePEPSAtSite
+     procedure,public :: Canonize_FullRow => CanonizePEPSRow
+     procedure,public :: Canonize_FullCol => CanonizePEPSCol
+     procedure,public :: Canonize_Site => CanonizePEPSSiteAndPushNorm
   end type PEPS
 
   interface new_PEPS
@@ -90,7 +98,9 @@ Module PEPS_Class
   function new_PEPS_Random(XLength,YLength,spin,bond) result (this)
     integer,intent(IN) :: XLength,YLength,bond,spin
     type(PEPS) :: this
-    integer :: n,m
+    integer :: n,m,error
+
+    if (this%Initialized) error=this%delete()
 
     allocate(this%TensorCollection(0:XLength+1,0:YLength+1))
 
@@ -289,6 +299,8 @@ Module PEPS_Class
 
 
 
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 
 
@@ -335,8 +347,8 @@ Module PEPS_Class
      if(aPEPS%Initialized) then
        do Y=1,aPEPS%YLength
          do X=1,aPEPS%XLength
-           bond= max( bond, aPEPS%TensorCollection(X,Y)%getDLeft(), aPEPS%TensorCollection(X,Y)%getDRight(), &
-            & aPEPS%TensorCollection(X,Y)%getDUp(), aPEPS%TensorCollection(X,Y)%getDDown() )
+           ! call aPEPS%TensorCollection(X,Y)%PrintDimensions()
+           bond= max( bond, maxval(aPEPS%TensorCollection(X,Y)%getBonds()) )
          enddo
        enddo
      else
@@ -379,6 +391,12 @@ Module PEPS_Class
 
 
 
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 
 
@@ -396,7 +414,7 @@ Module PEPS_Class
         if (newMaxBond.lt.thisPEPS%GetMaxBond()) then
             do Y=1,thisPEPS%YLength
                 do X=1,thisPEPS%XLength
-                    call newPEPS%TensorCollection(X,Y)%HOSVD(coreTensor,Umatrices,newMaxBond)
+                    call newPEPS%TensorCollection(X,Y)%HOSVD(coreTensor,Umatrices,[newMaxBond,newMaxBond,newMaxBond,newMaxBond])
                     !Umatrices are ordered as LEFT/RIGHT/UP/DOWN
                     tempTensor=ApplyMatrixToBond(ApplyMatrixToBond(coreTensor,Umatrices(LEFT),LEFT),Umatrices(DOWN),DOWN)
                     call newPEPS%SetTensorAt(X,Y,tempTensor)
@@ -421,12 +439,244 @@ Module PEPS_Class
    end function ReduceMaxPEPSBond
 
 
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 
+  subroutine CanonizePEPSAtSite(aPEPS,siteX,siteY,direction,MaxLongitudinalBond,MaxTransverseBond)
+   class(PEPS),intent(INOUT) :: aPEPS
+   integer,intent(IN) :: siteX,siteY
+   integer,intent(IN) :: direction
+   integer :: MaxLongitudinalBond,MaxTransverseBond
+   integer :: x,y
+   real(8) :: NormOfTensor
+   type(PEPSTensor) :: tempTensor
+
+     if(aPEPS%Initialized) then
+
+      if (direction.eq.HORIZONTAL) then
+         do x=1,siteX-1
+            call aPEPS%Canonize_FullCol(x,RIGHT,MaxLongitudinalBond,MaxTransverseBond)
+         enddo
+         do x=aPEPS%XLength,siteX+1,-1
+            call aPEPS%Canonize_FullCol(x,LEFT,MaxLongitudinalBond,MaxTransverseBond)
+         enddo
+         do y=1,siteY-1
+            call aPEPS%Canonize_Site(siteX,y,UP,MaxTransverseBond**2)
+         enddo
+         do y=aPEPS%YLength,siteY+1,-1
+            call aPEPS%Canonize_Site(siteX,y,DOWN,MaxTransverseBond**2)
+         enddo
+       else if (direction.eq.VERTICAL) then
+         do y=1,siteY-1
+            call aPEPS%Canonize_FullRow(y,UP,MaxLongitudinalBond,MaxTransverseBond)
+         enddo
+         do y=aPEPS%YLength,siteY+1,-1
+            call aPEPS%Canonize_FullRow(y,DOWN,MaxLongitudinalBond,MaxTransverseBond)
+         enddo
+         do x=1,siteX-1
+            call aPEPS%Canonize_Site(x,siteY,RIGHT,MaxTransverseBond**2)
+         enddo
+         do x=aPEPS%XLength,siteX+1,-1
+            call aPEPS%Canonize_Site(x,siteY,LEFT,MaxTransverseBond**2)
+         enddo
+       else
+         call ThrowException('CanonizePEPSAtSite','Direction must be HORIZONTAL or VERTICAL',NoErrorCode,CriticalError)
+       endif
+      !Finally normalize the centered tensor so that norm of PEPS is ONE
+       NormOfTensor=aPEPS%TensorCollection(siteX,siteY)%Norm()
+       tempTensor=(ONE/sqrt(NormOfTensor)) * (aPEPS%TensorCollection(siteX,siteY))
+       call aPEPS%SetTensorAt(siteX,siteY, tempTensor )
+
+     else
+         call ThrowException('CanonizePEPSAtSite','PEPS not initialized',NoErrorCode,CriticalError)
+     endif
+   end subroutine CanonizePEPSAtSite
 
 
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+   subroutine CanonizePEPSRow(aPEPS,WhichRow,directionToPush,MaxLongitudinalBond,MaxTransverseBond)
+      class(PEPS),intent(INOUT) :: aPEPS
+      integer,intent(IN) :: whichRow,directionToPush,MaxLongitudinalBond,MaxTransverseBond
+      integer :: x,spin
+      type(PEPSTensor) :: tempPEPSTensor
+      type(Tensor4) :: tempTensor4,pushTensor
+      type(Tensor3) :: tempTensor3
+      type(Tensor2) :: UMatrices(LEFT:DOWN)
+      integer :: deltaY,BondSizes(LEFT:DOWN),BondLimits(LEFT:DOWN)
+
+      If (directionToPush.eq.UP) then
+         deltaY=1
+      else if (directionToPush.eq.DOWN) then
+         deltaY=-1
+      endif
+
+      do x=1,aPEPS%XLength
+         !First join spin dimension of tensor with the leg opposite the push direction
+         tempTensor4=aPEPS%TensorCollection(x,whichRow)%JoinSpinWith(DirectionOppositeTo(directionToPush))
+         !Need to prepare the truncation of bonds
+         BondSizes=aPEPS%TensorCollection(x,whichRow)%GetBonds()
+         spin=aPEPS%TensorCollection(x,whichRow)%GetSpin()
+         BondLimits(LEFT)=BondSizes(LEFT)
+         BondLimits(RIGHT)=MaxTransverseBond
+         !keep track of growing bonds near borders
+         BondLimits(directionToPush)=BondSizes(directionToPush)
+         BondLimits(DirectionOppositeTo(directionToPush))= min(MaxLongitudinalBond, spin*BondSizes(DirectionOppositeTo(directionToPush)) )
+         !Decompose joined tensor
+         call tempTensor4%SVD(pushTensor,Umatrices,BondLimits)
+         !Recover the left matrix into the push tensor
+         pushTensor=nModeProduct(Umatrices(LEFT),pushTensor,[LEFT])
+         !Push the unitary matrices, first right
+         if (x.lt.aPEPS%XLength) then
+            tempPEPSTensor=ApplyMatrixToBond(aPEPS%TensorCollection(x+1,whichRow),TensorTranspose(Umatrices(RIGHT)),LEFT)
+            call aPEPS%SetTensorAt(x+1,whichRow,tempPEPSTensor)
+         endif
+         !and now push matrix first, tensor comes later (this reduces cost because matrix is truncated)
+         if (IsPositionInsidePEPS(aPEPS,x,whichRow+deltaY) ) then
+            tempPEPSTensor=ApplyMatrixToBond(aPEPS%TensorCollection(x,whichRow+deltaY), &
+               & TensorTranspose(Umatrices(directionToPush)),DirectionOppositeTo(directionToPush))
+            tempPEPSTensor=ApplyMPOToBond(tempPEPSTensor,pushTensor,DirectionOppositeTo(directionToPush))
+            call aPEPS%SetTensorAt(x,whichRow+deltaY,tempPEPSTensor)
+         endif
+         !Finally reconstruct a new PEPSTensor on site from the remaining Umatrix
+         if (directionToPush.eq.UP) then
+            tempTensor3 = TensorReshape( TensorTranspose(Umatrices(DOWN)), & !Second index of U is always the one corresponding to core tensor
+               &  [ BondLimits(DOWN), BondSizes(DOWN), spin ] )
+            tempPEPSTensor=new_PEPSTensor(tempTensor3, 3, VERTICAL)
+         else if (directionToPush.eq.DOWN) then
+            tempTensor3 = TensorReshape( Umatrices(UP), &
+               &  [ BondSizes(UP), spin, BondLimits(UP) ] )
+            tempPEPSTensor=new_PEPSTensor(tempTensor3, 2, VERTICAL)
+         endif
+         call aPEPS%SetTensorAt(x,whichRow,tempPEPSTensor)
+      enddo
+
+   end subroutine CanonizePEPSRow
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+   subroutine CanonizePEPSCol(aPEPS,WhichCol,directionToPush,MaxLongitudinalBond,MaxTransverseBond)
+      class(PEPS),intent(INOUT) :: aPEPS
+      integer,intent(IN) :: WhichCol,directionToPush,MaxLongitudinalBond,MaxTransverseBond
+      integer :: y,spin
+      type(PEPSTensor) :: tempPEPSTensor
+      type(Tensor4) :: tempTensor4,pushTensor
+      type(Tensor3) :: tempTensor3
+      type(Tensor2) :: UMatrices(LEFT:DOWN)
+      integer :: deltaX,BondSizes(LEFT:DOWN),BondLimits(LEFT:DOWN),n
+
+      If (directionToPush.eq.RIGHT) then
+         deltaX=1
+      else if (directionToPush.eq.LEFT) then
+         deltaX=-1
+      endif
+
+      do y=1,aPEPS%YLength
+         !First join spin dimension of tensor with the leg opposite the push direction
+         tempTensor4=aPEPS%TensorCollection(WhichCol,y)%JoinSpinWith(DirectionOppositeTo(directionToPush))
+         !Need to prepare the truncation of bonds
+         BondSizes=aPEPS%TensorCollection(WhichCol,y)%GetBonds()
+         spin=aPEPS%TensorCollection(WhichCol,y)%GetSpin()
+         BondLimits(DOWN)=BondSizes(DOWN)
+         BondLimits(UP)=MaxTransverseBond
+         !keep track of growing bonds near borders
+         BondLimits(directionToPush)=BondSizes(directionToPush)
+         BondLimits(DirectionOppositeTo(directionToPush))= min(MaxLongitudinalBond, spin*BondSizes(DirectionOppositeTo(directionToPush)) )
+         call tempTensor4%SVD(pushTensor,Umatrices,BondLimits)
+         !Recover the down matrix into the push tensor
+         pushTensor=nModeProduct(Umatrices(DOWN),pushTensor,[DOWN])
+         !Push the unitary matrices, first above
+         if (y.lt.aPEPS%YLength) then
+            tempPEPSTensor=ApplyMatrixToBond(aPEPS%TensorCollection(WhichCol,y+1),TensorTranspose(Umatrices(UP)),DOWN)
+            call aPEPS%SetTensorAt(WhichCol,y+1,tempPEPSTensor)
+         endif
+         !and now push matrix first, tensor comes later (this reduces cost because matrix is truncated)
+         if (IsPositionInsidePEPS(aPEPS,WhichCol+deltaX,y)) then
+            tempPEPSTensor=ApplyMatrixToBond(aPEPS%TensorCollection(WhichCol+deltaX,y), &
+               & TensorTranspose(Umatrices(directionToPush)),DirectionOppositeTo(directionToPush))
+            tempPEPSTensor=ApplyMPOToBond(tempPEPSTensor,pushTensor,DirectionOppositeTo(directionToPush))
+            call aPEPS%SetTensorAt(WhichCol+deltaX,y,tempPEPSTensor)
+         endif
+         !Finally reconstruct a new PEPSTensor on site from the remaining Umatrix
+         if (directionToPush.eq.LEFT) then
+            tempTensor3 = TensorReshape( TensorTranspose(Umatrices(RIGHT)), & !Its transposed because second index always corresponds to core tensor
+               &  [ BondLimits(RIGHT), BondSizes(RIGHT), spin ] )
+            tempPEPSTensor=new_PEPSTensor(tempTensor3, 3, HORIZONTAL)
+         else if (directionToPush.eq.RIGHT) then
+            tempTensor3 = TensorReshape( Umatrices(LEFT), &
+               &  [ BondSizes(LEFT), spin, BondLimits(LEFT) ] )
+            tempPEPSTensor=new_PEPSTensor(tempTensor3, 2, HORIZONTAL)
+         endif
+         call aPEPS%SetTensorAt(WhichCol,y,tempPEPSTensor)
+      enddo
+   end subroutine CanonizePEPSCol
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+   subroutine CanonizePEPSSiteAndPushNorm(aPEPS,siteX,siteY,directionToPush,MaxBond)
+      class(PEPS),intent(INOUT) :: aPEPS
+      integer,intent(IN) :: siteX,siteY,directionToPush,MaxBond
+      type(PEPSTensor) :: coreTensor,tempTensor
+      type(Tensor2) :: UMatrices(LEFT:DOWN),NormMatrix,SqrtOfNormMatrix,InverseSqrtNorm
+      integer :: deltaR(2),RankTruncation(4),direction
+
+      RankTruncation=aPEPS%TensorCollection(siteX,siteY)%GetBonds()
+      RankTruncation(directionToPush)=MaxBond
+      call aPEPS%TensorCollection(siteX,siteY)%HOSVD(coreTensor,Umatrices,RankTruncation)
+      !Reconstruct the non-relevant parts of the tensor skipping the direction to push the norm
+      do direction=LEFT,DOWN
+         if (direction.ne.directionToPush) coreTensor=ApplyMatrixToBond(coreTensor,Umatrices(direction),direction)
+      enddo
+      NormMatrix=TakeDiagonalPart(coreTensor%CollapseAllIndicesBut(directionToPush))
+      SqrtOfNormMatrix=TensorSqrt(NormMatrix)
+
+      NormMatrix=PseudoInverseDiagonal(SqrtOfNormMatrix)
+      coreTensor=ApplyMatrixToBond(coreTensor,PseudoInverseDiagonal(SqrtOfNormMatrix),directionToPush)
+      call aPEPS%SetTensorAt(siteX,siteY,coreTensor)
+
+      !Finally push the U and then the norm matrix to the neighbor tensor
+      select case (directionToPush)
+         case (UP)
+            deltaR=[0,1]
+         case (DOWN)
+            deltaR=[0,-1]
+         case (LEFT)
+            deltaR=[-1,0]
+         case (RIGHT)
+            deltaR=[1,0]
+      end select
+      if (IsPositionInsidePEPS(aPEPS,siteX+deltaR(1),siteY+deltaR(2))) then
+         tempTensor=aPEPS%TensorCollection(siteX+deltaR(1),siteY+deltaR(2))
+         tempTensor=ApplyMatrixToBond(tempTensor,TensorTranspose(Umatrices(directionToPush)),DirectionOppositeTo(directionToPush))
+         tempTensor=ApplyMatrixToBond(tempTensor,SqrtOfNormMatrix,DirectionOppositeTo(directionToPush))
+         call aPEPS%SetTensorAt(siteX+deltaR(1),siteY+deltaR(2),tempTensor)
+      endif
+
+   end subroutine CanonizePEPSSiteAndPushNorm
 
 
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
     logical function Integrity_Check_of_bonds(thisPEPS) result(isAllOK)
      class(PEPS),intent(IN) :: thisPEPS
@@ -478,6 +728,55 @@ Module PEPS_Class
    end function Integrity_Check_of_bonds
 
 
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+subroutine PrintPEPSBondDimensionsMap(aPEPS,message)
+    class(PEPS),intent(IN) :: aPEPS
+    character*(*),optional :: message
+    integer :: x,y,length
+    integer,allocatable :: dims(:)
+!    character(LEN=20),parameter :: upaboveFormat='(A,I2)'
+
+    if (present(message)) then
+      print *,message
+    endif
+    print *,'PEPS dims:'
+    print *,'========='
+
+    length=2*aPEPS%XLength
+    allocate (dims(length))
+
+    do y=aPEPS%Ylength,1,-1
+        do x=1,aPEPS%XLength
+            dims(x)=aPEPS%TensorCollection(x,y)%GetDUp()
+        enddo
+        write(*,'(2x,<length>(I2,6x))'), (dims(x),x=1,aPEPS%XLength)
+        do x=1,aPEPS%XLength
+            dims(2*x-1)=aPEPS%TensorCollection(x,y)%GetDLeft()
+            dims(2*x)=aPEPS%TensorCollection(x,y)%GetDRight()
+        enddo
+        write(*,'(<length>(I2," H",I2," -"))') (dims(x),x=1,2*aPEPS%XLength)
+        !'(I2,"100x ",I2,"-")'), dims(1),dims(2),dims(3),dims(4),dims(5),dims(6),dims(7),dims(8)
+        do x=1,aPEPS%XLength
+            dims(x)=aPEPS%TensorCollection(x,y)%GetDDown()
+        enddo
+        write(*,'(2x,<length>(I2,6x))'), (dims(x),x=1,aPEPS%XLength)
+        write(*,'(2x,<length>(A2,6x))'), ('|',x=1,aPEPS%XLength)
+    enddo
+
+end subroutine PrintPEPSBondDimensionsMap
+
+logical function IsPositionInsidePEPS(aPEPS,siteX,siteY)
+   class(PEPS),intent(IN) :: aPEPS
+   integer,intent(IN) :: siteX,siteY
+
+   IsPositionInsidePEPS=siteX.ge.1
+   IsPositionInsidePEPS=IsPositionInsidePEPS.and. (siteX.le.aPEPS%XLength)
+   IsPositionInsidePEPS=IsPositionInsidePEPS.and. (siteY.ge.1)
+   IsPositionInsidePEPS=IsPositionInsidePEPS.and. (siteY.le.aPEPS%YLength)
+
+end function IsPositionInsidePEPS
  end module PEPS_Class
 
 
