@@ -21,6 +21,7 @@ module PEPSTensor_Class
   use Constants
   use Tensor_Class
   use Operator_Class
+  use MPSTensor_Class
 
   implicit none
 
@@ -46,6 +47,7 @@ module PEPSTensor_Class
      procedure,public :: Collapse => Collapse_PEPS_Into_Tensor4
      procedure,public :: CompactBonds => CompactPEPSBondDimensions
      procedure,public :: CollapseAllIndicesBut => CollapsePEPSandSpinIndicesBut
+     procedure,public :: asMPSTensor => DropTwoBondsAndReturnMPSTensor
      procedure,public :: JoinSpinWith => JoinPEPSSpinWithBond
      procedure,public :: HOSVD => HighOrderSVDofPEPS
   end type PEPSTensor
@@ -512,6 +514,29 @@ module PEPSTensor_Class
         endif
 
     end function JoinPEPSSpinWithBond
+
+!##################################################################
+   function DropTwoBondsAndReturnMPSTensor(aPEPS,whichIsLeft,whichIsRight) result(aMPSTensor)
+      class(PEPSTensor),intent(IN) :: aPEPS
+      integer,intent(IN) :: whichIsLeft,whichIsRight
+      type(MPSTensor) :: aMPSTensor
+      integer :: n,joinedDims(3),tempInt
+
+        if(aPEPS%Isinitialized()) then
+          tempInt=1
+          do n=1,5 !loop to skip over the used dimensions and join all the others
+            if (n.ne.whichIsLeft .and. n.ne.whichIsRight .and. n.ne.5) then !5 is the spin dimension...
+               joinedDims(tempInt)=n
+               tempInt=tempInt+1
+            endif
+          enddo
+          aMPSTensor=new_MPSTensor(Flatten(aPEPS,[whichIsLeft],[whichIsRight],joinedDims),3,1,2) ! 3,1,2 == Spin, Left, Right
+        else
+            call ThrowException('DropTwoBondsAndReturnMPSTensor','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function DropTwoBondsAndReturnMPSTensor
+
 
 !##################################################################
 

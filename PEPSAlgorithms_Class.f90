@@ -47,11 +47,11 @@ module PEPSAlgorithms_Class
     end interface
 
     interface Overlap
-        module procedure Overlap_PEPS
+        module procedure Overlap_PEPS, Canonical_PEPS_Overlap
     end interface
 
     interface ExpectationValue
-        module procedure Expectation_Value_PEPS_PEPO
+        module procedure Expectation_Value_PEPS_PEPO, Expectation_Value_Canonical_PEPS_PEPO
     end interface
 
   contains

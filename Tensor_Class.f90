@@ -290,7 +290,7 @@ module Tensor_Class
   end interface
 
   interface Flatten
-   module procedure Tensor4FromJoinedTensor5
+   module procedure Tensor4FromJoinedTensor5,Tensor3FromJoinedTensor5
   end interface
 
   interface CompactLeft
@@ -330,6 +330,10 @@ module Tensor_Class
 
    interface PseudoInverseDiagonal
      module Procedure Tensor2PseudoInverseDiagonal
+   end interface
+
+   interface Identity
+      module procedure Tensor2Identity
    end interface
 
 !######################################################################################
@@ -3506,6 +3510,77 @@ end function JoinIndicesOfTensor4
 
 !##################################################################
 
+
+    function Tensor3FromJoinedTensor5(this,reqDim1,reqDim2,reqDim3) result(aTensor)
+        class(Tensor5),intent(IN) :: this
+        type(Tensor3) :: aTensor
+        integer,intent(IN) :: reqDim1(:),reqDim2(:),reqDim3(:)
+        integer :: dims(5),newdims(3),currDim
+        integer :: x1,x2,x3,x4,x5,i,j,n
+        integer :: yVec(3),xVec(5)
+        !From T5 to T4, 2 is the max number of 4 dims that can be put together
+        integer :: reorderedDims(3,0:2)
+
+        if(this%Initialized) then
+            dims=shape(this%data)
+            newDims=integerONE
+            !Ugly code follows. How to write this cleaner while kepping the interface?
+            currDim=1
+            reorderedDims(currDim,0)=size(reqDim1)
+            do n=1,reorderedDims(currDim,0)
+                newDims(currDim)=newDims(currDim)*dims(reqDim1(n))
+                reorderedDims(currDim,n)=reqDim1(n)
+            enddo
+            !2
+            currDim=2
+            reorderedDims(currDim,0)=size(reqDim2)
+            do n=1,reorderedDims(currDim,0)
+                newDims(currDim)=newDims(currDim)*dims(reqDim2(n))
+                reorderedDims(currDim,n)=reqDim2(n)
+            enddo
+            !3
+            currDim=3
+            reorderedDims(currDim,0)=size(reqDim3)
+            do n=1,reorderedDims(currDim,0)
+                newDims(currDim)=newDims(currDim)*dims(reqDim3(n))
+                reorderedDims(currDim,n)=reqDim3(n)
+            enddo
+
+            if(product(dims).eq.product(newdims)) then
+                aTensor=new_Tensor( newdims(1),newdims(2),newdims(3), ZERO )
+                do x5=1,dims(5)
+                 xVec(5)=x5
+                 do x4=1,dims(4)
+                  xVec(4)=x4
+                  do x3=1,dims(3)
+                   xVec(3)=x3
+                   do x2=1,dims(2)
+                    xVec(2)=x2
+                    do x1=1,dims(1)
+                     xVec(1)=x1
+                     do i=1,3
+                       yVec(i)=xVec(reorderedDims(i,1))
+                       do j=2,reorderedDims(i,0)
+                        yVec(i)=yVec(i)+(xVec(reorderedDims(i,j))-1)*dims(reorderedDims(i,j-1))
+                       enddo
+                     enddo
+                     !Finally assign data
+                     aTensor%data(yVec(1),yVec(2),yVec(3))=this%data(x1,x2,x3,x4,x5)
+                    enddo
+                   enddo
+                  enddo
+                 enddo
+                enddo
+            else
+                call ThrowException('Tensor3FromJoinedTensor5','Dims look incorrect',NoErrorCode,CriticalError)
+            endif
+        else
+            call ThrowException('Tensor3FromJoinedTensor5','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function Tensor3FromJoinedTensor5
+
+!##################################################################
     function SplitIndicesOfTensor2in5(this,dims) result(aTensor)
         class(Tensor2),intent(IN) :: this
         type(Tensor5) :: aTensor
@@ -3677,6 +3752,16 @@ end function Take_Slice_Of_Tensor5
    end function TakeDiagonalTensor2
 
 
+   function Tensor2Identity(rank) result(aMatrix)
+      integer,intent(IN) :: rank
+      type(Tensor2) :: aMatrix
+      integer :: n
+
+      aMatrix=New_Tensor(rank,rank,ZERO)
+      do n=1,rank
+         aMatrix%data(n,n)=ONE
+      enddo
+   end function Tensor2Identity
 
 !##################################################################
 

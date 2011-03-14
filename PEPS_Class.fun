@@ -58,6 +58,7 @@ test PEPS_Canonization_Routines_Basic
     type(PEPS) :: aPEPS,smallPEPS
     type(PEPSTensor) :: aTensor
     integer :: dims(4)
+    type(Tensor2) :: aMatrix,theId
 
     aPEPS=new_PEPS(4,4,2,5)
     smallPEPS=aPEPS
@@ -67,6 +68,25 @@ test PEPS_Canonization_Routines_Basic
     assert_true(aTensor%GetBonds().equalvector.dims)
     assert_true(smallPEPS%IsPEPSWellFormed())
     call smallPEPS%PrintBondDimensions()
+
+    !now check canonization of core
+    aTensor=smallPEPS%GetTensorAt(3,4)
+    aMatrix=aTensor%CollapseAllIndicesBut(DOWN)
+    dims=aTensor%GetBonds()
+    theId=Identity(dims(DOWN))
+    assert_equal_within(aMatrix.absdiff.TheId,0.0d0,1.0d-8)
+
+    aTensor=smallPEPS%GetTensorAt(3,3)
+    aMatrix=aTensor%CollapseAllIndicesBut(DOWN)
+    dims=aTensor%GetBonds()
+    theId=Identity(dims(DOWN))
+    assert_equal_within(aMatrix.absdiff.TheId,0.0d0,1.0d-8)
+
+    aTensor=smallPEPS%GetTensorAt(3,1)
+    aMatrix=aTensor%CollapseAllIndicesBut(UP)
+    dims=aTensor%GetBonds()
+    theId=Identity(dims(UP))
+    assert_equal_within(aMatrix.absdiff.TheId,0.0d0,1.0d-8)
 end test
 
 
