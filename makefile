@@ -20,14 +20,18 @@ DEBUGFLAG=-g -debug -save-temps
 endif
 
 ifeq ($(ARCH),Linux)
-FLAGS = -O3
+MKLPATH=/opt/intel/composerxe-2011/mkl/lib/intel64/
+MKLINCLUDE=/opt/intel/composerxe-2011/mkl/include/intel64/lp64/
+FLAGS = -O3 -i8
 SYS = Linux-x86-64
-LAPACK=
+LAPACK=-L${MKLPATH} -I${MKLINCLUDE} -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread
 BLAS=
+FLAGS=$(LAPACK) 
 RM=rm
 FCOMP=ifort
 LINKER=ifort
 LINKFLAGS=
+DEBUGFLAG=-g -debug -save-temps
 endif
 
 BINARIES=_$(SYS)

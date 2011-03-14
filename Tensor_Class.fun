@@ -37,6 +37,7 @@ end teardown
 test assignments_of_tensor
 
   type(tensor3) :: mps1,mps2
+  type(tensor4) :: aT4
   integer error
   print *,'First test'
 
@@ -44,6 +45,7 @@ test assignments_of_tensor
   print *,'Assigned 1'
   mps2=mps1
   print *,'Assigned 2'
+  aT4=new_Tensor(20,40,10,20)
 !  assert_equal_within(mps1.absdiff.mps2, 0.0d0, 1.0e-10)
   assert_false(WasThereError())
 
