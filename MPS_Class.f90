@@ -47,6 +47,7 @@ Module MPS_Class
      procedure,public :: GetSpin => GetMPSSpin
      procedure,public :: GetBondAt => GetMPSBond
      procedure,public :: GetMaxBond => GetMaxMPSBond
+     procedure,public :: PrintBondDimensions => PrintMPSBonds
      procedure,public :: IsInitialized => Is_MPS_Initialized
   end type MPS
 
@@ -353,6 +354,33 @@ Module MPS_Class
          call ThrowException('GetMPSBond','MPS not initialized',NoErrorCode,CriticalError)
      endif
    end function GetMPSBond
+
+
+	subroutine PrintMPSBonds(anMPS,message)
+    class(MPS),intent(IN) :: anMPS
+    character*(*),optional :: message
+    integer :: x,length,sh(3)
+    integer,allocatable :: dims(:),spins(:)
+
+    if (present(message)) then
+      print *,message
+    endif
+    print *,'MPS dims:'
+    print *,'========='
+
+    length=2*anMPS%Length
+    allocate (dims(length),spins(length/2))
+
+    do x=1,anMPS%Length
+      dims(2*x-1)=anMPS%TensorCollection(x)%GetDLeft()
+      dims(2*x)=anMPS%TensorCollection(x)%GetDRight()
+      spins(x)=anMPS%TensorCollection(x)%GetSpin()
+    enddo
+    write(*,'(<length>(I2," o ",I2," - "))') (dims(x),x=1,2*anMPS%Length)
+        write(*,'(2x,<length/2>(A2,8x))'), ('|',x=1,anMPS%Length)
+        write(*,'(2x,<length/2>(I2,8x))'), (spins(x),x=1,anMPS%Length)
+
+end subroutine PrintMPSBonds
 
  end module MPS_Class
 

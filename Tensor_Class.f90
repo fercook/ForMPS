@@ -336,6 +336,11 @@ module Tensor_Class
       module procedure Tensor2Identity
    end interface
 
+   interface Norm
+   	module procedure Norm_Of_Tensor1,Norm_Of_Tensor2,Norm_Of_Tensor3,Norm_Of_Tensor4, &
+   		& Norm_Of_Tensor5,Norm_Of_Tensor6
+   end interface
+
 !######################################################################################
 !######################################################################################
 !######################################################################################
@@ -3436,75 +3441,41 @@ end function JoinIndicesOfTensor4
         class(Tensor5),intent(IN) :: this
         type(Tensor4) :: aTensor
         integer,intent(IN) :: reqDim1(:),reqDim2(:),reqDim3(:),reqDim4(:)
-        integer :: dims(5),newdims(4),currDim
-        integer :: x1,x2,x3,x4,x5,i,j,n
-        integer :: yVec(4),xVec(5)
-        !From T5 to T4, 2 is the max number of 4 dims that can be put together
-        integer :: reorderedDims(4,0:2)
+        integer :: dims(5),newdims(4),permutation(5),reshapedDims(5)
+        integer :: n
 
         if(this%Initialized) then
-            dims=shape(this%data)
-            newDims=integerONE
+        	dims=shape(this%data)
+        	newdims=integerONE
             !Ugly code follows. How to write this cleaner while kepping the interface?
-            currDim=1
-            reorderedDims(currDim,0)=size(reqDim1)
-            do n=1,reorderedDims(currDim,0)
-                newDims(currDim)=newDims(currDim)*dims(reqDim1(n))
-                reorderedDims(currDim,n)=reqDim1(n)
+            do n=1,size(reqDim1)
+				permutation(n)=reqDim1(n)
+				newdims(1)=newdims(1)*dims(reqDim1(n))
+			enddo
+			do n=1,size(reqDim2)
+				permutation(n+size(reqDim1))=reqDim2(n)
+				newdims(2)=newdims(2)*dims(reqDim2(n))
+			enddo
+			do n=1,size(reqDim3)
+				permutation(n+size(reqDim1)+size(reqDim2))=reqDim3(n)
+				newdims(3)=newdims(3)*dims(reqDim3(n))
+			enddo
+			do n=1,size(reqDim4)
+				permutation(n+size(reqDim1)+size(reqDim2)+size(reqDim3))=reqDim4(n)
+				newdims(4)=newdims(4)*dims(reqDim4(n))
+			enddo
+            do n=1,5
+                ReshapedDims(permutation(n))=dims(n)
             enddo
-            !2
-            currDim=2
-            reorderedDims(currDim,0)=size(reqDim2)
-            do n=1,reorderedDims(currDim,0)
-                newDims(currDim)=newDims(currDim)*dims(reqDim2(n))
-                reorderedDims(currDim,n)=reqDim2(n)
-            enddo
-            !3
-            currDim=3
-            reorderedDims(currDim,0)=size(reqDim3)
-            do n=1,reorderedDims(currDim,0)
-                newDims(currDim)=newDims(currDim)*dims(reqDim3(n))
-                reorderedDims(currDim,n)=reqDim3(n)
-            enddo
-            !4
-            currDim=4
-            reorderedDims(currDim,0)=size(reqDim4)
-            do n=1,reorderedDims(currDim,0)
-                newDims(currDim)=newDims(currDim)*dims(reqDim4(n))
-                reorderedDims(currDim,n)=reqDim4(n)
-            enddo
-
             if(product(dims).eq.product(newdims)) then
-                aTensor=new_Tensor( newdims(1),newdims(2),newdims(3),newdims(4) , ZERO )
-                do x5=1,dims(5)
-                 xVec(5)=x5
-                 do x4=1,dims(4)
-                  xVec(4)=x4
-                  do x3=1,dims(3)
-                   xVec(3)=x3
-                   do x2=1,dims(2)
-                    xVec(2)=x2
-                    do x1=1,dims(1)
-                     xVec(1)=x1
-                     do i=1,4
-                       yVec(i)=xVec(reorderedDims(i,1))
-                       do j=2,reorderedDims(i,0)
-                        yVec(i)=yVec(i)+(xVec(reorderedDims(i,j))-1)*dims(reorderedDims(i,j-1))
-                       enddo
-                     enddo
-                     !Finally assign data
-                     aTensor%data(yVec(1),yVec(2),yVec(3),yVec(4))=this%data(x1,x2,x3,x4,x5)
-                    enddo
-                   enddo
-                  enddo
-                 enddo
-                enddo
-            else
-                call ThrowException('Tensor4FromJoinedTensor5','Dims look incorrect',NoErrorCode,CriticalError)
-            endif
-        else
-            call ThrowException('Tensor4FromJoinedTensor5','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
+				aTensor=new_Tensor( reshape( reshape(this%data,ReshapedDims,ORDER=permutation),newdims))
+			else
+				call ThrowException('Tensor4FromJoinedTensor5','Dims look incorrect',NoErrorCode,CriticalError)
+			endif
+	    else
+    	    call ThrowException('Tensor4FromJoinedTensor5','Tensor not initialized',NoErrorCode,CriticalError)
+       	endif
+
 
     end function Tensor4FromJoinedTensor5
 
@@ -3515,75 +3486,44 @@ end function JoinIndicesOfTensor4
         class(Tensor5),intent(IN) :: this
         type(Tensor3) :: aTensor
         integer,intent(IN) :: reqDim1(:),reqDim2(:),reqDim3(:)
-        integer :: dims(5),newdims(3),currDim
-        integer :: x1,x2,x3,x4,x5,i,j,n
-        integer :: yVec(3),xVec(5)
-        !From T5 to T4, 2 is the max number of 4 dims that can be put together
-        integer :: reorderedDims(3,0:2)
+        integer :: dims(5),newdims(3),permutation(5),reshapedDims(5)
+        integer :: n
 
         if(this%Initialized) then
-            dims=shape(this%data)
-            newDims=integerONE
+        	dims=shape(this%data)
+        	newdims=integerONE
             !Ugly code follows. How to write this cleaner while kepping the interface?
-            currDim=1
-            reorderedDims(currDim,0)=size(reqDim1)
-            do n=1,reorderedDims(currDim,0)
-                newDims(currDim)=newDims(currDim)*dims(reqDim1(n))
-                reorderedDims(currDim,n)=reqDim1(n)
+            do n=1,size(reqDim1)
+				permutation(n)=reqDim1(n)
+				newdims(1)=newdims(1)*dims(reqDim1(n))
+			enddo
+			do n=1,size(reqDim2)
+				permutation(n+size(reqDim1))=reqDim2(n)
+				newdims(2)=newdims(2)*dims(reqDim2(n))
+			enddo
+			do n=1,size(reqDim3)
+				permutation(n+size(reqDim1)+size(reqDim2))=reqDim3(n)
+				newdims(3)=newdims(3)*dims(reqDim3(n))
+			enddo
+            do n=1,5
+                ReshapedDims(permutation(n))=dims(n)
             enddo
-            !2
-            currDim=2
-            reorderedDims(currDim,0)=size(reqDim2)
-            do n=1,reorderedDims(currDim,0)
-                newDims(currDim)=newDims(currDim)*dims(reqDim2(n))
-                reorderedDims(currDim,n)=reqDim2(n)
-            enddo
-            !3
-            currDim=3
-            reorderedDims(currDim,0)=size(reqDim3)
-            do n=1,reorderedDims(currDim,0)
-                newDims(currDim)=newDims(currDim)*dims(reqDim3(n))
-                reorderedDims(currDim,n)=reqDim3(n)
-            enddo
-
             if(product(dims).eq.product(newdims)) then
-                aTensor=new_Tensor( newdims(1),newdims(2),newdims(3), ZERO )
-                do x5=1,dims(5)
-                 xVec(5)=x5
-                 do x4=1,dims(4)
-                  xVec(4)=x4
-                  do x3=1,dims(3)
-                   xVec(3)=x3
-                   do x2=1,dims(2)
-                    xVec(2)=x2
-                    do x1=1,dims(1)
-                     xVec(1)=x1
-                     do i=1,3
-                       yVec(i)=xVec(reorderedDims(i,1))
-                       do j=2,reorderedDims(i,0)
-                        yVec(i)=yVec(i)+(xVec(reorderedDims(i,j))-1)*dims(reorderedDims(i,j-1))
-                       enddo
-                     enddo
-                     !Finally assign data
-                     aTensor%data(yVec(1),yVec(2),yVec(3))=this%data(x1,x2,x3,x4,x5)
-                    enddo
-                   enddo
-                  enddo
-                 enddo
-                enddo
-            else
-                print *,dims
-                print *,newdims
-                print *,reqDim1,reqDim2,reqDim3
-                call ThrowException('Tensor3FromJoinedTensor5','Dims look incorrect',NoErrorCode,CriticalError)
-            endif
-        else
-            call ThrowException('Tensor3FromJoinedTensor5','Tensor not initialized',NoErrorCode,CriticalError)
-        endif
+				aTensor=new_Tensor( reshape( reshape(this%data,ReshapedDims,ORDER=permutation),newdims))
+			else
+				call ThrowException('Tensor3FromJoinedTensor5','Dims look incorrect',NoErrorCode,CriticalError)
+			endif
+	    else
+    	    call ThrowException('Tensor3FromJoinedTensor5','Tensor not initialized',NoErrorCode,CriticalError)
+       	endif
 
     end function Tensor3FromJoinedTensor5
 
 !##################################################################
+
+
+
+
     function SplitIndicesOfTensor2in5(this,dims) result(aTensor)
         class(Tensor2),intent(IN) :: this
         type(Tensor5) :: aTensor

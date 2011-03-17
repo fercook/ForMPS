@@ -17,7 +17,8 @@
 test_suite PEPS_Class
 
 setup
-  !Set testing mode
+
+	  !Set testing mode
   MaxErrorAllowed=CriticalError
 end setup
 
@@ -39,6 +40,80 @@ test PEPS_creation_deletion
    assert_false(WasThereError())
    print *,'After bussiness'
    assert_equal(aPEPS%delete(),Normal)
+end test
+
+
+test MPS_Core_Extraction
+
+	use MPSAlgorithms_Class
+	use Multiplicator_Class
+
+    type(PEPS) :: aPEPS
+    type(MPS) :: anMPS
+    integer :: dims(2)
+    complex(8) :: theOverlap
+    type(Multiplicator) :: aMultiplicator
+    type(Tensor2) :: aMatrix,theId,LeftMatrices,RightMatrices
+
+    aPEPS=new_PEPS(6,4,2,5)
+    call aPEPS%CanonizeAt(4,2,HORIZONTAL,6,6)
+    call aPEPS%PrintBondDimensions('PEPS map')
+	anMPS=GetPEPSColAsMPS(aPEPS,4,[1,4])
+	call anMPS%PrintBondDimensions('Core MPS')
+
+	aMultiplicator=new_Multiplicator(anMPS)
+	aMatrix=LeftAtSite(aMultiplicator,1)
+	dims=aMatrix%GetDimensions()
+	TheId=Identity(dims(1))
+	print *,'Diff of LEft with identity',Norm(aMatrix-TheId)
+	assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
+
+	aMatrix=LeftAtSite(aMultiplicator,2)
+	dims=aMatrix%GetDimensions()
+	TheId=Identity(dims(1))
+	print *,'Diff of LEft with identity',Norm(aMatrix-TheId)
+	assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
+
+	aMatrix=LeftAtSite(aMultiplicator,3)
+	dims=aMatrix%GetDimensions()
+	TheId=Identity(dims(1))
+	print *,'Diff of LEft with identity',Norm(aMatrix-TheId)
+	assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
+
+	aMatrix=LeftAtSite(aMultiplicator,4)
+	dims=aMatrix%GetDimensions()
+	TheId=Identity(dims(1))
+	print *,'Diff of LEft with identity',Norm(aMatrix-TheId)
+	assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
+
+	aMatrix=RightAtSite(aMultiplicator,4)
+	dims=aMatrix%GetDimensions()
+	TheId=Identity(dims(1))
+	print *,'Diff of Right with identity',Norm(aMatrix-TheId)
+	assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
+
+	aMatrix=RightAtSite(aMultiplicator,3)
+	dims=aMatrix%GetDimensions()
+	TheId=Identity(dims(1))
+	print *,'Diff of Right with identity',Norm(aMatrix-TheId)
+	assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
+
+	aMatrix=RightAtSite(aMultiplicator,2)
+	dims=aMatrix%GetDimensions()
+	TheId=Identity(dims(1))
+	print *,'Diff of Right with identity',Norm(aMatrix-TheId)
+	assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
+
+	aMatrix=RightAtSite(aMultiplicator,1)
+	dims=aMatrix%GetDimensions()
+	TheId=Identity(dims(1))
+	print *,'Diff of Right with identity',Norm(aMatrix-TheId)
+	assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
+
+	theOverlap=Overlap_MPS(anMPS,anMPS)
+	print *,theOverlap
+	assert_equal_within(abs(theOverlap)**2,1.0d0,1.0d-6)
+
 end test
 
 
@@ -129,16 +204,39 @@ end test
 
 
 test MPS_Row_Extraction
+
+	use Multiplicator_Class
+
     type(PEPS) :: aPEPS
     type(MPS) :: anMPS
     type(Multiplicator) :: aMultiplicator
-    integer :: dims(4)
-    type(Tensor2) :: aMatrix,theId,LeftMatrices,RightMatrices
+    integer :: dims(2),theRow
+    complex(8) :: theOverlap
+    type(Tensor2) :: aMatrix,theId
 
-    aPEPS=new_PEPS(4,4,2,5)
-
+    aPEPS=new_PEPS(6,4,2,5)
+    call aPEPS%CanonizeAt(4,2,HORIZONTAL,6,6)
+    do theRow=1,4
+	    anMPS=GetRowAsMPS(aPEPS,theRow,[1,3])
+    	aMultiplicator=new_Multiplicator(anMPS)
+		aMatrix=LeftAtSite(aMultiplicator,3)
+		dims=aMatrix%GetDimensions()
+		TheId=Identity(dims(1))
+		print *,'Diff with identity',Norm(aMatrix-TheId)
+		assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
+	enddo
+    do theRow=1,4
+	    anMPS=GetRowAsMPS(aPEPS,theRow,[5,6])
+    	aMultiplicator=new_Multiplicator(anMPS)
+		aMatrix=RightAtSite(aMultiplicator,1)
+		dims=aMatrix%GetDimensions()
+		TheId=Identity(dims(1))
+		print *,'Diff with identity',Norm(aMatrix-TheId)
+		assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
+	enddo
 
 end test
+
 
 
 end test_suite

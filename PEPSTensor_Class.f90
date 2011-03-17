@@ -524,12 +524,13 @@ module PEPSTensor_Class
 
         if(aPEPS%Isinitialized()) then
           tempInt=1
-          do n=1,5 !loop to skip over the used dimensions and join all the others
+          do n=1,4 !loop to skip over the used dimensions and join all the others
             if (n.ne.whichIsLeft .and. n.ne.whichIsRight .and. n.ne.5) then !5 is the spin dimension...
                joinedDims(tempInt)=n
                tempInt=tempInt+1
             endif
           enddo
+          joinedDims(3)=5
           aMPSTensor=new_MPSTensor(Flatten(aPEPS,[whichIsLeft],[whichIsRight],joinedDims),3,1,2) ! 3,1,2 == Spin, Left, Right
         else
             call ThrowException('DropTwoBondsAndReturnMPSTensor','Tensor not initialized',NoErrorCode,CriticalError)
