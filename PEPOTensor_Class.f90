@@ -42,7 +42,7 @@ module PEPOTensor_Class
   interface new_PEPOTensor
      module procedure new_PEPOTensor_Random,new_PEPOTensor_fromPEPOTensor, &
           & new_PEPOTensor_fromSplitData, new_PEPOTensor_fromTensor6_Transposed, &
-          & new_PEPOTensor_withConstant
+          & new_PEPOTensor_withConstant, new_PEPOTensor_fromTensor4
   end interface
 
   interface assignment (=)
@@ -177,6 +177,41 @@ contains
         return
      endif
    end function new_PEPOTensor_fromTensor6_Transposed
+
+!#############################################################
+
+   function new_PEPOTensor_fromTensor4(tensor,whichDimIsSpinUp,whichDimIsSpinDown,whichDirectionBondsGo) result (this)
+      class(Tensor4),intent(in) :: tensor
+      integer, intent(IN) :: whichDimIsSpinUp,whichDimIsSpinDown,whichDirectionBondsGo
+      type(PEPOTensor) :: this
+      integer :: newDims(6),oldDims(4),reorderedDims(4)
+
+      oldDims=tensor%GetDimensions()
+      !Find in which order the tensor has to enter so that the spin is in the last dimension
+      reorderedDims=[1,2,3,4]
+      reorderedDims(whichDimIsSpinUP)=3
+      reorderedDims(whichDimIsSpinDOWN)=4
+      reorderedDims(3)=whichDimIsSpinUP
+      reorderedDims(4)=whichDimIsSpinDOWN
+
+      if (whichDirectionBondsGo.eq.HORIZONTAL) then
+         newDims(1)=oldDims(reorderedDims(1))
+         newDims(2)=oldDims(reorderedDims(2))
+         newDims(3)=integerONE
+         newDims(4)=integerONE
+      else if (whichDirectionBondsGo.eq.VERTICAL) then
+         newDims(1)=integerONE
+         newDims(2)=integerONE
+         newDims(3)=oldDims(reorderedDims(1))
+         newDims(4)=oldDims(reorderedDims(2))
+      endif
+      newDims(5)=oldDims(reorderedDims(3))
+      newDims(6)=oldDims(reorderedDims(4))
+
+      this=TensorReshape( TensorTranspose(tensor,reorderedDims) , newDims)
+
+   end function new_PEPOTensor_fromTensor4
+!#############################################################
 
 !##################################################################
 !##################################################################

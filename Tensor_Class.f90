@@ -286,7 +286,7 @@ module Tensor_Class
   end interface
 
   interface TensorReshape
-   module procedure TensorReshape3To5,TensorReshape2To3
+   module procedure TensorReshape3To5,TensorReshape2To3,TensorReshape4To6
   end interface
 
   interface Flatten
@@ -3572,6 +3572,9 @@ end function JoinIndicesOfTensor4
                  enddo
                 enddo
             else
+                print *,dims
+                print *,newdims
+                print *,reqDim1,reqDim2,reqDim3
                 call ThrowException('Tensor3FromJoinedTensor5','Dims look incorrect',NoErrorCode,CriticalError)
             endif
         else
@@ -3611,6 +3614,23 @@ end function JoinIndicesOfTensor4
     end function TensorReshape3To5
 
 !##################################################################
+
+    function TensorReshape4To6(this,dims) result(aTensor)
+        class(Tensor4),intent(IN) :: this
+        type(Tensor6) :: aTensor
+        integer,intent(IN) :: dims(6)
+
+        if(this%Initialized) then
+            aTensor=new_Tensor( dims(1), dims(2), dims(3), dims(4), dims(5), dims(6) , ZERO )
+            aTensor%data=reshape(this%data, dims )
+        else
+            call ThrowException('TensorReshape4To6','Tensor not initialized',NoErrorCode,CriticalError)
+        endif
+
+    end function TensorReshape4To6
+
+!##################################################################
+
     function TensorReshape2To3(this,dims) result(aTensor)
         class(Tensor2),intent(IN) :: this
         type(Tensor3) :: aTensor

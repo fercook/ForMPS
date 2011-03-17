@@ -51,7 +51,7 @@ module PEPSAlgorithms_Class
     end interface
 
     interface ExpectationValue
-        module procedure Expectation_Value_PEPS_PEPO, Expectation_Value_Canonical_PEPS_PEPO
+        module procedure Expectation_Value_PEPS_PEPO, Expectation_Value_Canonical_PEPS_MPO
     end interface
 
   contains
@@ -251,5 +251,144 @@ module PEPSAlgorithms_Class
       call aPEPS%ScaleBy(ONE/(theNorm**(0.5d0/TotalNumberOfTensors)))
 
   end subroutine Normalize_PEPS
+
+
+
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+
+  function Canonical_PEPS_Overlap(onePEPS, anotherPEPS, CorePosition, CoreDirection) result(theOverlap)
+      class(PEPS),intent(IN),target :: onePEPS
+      class(PEPS),intent(IN),optional,target :: anotherPEPS
+      type(PEPS),pointer :: belowPEPS
+      integer,intent(IN) :: CorePosition, CoreDirection
+      complex(8) :: theOverlap
+      type(Tensor2),allocatable :: RightMatrices(:),LeftMatrices(:)
+      type(Multiplicator) :: aMultiplicator
+      type(MPS) :: MPSAbove,MPSBelow,CoreMPSBelow,CoreMPSAbove
+      integer :: x,y,dims(2)
+
+      if (present(anotherPEPS)) then
+         belowPEPS => anotherPEPS
+      else
+         belowPEPS => onePEPS
+      endif
+
+      dims=onePEPS%GetSize()
+      if (dims.equalvector.belowPEPS%GetSize()) then
+        select case (CoreDirection)
+         case (VERTICAL)
+            allocate (RightMatrices(dims(2)),LeftMatrices(dims(2)))
+            do y=1,dims(2)
+               if (CorePosition.gt.1) then
+                  MPSAbove=onePEPS%GetRowAsMPS(y,[1,CorePosition-1])
+                  MPSBelow=belowPEPS%GetRowAsMPS(y,[1,CorePosition-1])
+                  aMultiplicator=new_Multiplicator(MPSAbove,MPSBelow)
+                  LeftMatrices(y)=LeftAtSite(aMultiplicator,CorePosition-1)
+               else
+                  LeftMatrices(y)=Identity(1)
+               endif
+               if (CorePosition.lt.dims(1)) then
+                  MPSAbove=onePEPS%GetRowAsMPS(y,[CorePosition+1,dims(1)])
+                  MPSBelow=belowPEPS%GetRowAsMPS(y,[CorePosition+1,dims(1)])
+                  aMultiplicator=new_Multiplicator(MPSAbove,MPSBelow)
+                  RightMatrices(y)=RightAtSite(aMultiplicator,1)
+               else
+                  RightMatrices(y)=Identity(1)
+               endif
+            enddo
+            CoreMPSBelow=GetColAsMPS(belowPEPS,CorePosition)
+            CoreMPSAbove=GetColAsMPS(onePEPS,CorePosition,LeftMatrices,RightMatrices)
+         case (HORIZONTAL)
+            allocate (RightMatrices(dims(1)),LeftMatrices(dims(1)))
+            do x=1,dims(1)
+               if (CorePosition.gt.1) then
+                  MPSAbove=onePEPS%GetColAsMPS(x,[1,CorePosition-1])
+                  MPSBelow=belowPEPS%GetColAsMPS(x,[1,CorePosition-1])
+                  aMultiplicator=new_Multiplicator(MPSAbove,MPSBelow)
+                  LeftMatrices(x)=LeftAtSite(aMultiplicator,CorePosition-1)
+               else
+                  LeftMatrices(x)=Identity(1)
+               endif
+               if (CorePosition.lt.dims(2)) then
+                  MPSAbove=onePEPS%GetColAsMPS(x,[CorePosition+1,dims(2)])
+                  MPSBelow=belowPEPS%GetColAsMPS(x,[CorePosition+1,dims(2)])
+                  aMultiplicator=new_Multiplicator(MPSAbove,MPSBelow)
+                  RightMatrices(x)=RightAtSite(aMultiplicator,1)
+               else
+                  RightMatrices(x)=Identity(1)
+               endif
+            enddo
+            CoreMPSBelow=GetRowAsMPS(belowPEPS,CorePosition)
+            CoreMPSAbove=GetRowAsMPS(onePEPS,CorePosition,LeftMatrices,RightMatrices)
+          end select
+
+           theOverlap=Overlap(CoreMPSAbove,CoreMPSBelow)
+
+        else
+            call ThrowException('PEPS-Canonical_PEPS_Overlap','PEPS not initialized',NoErrorCode,CriticalError)
+        endif
+
+
+  end function Canonical_PEPS_Overlap
+
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!!!!  CAREFUL FOR NOW THIS ROUTINE ASSUMES THAT PEPS IS CANONIZED IN COL/ROW OF CHOICE
+  function Expectation_Value_Canonical_PEPS_MPO(onePEPS, aMPO, anotherPEPS,colORrowPosition,direction,corePosition) result(theResult)
+      class(PEPS),intent(IN),target :: onePEPS
+      class(MPO),intent(IN) :: aMPO
+      class(PEPS),intent(IN),optional,target :: anotherPEPS
+      integer,intent(IN) :: colORrowPosition,direction,corePosition
+      type(PEPS),pointer :: belowPEPS
+      type(MPS) :: MPSAbove,MPSBelow
+      type(PEPSTensor) :: tempPEPSTensor
+      type(PEPOTensor) :: tempPEPOTensor
+      complex(8) :: theResult
+      integer :: dims(2)
+
+      dims=onePEPS%GetSize()
+
+      if (present(anotherPEPS)) then
+         belowPEPS => anotherPEPS
+      else
+         belowPEPS => onePEPS
+      endif
+
+      dims=onePEPS%GetSize()
+      if (dims.equalvector.belowPEPS%GetSize()) then
+        select case (direction)
+         case (VERTICAL)
+            MPSAbove=onePEPS%GetColAsMPS(colORrowPosition,[1,dims(2)])
+            MPSBelow=belowPEPS%GetColAsMPS(colORrowPosition,[1,dims(2)])
+            tempPEPOTensor=new_PEPOTensor(aMPO%GetTensorAt(CorePosition),3,4,VERTICAL)
+            tempPEPSTensor=tempPEPOTensor.applyTo. (onePEPS%GetTensorAt(CorePosition, colORrowPosition))
+            call MPSAbove%SetTensorAt(CorePosition,tempPEPSTensor%AsMPSTensor(DOWN,UP))
+         case (HORIZONTAL)
+            MPSAbove=onePEPS%GetRowAsMPS(colORrowPosition,[1,dims(1)])
+            MPSBelow=belowPEPS%GetRowAsMPS(colORrowPosition,[1,dims(1)])
+            tempPEPOTensor=new_PEPOTensor(aMPO%GetTensorAt(CorePosition),3,4,HORIZONTAL)
+            tempPEPSTensor=tempPEPOTensor.applyTo.(onePEPS%GetTensorAt(CorePosition, colORrowPosition))
+            call MPSAbove%SetTensorAt(CorePosition,tempPEPSTensor%AsMPSTensor(LEFT,RIGHT))
+          end select
+
+           theResult=Overlap(MPSAbove,MPSBelow)
+
+        else
+            call ThrowException('Expectation_Value_Canonical_PEPS_MPO','PEPS not initialized',NoErrorCode,CriticalError)
+        endif
+
+  end function Expectation_Value_Canonical_PEPS_MPO
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
 
 end module PEPSAlgorithms_Class

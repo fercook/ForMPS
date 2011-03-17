@@ -33,22 +33,26 @@ module MPSAlgorithms_Class
     interface Approximate
         module procedure Approximate_MPS
     end interface
+
+    interface Overlap
+      module procedure Overlap_MPS
+    end interface
   contains
 
 !*****************************************************************************
-  complex(8) function Overlap(mps1,mps2)
+  complex(8) function Overlap_MPS(mps1,mps2)
     type(MPS),intent(IN) :: mps1, mps2
     type(Multiplicator) :: aMultiplicator
 
     if(mps1%IsInitialized().and.mps2%IsInitialized()) then
         aMultiplicator = new_Multiplicator(mps1,mps2)
-        Overlap=TensorTrace( (LeftAtSite(aMultiplicator,0))*(RightAtSite(aMultiplicator,1)) )
+        Overlap_MPS=TensorTrace( (LeftAtSite(aMultiplicator,0))*(RightAtSite(aMultiplicator,1)) )
     else
-        call ThrowException('Overlap algorithm','MPS not initialized',NoErrorCode,CriticalError)
+        call ThrowException('Overlap_MPS','MPS not initialized',NoErrorCode,CriticalError)
     endif
     call aMultiplicator%Delete()
 
-  end function Overlap
+  end function Overlap_MPS
 
 
 !*****************************************************************************

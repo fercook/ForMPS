@@ -52,6 +52,8 @@ Module PEPS_Class
      procedure,public :: PrintBondDimensions => PrintPEPSBondDimensionsMap
      procedure,public :: IsPEPSWellFormed => Integrity_Check_of_bonds
      procedure,public :: CanonizeAt => CanonizePEPSAtSite
+     procedure,public :: GetRowAsMPS => GetPEPSRowAsMPS
+     procedure,public :: GetColAsMPS => GetPEPSColAsMPS
   end type PEPS
 
   interface new_PEPS
@@ -60,6 +62,14 @@ Module PEPS_Class
 
   interface assignment (=)
      module procedure new_PEPS_fromAssignment
+  end interface
+
+  interface getRowAsMPS
+   module procedure GetPEPSRowAsMPS, GetCoreRowAsMPS
+  end interface
+
+  interface getColAsMPS
+   module procedure GetPEPSColAsMPS, GetCoreColAsMPS
   end interface
 
     contains
@@ -620,7 +630,7 @@ Module PEPS_Class
             call DecouplePEPSHorizontallyAtRow(aPEPS,y,UP,MaxLongitudinalBond,MaxTransverseBond)
          enddo
          do y=aPEPS%YLength,siteY+1,-1
-            call DecouplePEPSHorizontallyAtRow(aPEPS,y,UP,MaxLongitudinalBond,MaxTransverseBond)
+            call DecouplePEPSHorizontallyAtRow(aPEPS,y,DOWN,MaxLongitudinalBond,MaxTransverseBond)
          enddo
          do x=1,siteX-1
             call CanonizeCoreSiteAndPushNorm(aPEPS,x,siteY,RIGHT,MaxTransverseBond**2)
@@ -721,7 +731,7 @@ Module PEPS_Class
 
       call tempTensor4%SVD(pushTensor,Umatrices,BondLimits)
 
-      !Recover the do not push matrix into the push tensor
+      !Recover the do-not push matrix into the push tensor
       pushTensor=nModeProduct(Umatrices(TransverseDoNotPush),pushTensor,[TransverseDoNotPush])
       !And now push the transverse matrix
       if ( IsPositionInsidePEPS(aPEPS,Xcol+abs(deltaY),Yrow+abs(deltaX)) ) then

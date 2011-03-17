@@ -54,7 +54,7 @@ end test
 
 
 
-test PEPS_Canonization_Routines_Basic
+test PEPS_Canonization_Routines_Horizontal
     type(PEPS) :: aPEPS,smallPEPS
     type(PEPSTensor) :: aTensor
     integer :: dims(4)
@@ -87,6 +87,57 @@ test PEPS_Canonization_Routines_Basic
     dims=aTensor%GetBonds()
     theId=Identity(dims(UP))
     assert_equal_within(aMatrix.absdiff.TheId,0.0d0,1.0d-8)
+end test
+
+
+
+test PEPS_Canonization_Routines_Vertical
+    type(PEPS) :: aPEPS,smallPEPS
+    type(PEPSTensor) :: aTensor
+    integer :: dims(4)
+    type(Tensor2) :: aMatrix,theId
+
+    aPEPS=new_PEPS(4,4,2,5)
+    smallPEPS=aPEPS
+    call smallPEPS%CanonizeAt(3,2,VERTICAL,6,6)
+    dims=[36,16,4,2]
+    aTensor=smallPEPS%GetTensorAt(3,2)
+    assert_true(aTensor%GetBonds().equalvector.dims)
+    assert_true(smallPEPS%IsPEPSWellFormed())
+    call smallPEPS%PrintBondDimensions()
+
+    !now check canonization of core
+    aTensor=smallPEPS%GetTensorAt(1,2)
+    aMatrix=aTensor%CollapseAllIndicesBut(RIGHT)
+    dims=aTensor%GetBonds()
+    theId=Identity(dims(RIGHT))
+    assert_equal_within(aMatrix.absdiff.TheId,0.0d0,1.0d-8)
+
+    aTensor=smallPEPS%GetTensorAt(2,2)
+    aMatrix=aTensor%CollapseAllIndicesBut(RIGHT)
+    dims=aTensor%GetBonds()
+    theId=Identity(dims(RIGHT))
+    assert_equal_within(aMatrix.absdiff.TheId,0.0d0,1.0d-8)
+
+    aTensor=smallPEPS%GetTensorAt(4,2)
+    aMatrix=aTensor%CollapseAllIndicesBut(LEFT)
+    dims=aTensor%GetBonds()
+    theId=Identity(dims(LEFT))
+    assert_equal_within(aMatrix.absdiff.TheId,0.0d0,1.0d-8)
+
+end test
+
+
+test MPS_Row_Extraction
+    type(PEPS) :: aPEPS
+    type(MPS) :: anMPS
+    type(Multiplicator) :: aMultiplicator
+    integer :: dims(4)
+    type(Tensor2) :: aMatrix,theId,LeftMatrices,RightMatrices
+
+    aPEPS=new_PEPS(4,4,2,5)
+
+
 end test
 
 

@@ -109,7 +109,8 @@ test PEPS_Canonization_Routines
     aPEPS=new_PEPS(4,4,2,2)
     call Normalize(aPEPS)
     smallPEPS=aPEPS
-    call smallPEPS%CanonizeAt(2,2,VERTICAL,6,6)
+    call smallPEPS%CanonizeAt(2,2,HORIZONTAL,6,6)
+    assert_true(smallPEPS%IsPEPSWellFormed())
     overlapBS=Overlap_PEPS(aPEPS,smallPEPS)
     print *, 'overlap BTW peps and Canonized PEPS (EXACT): ',abs(overlapBS)**2
     assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-9)
@@ -118,11 +119,10 @@ test PEPS_Canonization_Routines
     call Normalize(aPEPS)
     smallPEPS=aPEPS
     print *,'About to canonize...'
-    call smallPEPS%CanonizeAt(2,2,VERTICAL,6,6)
+    call smallPEPS%CanonizeAt(2,2,HORIZONTAL,6,6)
     overlapBS=Overlap_PEPS(aPEPS,smallPEPS)
-    print *, 'overlap BTW peps and Canonized PEPS (small bond): ',abs(overlapBS)**2
-    !assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-9)
-
+    print *, 'overlap BTW peps and Canonized PEPS (H small bond): ',abs(overlapBS)**2
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-6)
 
 end test
 
@@ -510,10 +510,31 @@ test ExptValueHamiltonianCol
 
     !Now compute energy
     energy=ExpectationValue(theState,theH)
-    print *,energy,3*cos(theta)**2+4*field*sin(theta)
     assert_equal_within(energy,3*cos(theta)**2+4*field*sin(theta),1.0d-3)
 
 end test
+
+
+test Canonical_Overlap
+    type(PEPS) :: onePEPS,twoPEPS,smallPEPS1,smallPEPS2
+    complex(8) :: overlapBS,overlapNormal
+
+    onePEPS=new_PEPS(4,4,2,2)
+    smallPEPS1=onePEPS
+    call smallPEPS1%CanonizeAt(2,2,HORIZONTAL,6,6)
+    overlapBS=Overlap(smallPEPS1,CorePosition=2, CoreDirection=HORIZONTAL)
+    print *, 'overlap BTW Canonized PEPSs (EXACT): ',abs(overlapBS)**2
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+
+    twoPEPS=new_PEPS(4,4,2,2)
+    smallPEPS2=twoPEPS
+    call smallPEPS2%CanonizeAt(2,2,HORIZONTAL,6,6)
+    overlapNormal=Overlap(onePEPS,twoPEPS)
+    overlapBS=Overlap(smallPEPS1,smallPEPS2,CorePosition=2, CoreDirection=HORIZONTAL)
+    assert_equal_within(abs(overlapBS-overlapNormal),0.0d0,1.0d-10)
+
+end test
+
 
 
 end test_suite
