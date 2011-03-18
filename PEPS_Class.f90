@@ -794,10 +794,6 @@ Module PEPS_Class
       NormMatrix=TakeDiagonalPart(coreTensor%CollapseAllIndicesBut(directionToPush))
       SqrtOfNormMatrix=TensorSqrt(NormMatrix)
 
-      NormMatrix=PseudoInverseDiagonal(SqrtOfNormMatrix)
-      coreTensor=ApplyMatrixToBond(coreTensor,PseudoInverseDiagonal(SqrtOfNormMatrix),directionToPush)
-      call aPEPS%SetTensorAt(siteX,siteY,coreTensor)
-
       !Finally push the U and then the norm matrix to the neighbor tensor
       select case (directionToPush)
          case (UP)
@@ -810,10 +806,18 @@ Module PEPS_Class
             deltaR=[1,0]
       end select
       if (IsPositionInsidePEPS(aPEPS,siteX+deltaR(1),siteY+deltaR(2))) then
+         !renormalize the tensor with the inverse sqrt of the norm
+         coreTensor=ApplyMatrixToBond(coreTensor,PseudoInverseDiagonal(SqrtOfNormMatrix),directionToPush)
+         call aPEPS%SetTensorAt(siteX,siteY,coreTensor)
+         !And now push the U matrix and then the sqrt of the norm
          tempTensor=aPEPS%TensorCollection(siteX+deltaR(1),siteY+deltaR(2))
          tempTensor=ApplyMatrixToBond(tempTensor,TensorTranspose(Umatrices(directionToPush)),DirectionOppositeTo(directionToPush))
          tempTensor=ApplyMatrixToBond(tempTensor,SqrtOfNormMatrix,DirectionOppositeTo(directionToPush))
          call aPEPS%SetTensorAt(siteX+deltaR(1),siteY+deltaR(2),tempTensor)
+      else
+         !Store the tensor but without adding the norm
+         coreTensor=ApplyMatrixToBond(coreTensor,Umatrices(directionToPush),directionToPush)
+         call aPEPS%SetTensorAt(siteX,siteY,coreTensor)
       endif
 
    end subroutine CanonizeCoreSiteAndPushNorm
