@@ -27,6 +27,23 @@ teardown
 
 end teardown
 
+test NormalizeUsingOverlap
+  type(MPS) :: anMPS
+  integer :: length=10,spin=2,bond=20
+  complex(8) :: overlap12
+
+  anMPS=new_MPS(length,spin,bond)
+  overlap12 = Overlap(anMPS,anMPS)
+  assert_false(abs(overlap12)**2.eq.1.0d0)
+  print *,'prevo overlap is ',overlap12
+  call Normalize(anMPS)
+  overlap12 = Overlap(anMPS,anMPS)
+  print *,'after overlap is ',overlap12
+  assert_equal_within(abs(overlap12)**2,1.0d0,1.0e-8)
+
+  spin= anMPS%Delete()
+
+end test
 
 test OverlapAlgorithm
   type(MPS) :: anMPS
@@ -67,5 +84,47 @@ test ApproximationAlgorithm
     print *,site
   enddo
 end test
+
+test ApproximationWithoutCanonization
+  type(MPS) :: smallMPS,bigMPS
+  integer :: length=20,spin=2,bondBig=40,bondSmall=2,site
+  real(8) :: overlap12
+  type(MPSTensor) :: localTensor
+
+  bigMPS=new_MPS(length,spin,bondBig)
+  call Normalize(bigMPS)
+
+  smallMPS=Approximate(bigMPS,bondSmall,overlap12)
+  assert_equal_within(overlap12,1.0d0,1.0D-5)
+
+  print *,'Approximated overlap :',overlap12
+  print *,'Big bond:',bondBig
+  print *,'Small bond: ',smallMPS%GetMaxBond()
+
+  do site=1,smallMPS%GetSize()
+    localTensor=smallMPS.TensorAt.site
+    call localTensor%PrintDimensions('Dimensions of tensor')
+    print *,site
+  enddo
+end test
+
+
+test ApproximateLargeSpinMPS
+  type(MPS) :: smallMPS,bigMPS
+  integer :: length=20,spin=20,bondBig=20,bondSmall=2,site
+  real(8) :: overlap12
+  type(MPSTensor) :: localTensor
+
+  bigMPS=new_MPS(length,spin,bondBig)
+  call Normalize(bigMPS)
+
+  smallMPS=Approximate(bigMPS,bondSmall,overlap12)
+  assert_equal_within(overlap12,1.0d0,1.0D-5)
+
+  print *,'Approximated overlap :',overlap12
+  print *,'Big bond:',bondBig
+  print *,'Small bond: ',smallMPS%GetMaxBond()
+end test
+
 
 end test_suite

@@ -35,47 +35,47 @@ test MPS_Core_Extraction
 
     type(PEPS) :: aPEPS
     type(MPS) :: anMPS
-    integer :: dims(2)
+    integer :: dims(2),x,y
     complex(8) :: theOverlap
     type(Multiplicator) :: aMultiplicator
     type(Tensor2) :: aMatrix,theId,LeftMatrices,RightMatrices
     type(PEPSTensor) :: aPTensor
-    type(MPSTensor) :: aMtensor
+    type(MPSTensor) :: aMtensor,bMTensor
+    integer,parameter :: XLength=6,YLength=6,XcanonPos=4,YCanonPos=3
 
-    aPEPS=new_PEPS(6,4,2,5)
-    call aPEPS%CanonizeAt(4,2,HORIZONTAL,5,6)
+    aPEPS=new_PEPS(XLength,YLength,2,5)
+    call aPEPS%CanonizeAt(XcanonPos,YCanonPos,HORIZONTAL,5,6)
     call aPEPS%PrintBondDimensions('PEPS map')
-	anMPS=GetPEPSColAsMPS(aPEPS,4,[1,4])
+	anMPS=GetPEPSColAsMPS(aPEPS,XcanonPos,[1,YLength])
 	call anMPS%PrintBondDimensions('Core MPS')
 
-	aPTensor=aPEPS%GetTensorAt(4,3)
+	aPTensor=aPEPS%GetTensorAt(XcanonPos,YcanonPos+1)
 	aMatrix=aPTensor%CollapseAllIndicesBut(DOWN)
    dims=aMatrix%GetDimensions()
    TheId=Identity(dims(1))
-   print *,'Diff of DOWN with identity',Norm(aMatrix-TheId),dims
    assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
    aMtensor=aPTensor%AsMPSTensor(DOWN,UP)
    call aMTensor%PrintDimensions()
-   print *,Norm(aMTensor),'NORM'
+   print *,Norm(aMTensor),'NORM of MPS Tensor'
+   bMtensor=anMPS%GetTensorAt(YcanonPos+1)
+   print *,'Diff between direct and core mps tensor',norm(bMTensor-aMtensor)
 
-	aMultiplicator=new_Multiplicator(anMPS)
-	aMatrix=LeftAtSite(aMultiplicator,1)
-	dims=aMatrix%GetDimensions()
-	TheId=Identity(dims(1))
-	print *,'Diff of LEft at 1 with identity',Norm(aMatrix-TheId), dims
-	assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
+   aMultiplicator=new_Multiplicator(anMPS)
+   do y=1,YCanonPos-1
+	   aMatrix=LeftAtSite(aMultiplicator,y)
+	   dims=aMatrix%GetDimensions()
+	   TheId=Identity(dims(1))
+	   print *,'Diff of LEft at ',y,' with identity',Norm(aMatrix-TheId)
+	   assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
+   enddo
 
-	aMatrix=RightAtSite(aMultiplicator,4)
-	dims=aMatrix%GetDimensions()
-	TheId=Identity(dims(1))
-	print *,'Diff of Right at 4 with identity',Norm(aMatrix-TheId),dims
-	assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
-
-	aMatrix=RightAtSite(aMultiplicator,3)
-	dims=aMatrix%GetDimensions()
-	TheId=Identity(dims(1))
-	print *,'Diff of Right at 3 with identity',Norm(aMatrix-TheId),dims
-	assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
+   do y=YLength,YCanonPos+1,-1
+   	aMatrix=RightAtSite(aMultiplicator,y)
+	  dims=aMatrix%GetDimensions()
+   	TheId=Identity(dims(1))
+   	print *,'Diff of Right at ',y,' with identity',Norm(aMatrix-TheId)
+   	assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
+   enddo
 
 	theOverlap=Overlap_MPS(anMPS,anMPS)
 	print *,theOverlap

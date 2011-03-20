@@ -27,7 +27,7 @@ module MPSAlgorithms_Class
 
   implicit none
 
-    integer :: MaxSweeps = 10
+    integer :: MaxSweeps = 4
     integer :: ApproximationTolerance = 1.0D-9
 
     interface Approximate
@@ -37,6 +37,11 @@ module MPSAlgorithms_Class
     interface Overlap
       module procedure Overlap_MPS
     end interface
+
+    interface Normalize
+      module procedure Normalize_MPS
+    end interface
+
   contains
 
 !*****************************************************************************
@@ -54,6 +59,21 @@ module MPSAlgorithms_Class
 
   end function Overlap_MPS
 
+
+
+
+  subroutine Normalize_MPS(anMPS)
+   class(MPS),intent(INOUT) :: anMPS
+   complex(8) :: theOverlap
+
+    if(anMPS%IsInitialized()) then
+        theOverlap=Overlap(anMPS,anMPS)
+        call MultiplyMPSbyNumber(anMPS,ONE/sqrt(abs(theOverlap)**(1.0d0/anMPS%GetSize())))
+    else
+        call ThrowException('Normalize_MPS','MPS not initialized',NoErrorCode,CriticalError)
+    endif
+
+ end subroutine Normalize_MPS
 
 !*****************************************************************************
   function Approximate_MPS(bigMPS, newBondDimension,returnOverlap) result(smallMPS)
@@ -89,9 +109,11 @@ module MPSAlgorithms_Class
         sweep=0
         !Start sweeping
         do while (sweep .le. MaxSweeps .and. (1.d0-overlap).gt.ApproximationTolerance )
+            if (debug) print *,'Approximating MPS, right sweep ',sweep
             sweep=sweep+1
             !Sweep to the right
             do site=1,MPSLength
+               if (debug) print *,'----Position ',site
                 localTensor=(LeftAtSite(bigMultiplicator,site-1)) .times. &
                     & (bigMPS%GetTensorAt(site)) .times. (RightAtSite(bigMultiplicator,site+1))
                 call smallMPS%SetTensorAt(site,localTensor)
@@ -101,7 +123,9 @@ module MPSAlgorithms_Class
             call smallMultiplicator%Reset(RIGHT)
             call bigMultiplicator%Reset(RIGHT)
             !Sweep to the left
+            if (debug) print *,'Approximating MPS, left sweep ',sweep
             do site=MPSLength,1,-1
+               if (debug) print *,'----Position ',site
                 localTensor=(LeftAtSite(bigMultiplicator,site-1)) .times. &
                     & (bigMPS%GetTensorAt(site)) .times. (RightAtSite(bigMultiplicator,site+1))
                 call smallMPS%SetTensorAt(site,localTensor)

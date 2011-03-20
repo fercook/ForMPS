@@ -231,9 +231,9 @@ contains
                             OperatedTensor=Typed_this%MPS_Above%GetTensorAt(site)
                         endif
                 end select
-                Mult_RightAtSite=MPSRightProduct(Multiplicator_Right(this,site+1), &
+                this%RightTensors(site)=MPSRightProduct(Multiplicator_Right(this,site+1), &
                         & OperatedTensor,this%MPS_Below%GetTensorAt(site))
-                this%RightTensors(site)=Mult_RightAtSite
+                Mult_RightAtSite=this%RightTensors(site)
             endif
         else
             call ThrowException('new_Multiplicator_two_MPS','MPS not initialized',NoErrorCode,CriticalError)

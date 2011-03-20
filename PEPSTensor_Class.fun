@@ -123,5 +123,27 @@ test Multiplication_By_MPO
     assert_true(dims.equalvector.correctDims)
 end test
 
+
+
+test go_to_mps_and_back
+  type(PEPSTensor) :: aPEPS,anotherPEPS
+  type(MPSTensor) :: aMPSt
+  integer :: error, spin=2,LSbond=3,RSbond=4,USbond=5,DSbond=6
+
+  aPEPS=new_PEPSTensor(spin,LSbond,RSbond,USbond,DSbond)
+  aMPSt=aPEPS%AsMPSTensor(LEFT,RIGHT)
+  call aMPSt%PrintDimensions()
+  anotherPEPS=new_PEPSTensor(aMPSt,3,HORIZONTAL,[USbond,DSbond])
+  assert_equal_within(Norm(aPEPS-anotherPEPS),0.0d0,1.0d-15)
+
+  aMPSt=aPEPS%AsMPSTensor(DOWN,UP)
+  call aMPSt%PrintDimensions()
+  anotherPEPS=new_PEPSTensor(aMPSt,3,VERTICAL,[LSbond,RSbond])
+  call anotherPeps%PrintDimensions()
+  assert_equal_within(Norm(aPEPS-anotherPEPS),0.0d0,1.0d-15)
+
+end test
+
+
 end test_suite
 

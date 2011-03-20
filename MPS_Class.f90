@@ -42,6 +42,7 @@ Module MPS_Class
      procedure,public :: Canonize => CanonizeMPS
      procedure,public :: GetTensorAt => GetMPSTensorAtSite
      procedure,public :: SetTensorAt => SetMPSTensorAtSite
+     procedure,public :: ScaleBy => MultiplyMPSbyNumber
      procedure,public :: delete => delete_MPS
      procedure,public :: GetSize => GetMPSLength
      procedure,public :: GetSpin => GetMPSSpin
@@ -210,24 +211,25 @@ Module MPS_Class
 
 
 
-  subroutine CanonizeMPS(aMPS,Norm)
+  subroutine CanonizeMPS(aMPS,Norma)
     class(MPS),intent(INOUT) :: aMPS
-    complex(8),intent(OUT),optional :: Norm
-    integer :: n
+    complex(8),intent(OUT),optional :: Norma
+    integer :: n,CanonSite
+    type(MPSTensor) :: tempTensor
 
     if(aMPS%Initialized) then
-        if (present(Norm)) Norm=ONE
+       if (present(Norma)) Norma=ONE
         !First canonize to the right
         do n=1,aMPS%length
             call aMPS%RightCanonizeAtSite(n)
         enddo
-        if (present(Norm)) Norm=Norm*aMPS%TensorCollection(aMPS%length+1)%Prod()
+        if (present(Norma)) Norma=Norma*aMPS%TensorCollection(aMPS%length+1)%Prod()
         aMPS%TensorCollection(aMPS%length+1) = new_MPSTensor(integerONE,integerONE,integerONE,ONE)
         !Now canonize to the left and end at first site
         do n=aMPS%length,1,-1
             call aMPS%LeftCanonizeAtSite(n)
         enddo
-        if (present(Norm)) Norm=Norm*aMPS%TensorCollection(0)%Prod()
+        if (present(Norma)) Norma=Norma*aMPS%TensorCollection(0)%Prod()
         aMPS%TensorCollection(0) = new_MPSTensor(integerONE,integerONE,integerONE,ONE)
     else
         call ThrowException('CanonizeMPS','MPS not initialized',NoErrorCode,CriticalError)
@@ -249,7 +251,7 @@ Module MPS_Class
      type(MPSTensor) :: aMPSTensor
 
      if(aMPS%Initialized) then
-        if(site.ge.1.and.site.le.aMPS%length) then
+        if(site.ge.0.and.site.le.aMPS%length+1) then
              aMPSTensor=aMPS%TensorCollection(site)
         else
              call ThrowException('GetMPSTensorAtSite','Site is wrong index',site,CriticalError)
@@ -273,7 +275,7 @@ Module MPS_Class
      class(MPSTensor),intent(IN) :: aMPSTensor
 
      if(thisMPS%Initialized.and.aMPSTensor%IsInitialized()) then
-        if(site.ge.1 .and. site.le.thisMPS%length) then
+        if(site.ge.0 .and. site.le.thisMPS%length+1) then
              thisMPS%TensorCollection(site)=aMPSTensor
         else
              call ThrowException('SetMPSTensorAtSite','Site is wrong index',site,CriticalError)
@@ -285,8 +287,21 @@ Module MPS_Class
 
 
 
+   subroutine MultiplyMPSbyNumber(thisMPS,aFactor)
+      class(MPS),intent(INOUT) :: thisMPS
+      complex(8),intent(IN) :: aFactor
+      integer :: n
+      type(MPSTensor) :: tempTensor
 
-
+      if(thisMPS%Initialized) then
+         do n=1,thisMPS%length
+            tempTensor=aFactor*thisMPS%GetTensorAt(n)
+            call thisMPS%SetTensorAt(n,tempTensor)
+         enddo
+     else
+         call ThrowException('MultiplyMPSbyNumber','MPS or Tensor not initialized',NoErrorCode,CriticalError)
+     endif
+   end Subroutine MultiplyMPSbyNumber
 
 
    integer function GetMPSLength(aMPS) result(length)

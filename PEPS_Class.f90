@@ -24,6 +24,7 @@ Module PEPS_Class
   use PEPSTensor_Class
   use MPS_Class
   use MPSTensor_Class
+  use MPSAlgorithms_Class
 !
 !	use Multiplicator_Class
 !	use MPSAlgorithms_Class
@@ -110,10 +111,14 @@ Module PEPS_Class
     integer,intent(IN) :: XLength,YLength,bond,spin
     type(PEPS) :: this
     integer :: n,m,error
+    complex(8) :: sqrtOfNorm
 
     if (this%Initialized) error=this%delete()
 
     allocate(this%TensorCollection(0:XLength+1,0:YLength+1))
+
+    !Insert some attempt at normalization
+    sqrtOfNorm=ONE/(spin*bond**4)   !ONE/sqrt(0.5d0**(1.0d0/( 1.0d0*(XLength-1)*(YLength-1)*spin*bond**4+ ((XLength-1)+(YLength-1))*2.0d0*spin*bond**3+4.0d0*spin*bond**2)) )
 
     !Outside of boundary terms are unit tensors
     this%TensorCollection(0,:)=new_PEPSTensor(spin,integerONE,integerONE,integerONE,integerONE,ONE)
@@ -121,23 +126,23 @@ Module PEPS_Class
     this%TensorCollection(:,0)=new_PEPSTensor(spin,integerONE,integerONE,integerONE,integerONE,ONE)
     this%TensorCollection(:,YLength+1)=new_PEPSTensor(spin,integerONE,integerONE,integerONE,integerONE,ONE)
     !Corner tensors have two bonds equal to one
-    this%TensorCollection(1,1)=new_PEPSTensor(spin,integerONE,bond,bond,integerONE)
-    this%TensorCollection(XLength,1)=new_PEPSTensor(spin,bond,integerONE,bond,integerONE)
-    this%TensorCollection(1,YLength)=new_PEPSTensor(spin,integerONE,bond,integerONE,bond)
-    this%TensorCollection(XLength,YLength)=new_PEPSTensor(spin,bond,integerONE,integerONE,bond)
+    this%TensorCollection(1,1)=sqrtOfNorm*new_PEPSTensor(spin,integerONE,bond,bond,integerONE)
+    this%TensorCollection(XLength,1)=sqrtOfNorm*new_PEPSTensor(spin,bond,integerONE,bond,integerONE)
+    this%TensorCollection(1,YLength)=sqrtOfNorm*new_PEPSTensor(spin,integerONE,bond,integerONE,bond)
+    this%TensorCollection(XLength,YLength)=sqrtOfNorm*new_PEPSTensor(spin,bond,integerONE,integerONE,bond)
     !Boundary terms have one bond of dimension one
     do n=2,XLength-1
-        this%TensorCollection(n,1)=new_PEPSTensor(spin,bond,bond,bond,integerONE)
-        this%TensorCollection(n,Ylength)=new_PEPSTensor(spin,bond,bond,integerONE,bond)
+        this%TensorCollection(n,1)=sqrtOfNorm*new_PEPSTensor(spin,bond,bond,bond,integerONE)
+        this%TensorCollection(n,Ylength)=sqrtOfNorm*new_PEPSTensor(spin,bond,bond,integerONE,bond)
     enddo
     do n=2,YLength-1
-        this%TensorCollection(1,n)=new_PEPSTensor(spin,integerONE,bond,bond,bond)
-        this%TensorCollection(Xlength,n)=new_PEPSTensor(spin,bond,integerONE,bond,bond)
+        this%TensorCollection(1,n)=sqrtOfNorm*new_PEPSTensor(spin,integerONE,bond,bond,bond)
+        this%TensorCollection(Xlength,n)=sqrtOfNorm*new_PEPSTensor(spin,bond,integerONE,bond,bond)
     enddo
     !Bulk terms are proper PEPS Tensors
     do m=2,YLength-1
         do n=2,Xlength-1
-            this%TensorCollection(n,m)=new_PEPSTensor(spin,bond,bond,bond,bond)
+            this%TensorCollection(n,m)=sqrtOfNorm*new_PEPSTensor(spin,bond,bond,bond,bond)
         enddo
     enddo
     this%XLength=Xlength
@@ -362,30 +367,6 @@ Module PEPS_Class
    end function GetPEPSColAsMPS
 
 !!!!  TODO : String of PEPS as MPS, with corners and all.
-!   function GetPEPSStringAsMPS(aPEPS,LeftPosition,RightPosition,positionOfCore,directionOfCore) result(aMPS)
-!     class(PEPS),intent(IN) :: aPEPS
-!     integer,intent(IN) :: LeftPosition(2),RightPosition(2),positionOfCore,directionOfCore
-!     type(MPS) :: aMPS
-!     type(MPSTensor) :: tempTensor
-!     integer :: x,y,totalLength
-!
-!     if(aPEPS%Initialized) then
-!        if(IsPositionInsidePEPS(aPEPS,LeftPosition(1),LeftPosition(2)) .and. IsPositionInsidePEPS(aPEPS,RightPosition(1),RightPosition(2)) ) then
-!             totalLength=sum(abs(RightPosition-LeftPosition))+1
-!             aMPS=new_MPS(totalLength)
-!             select case (directionOfCore)
-!               case (VERTICAL)
-!                  do y=RowRange(1),RowRange(2)
-!                    tempTensor=aPEPS%TensorCollection(whichCol,y)%asMPSTensor(VERTICAL)
-!               call aMPS%SetTensorAt(y-RowRange(1)+1,tempTensor)
-!             enddo
-!        else
-!             call ThrowException('GetPEPSColAsMPS','Site is wrong index',whichCol,CriticalError)
-!        endif
-!     else
-!         call ThrowException('GetPEPSColAsMPS','PEPS not initialized',NoErrorCode,CriticalError)
-!     endif
-!   end function GetPEPSStringAsMPS
 
    function GetCoreColAsMPS(aPEPS,whichCol,LeftMatrices,RightMatrices) result(aMPS)
      class(PEPS),intent(IN) :: aPEPS
@@ -616,17 +597,20 @@ Module PEPS_Class
 
       if (direction.eq.HORIZONTAL) then
          do x=1,siteX-1
+            if (verbose) print *,'Canonizing PEPS to right, col:',x
             call DecouplePEPSVerticallyAtCol(aPEPS,x,RIGHT,MaxLongitudinalBond,MaxTransverseBond)
          enddo
          do x=aPEPS%XLength,siteX+1,-1
+            if (verbose) print *,'Canonizing PEPS to left, col:',x
             call DecouplePEPSVerticallyAtCol(aPEPS,x,LEFT,MaxLongitudinalBond,MaxTransverseBond)
          enddo
-         do y=1,siteY-1
-            call CanonizeCoreSiteAndPushNorm(aPEPS,siteX,y,UP,MaxTransverseBond**2)
-         enddo
-         do y=aPEPS%YLength,siteY+1,-1
-            call CanonizeCoreSiteAndPushNorm(aPEPS,siteX,y,DOWN,MaxTransverseBond**2)
-         enddo
+         call CanonizeCoreColumnAtSite(aPEPS,siteX,siteY,MaxTransverseBond**2)
+!         do y=1,siteY-1
+!            call CanonizeCoreSiteAndPushNorm(aPEPS,siteX,y,UP,MaxTransverseBond**2)
+!         enddo
+!         do y=aPEPS%YLength,siteY+1,-1
+!            call CanonizeCoreSiteAndPushNorm(aPEPS,siteX,y,DOWN,MaxTransverseBond**2)
+!         enddo
        else if (direction.eq.VERTICAL) then
          do y=1,siteY-1
             call DecouplePEPSHorizontallyAtRow(aPEPS,y,UP,MaxLongitudinalBond,MaxTransverseBond)
@@ -634,19 +618,20 @@ Module PEPS_Class
          do y=aPEPS%YLength,siteY+1,-1
             call DecouplePEPSHorizontallyAtRow(aPEPS,y,DOWN,MaxLongitudinalBond,MaxTransverseBond)
          enddo
-         do x=1,siteX-1
-            call CanonizeCoreSiteAndPushNorm(aPEPS,x,siteY,RIGHT,MaxTransverseBond**2)
-         enddo
-         do x=aPEPS%XLength,siteX+1,-1
-            call CanonizeCoreSiteAndPushNorm(aPEPS,x,siteY,LEFT,MaxTransverseBond**2)
-         enddo
+         call CanonizeCoreRowAtSite(aPEPS,siteX,siteY,MaxTransverseBond**2)
+!         do x=1,siteX-1
+!            call CanonizeCoreSiteAndPushNorm(aPEPS,x,siteY,RIGHT,MaxTransverseBond**2)
+!         enddo
+!         do x=aPEPS%XLength,siteX+1,-1
+!            call CanonizeCoreSiteAndPushNorm(aPEPS,x,siteY,LEFT,MaxTransverseBond**2)
+!         enddo
        else
          call ThrowException('CanonizePEPSAtSite','Direction must be HORIZONTAL or VERTICAL',NoErrorCode,CriticalError)
        endif
       !Finally normalize the centered tensor so that norm of PEPS is ONE
-       NormOfTensor=aPEPS%TensorCollection(siteX,siteY)%Norm()
-       tempTensor=(ONE/sqrt(NormOfTensor)) * (aPEPS%TensorCollection(siteX,siteY))
-       call aPEPS%SetTensorAt(siteX,siteY, tempTensor )
+!       NormOfTensor=aPEPS%TensorCollection(siteX,siteY)%Norm()
+!       tempTensor=(ONE/sqrt(NormOfTensor)) * (aPEPS%TensorCollection(siteX,siteY))
+!       call aPEPS%SetTensorAt(siteX,siteY, tempTensor )
 
      else
          call ThrowException('CanonizePEPSAtSite','PEPS not initialized',NoErrorCode,CriticalError)
@@ -822,6 +807,108 @@ Module PEPS_Class
 
    end subroutine CanonizeCoreSiteAndPushNorm
 
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+   subroutine CanonizeCoreColumnAtSite(aPEPS,whichCol,siteY,MaxBond)
+      class(PEPS),intent(INOUT) :: aPEPS
+      integer,intent(IN) :: siteY,whichCol,MaxBond
+      type(PEPSTensor) :: tempTensor
+      type(MPSTensor) :: tempMPS
+      type(MPS) :: CoreMPS,reducedMPS
+      integer :: y,dims(4)
+      real(8) :: Norma
+
+      !First extract the core as an MPS
+      if (Debug) print *,'Extracting Core...'
+      CoreMPS=GetCoreColAsMPS(aPEPS,whichCol)
+      if (Debug) print *,'Core extracted, normalizing it'
+      !call Normalize_MPS(CoreMPS)
+      if (Debug) print *,'Core normalized, reducing it'
+      reducedMPS=Approximate(CoreMPS,MaxBond)
+      if (Debug) print *,'Core reduced, putting it in normal form at requested site...'
+      do y=1,siteY-1
+         call reducedMPS%RightCanonizeAtSite(y)
+      enddo
+!   !Might need this
+!      !Finally normalize the center tensor
+!      tempMPS=CoreMPS%GetTensorAt(siteX)
+!      Norma=Norm(tempMPS)
+!      tempMPS=(ONE/sqrt(Norma)) * tempMPS
+!      call CoreMPS%SetTensorAt(siteX,tempMPS)
+      !Finally, rewrite the MPS as a core column
+      if (Debug) print *,'Restoring MPS to core in PEPS'
+      do y=1,aPEPS%YLength
+         if (verbose) print *,'    --- row:',y
+         dims=aPEPS%TensorCollection(whichCol,y)%GetBonds()
+         tempMPS=reducedMPS%GetTensorAt(y)
+         tempTensor=new_PEPSTensor(tempMPS,3,VERTICAL,[dims(1),dims(2)])
+         call aPEPS%SetTensorAt(whichCol,y,tempTensor)
+      enddo
+
+!      !Canonize in a unorthodox way, first left part
+!      do y=siteY-1,1-1
+!         call CoreMPS%LeftCanonizeAtSite(y)
+!      enddo
+!      call CoreMPS%SetTensorAt(0,new_MPSTensor(integerONE,integerONE,integerONE,ONE))
+!      do y=1,siteY-1
+!         call CoreMPS%RightCanonizeAtSite(y)
+!      enddo
+!      !And now right part
+!      do y=siteY+1,aPEPS%Ylength
+!         call CoreMPS%RightCanonizeAtSite(y)
+!      enddo
+!      call CoreMPS%SetTensorAt(aPEPS%Ylength,new_MPSTensor(integerONE,integerONE,integerONE,ONE))
+!      do y=aPEPS%Ylength,siteY+1,-1
+!         call CoreMPS%LeftCanonizeAtSite(y)
+!      enddo
+!      !Finally normalize the center tensor
+!      tempMPS=CoreMPS%GetTensorAt(siteY)
+!      Norma=Norm(tempMPS)
+!      tempMPS=(ONE/sqrt(Norma)) * tempMPS
+!      call CoreMPS%SetTensorAt(siteY,tempMPS)
+!      !Finally, rewrite the MPS as a core column
+!      do y=1,aPEPS%YLength
+!         dims=aPEPS%TensorCollection(whichCol,y)%GetBonds()
+!         tempTensor=new_PEPSTensor(CoreMPS%GetTensorAt(y),3,VERTICAL,[dims(1),dims(2)])
+!         call aPEPS%SetTensorAt(whichCol,y,tempTensor)
+!      enddo
+
+   end subroutine CanonizeCoreColumnAtSite
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+   subroutine CanonizeCoreRowAtSite(aPEPS,siteX,whichRow,MaxBond)
+      class(PEPS),intent(INOUT) :: aPEPS
+      integer,intent(IN) :: siteX,whichRow,MaxBond
+      type(PEPSTensor) :: tempTensor
+      type(MPSTensor) :: tempMPS
+      type(MPS) :: CoreMPS,reducedMPS
+      integer :: x,dims(4)
+      real(8) :: Norma
+
+      !First extract the core as an MPS
+      CoreMPS=GetCoreRowAsMPS(aPEPS,whichRow)
+      call CoreMPS%Canonize()
+      reducedMPS=Approximate(CoreMPS,MaxBond)
+      do x=1,siteX-1
+         call reducedMPS%RightCanonizeAtSite(x)
+      enddo
+!   !Might need this
+!      !Finally normalize the center tensor
+!      tempMPS=CoreMPS%GetTensorAt(siteX)
+!      Norma=Norm(tempMPS)
+!      tempMPS=(ONE/sqrt(Norma)) * tempMPS
+!      call CoreMPS%SetTensorAt(siteX,tempMPS)
+      !Finally, rewrite the MPS as a core column
+      do x=1,aPEPS%XLength
+         dims=aPEPS%TensorCollection(x,whichRow)%GetBonds()
+         tempMPS=reducedMPS%GetTensorAt(x)
+         tempTensor=new_PEPSTensor(tempMPS,3,HORIZONTAL,[dims(3),dims(4)])
+         call aPEPS%SetTensorAt(x,whichRow,tempTensor)
+      enddo
+
+   end subroutine CanonizeCoreRowAtSite
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

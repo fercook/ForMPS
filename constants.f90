@@ -70,6 +70,7 @@ module Constants
   integer,parameter :: NOLIMIT = 9999999
 
   logical,parameter :: Verbose = .true.
+  logical,parameter :: Debug = .true.
 
   interface operator (.equalvector.)
      module procedure AreIntVectorsEqual

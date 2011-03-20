@@ -178,32 +178,51 @@ module PEPSTensor_Class
    end function new_PEPSTensor_fromTensor5_Transposed
 
 !##################################################################
-   function new_PEPSTensor_fromTensor3(tensor,whichDimIsSpin,whichDirectionBondsGo) result (this)
-      type(Tensor3),intent(in) :: tensor
-      integer, intent(IN) :: whichDimIsSpin,whichDirectionBondsGo
+   function new_PEPSTensor_fromTensor3(tensor,whichDimIsSpin,DirectionOfBonds,transverseBondsSize) result (this)
+      class(Tensor3),intent(in) :: tensor
+      integer, intent(IN) :: whichDimIsSpin,DirectionOfBonds
+      integer, intent(IN),optional :: transverseBondsSize(2)
       type(PEPSTensor) :: this
-      integer :: newDims(5),oldDims(3),reorderedDims(3)
+      integer :: newDims(5),oldDims(3),reorderedDims(3),reorderWithTransverse(5)
+
+      if (present(transverseBondsSize).and.whichDimIsSpin.ne.3) then
+         !I have not checked what happens when spin is not third dimension and requesting decomposition
+         call ThrowException('new_PEPSTensor_fromTensor3','When decomposing spin into transverse bonds spin should be last dimension',NoErrorCode,Warning)
+      endif
 
       oldDims=tensor%GetDimensions()
-      !Find in which order the tensor has to enter so that the spin is in the last dimension
-      reorderedDims=[1,2,3]
-      reorderedDims(whichDimIsSpin)=3
-      reorderedDims(3)=whichDimIsSpin
 
-      if (whichDirectionBondsGo.eq.HORIZONTAL) then
-         newDims(1)=oldDims(reorderedDims(1))
-         newDims(2)=oldDims(reorderedDims(2))
-         newDims(3)=integerONE
-         newDims(4)=integerONE
-      else if (whichDirectionBondsGo.eq.VERTICAL) then
-         newDims(1)=integerONE
-         newDims(2)=integerONE
-         newDims(3)=oldDims(reorderedDims(1))
-         newDims(4)=oldDims(reorderedDims(2))
+      if (present(transverseBondsSize)) then
+        newDims(1)=oldDims(1)
+        newDims(2)=oldDims(2)
+        newDims(3)=transverseBondsSize(1)
+        newDims(4)=transverseBondsSize(2)
+        newDims(5)=oldDims(3) / product(transverseBondsSize) !spin
+        if (DirectionOfBonds.eq.HORIZONTAL) then
+            reorderWithTransverse=[1,2,3,4,5]
+        else if (DirectionOfBonds.eq.VERTICAL) then
+            reorderWithTransverse=[4,3,1,2,5]
+        endif
+        this=TensorTranspose(TensorReshape( tensor ,newDims) ,reorderWithTransverse)
+      else
+         !Find in which order the tensor has to enter so that the spin is in the last dimension
+         reorderedDims=[1,2,3]
+         reorderedDims(whichDimIsSpin)=3
+         reorderedDims(3)=whichDimIsSpin
+         if (DirectionOfBonds.eq.HORIZONTAL) then
+            newDims(1)=oldDims(reorderedDims(1))
+            newDims(2)=oldDims(reorderedDims(2))
+            newDims(3)=integerONE
+            newDims(4)=integerONE
+            newDims(5)=oldDims(reorderedDims(3))
+         else if (DirectionOfBonds.eq.VERTICAL) then
+            newDims(1)=integerONE
+            newDims(2)=integerONE
+            newDims(3)=oldDims(reorderedDims(1))
+            newDims(4)=oldDims(reorderedDims(2))
+         endif
+         this=TensorReshape( TensorTranspose(tensor,reorderedDims) , newDims)
       endif
-      newDims(5)=oldDims(reorderedDims(3))
-
-      this=TensorReshape( TensorTranspose(tensor,reorderedDims) , newDims)
 
    end function new_PEPSTensor_fromTensor3
 !##################################################################
@@ -525,7 +544,7 @@ module PEPSTensor_Class
         if(aPEPS%Isinitialized()) then
           tempInt=1
           do n=1,4 !loop to skip over the used dimensions and join all the others
-            if (n.ne.whichIsLeft .and. n.ne.whichIsRight .and. n.ne.5) then !5 is the spin dimension...
+            if (n.ne.whichIsLeft .and. n.ne.whichIsRight ) then !5 is the spin dimension...
                joinedDims(tempInt)=n
                tempInt=tempInt+1
             endif

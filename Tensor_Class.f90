@@ -36,7 +36,7 @@ module Tensor_Class
   public :: CompactLeft,CompactRight,CompactBelow,SingularValueDecomposition
 
   integer,parameter :: Max_Combined_Dimension = 100000000
-  real(8),parameter :: DefaultToleranceForPseudoInverse=1.0d-10
+  real(8),parameter :: DefaultToleranceForPseudoInverse=1.0d-15
 
 !> \class Tensor (virtual)
 !! \brief
@@ -3494,15 +3494,15 @@ end function JoinIndicesOfTensor4
         	newdims=integerONE
             !Ugly code follows. How to write this cleaner while kepping the interface?
             do n=1,size(reqDim1)
-				permutation(n)=reqDim1(n)
+				permutation(reqDim1(n))=n
 				newdims(1)=newdims(1)*dims(reqDim1(n))
 			enddo
 			do n=1,size(reqDim2)
-				permutation(n+size(reqDim1))=reqDim2(n)
+				permutation(reqDim2(n))=n+size(reqDim1)
 				newdims(2)=newdims(2)*dims(reqDim2(n))
 			enddo
 			do n=1,size(reqDim3)
-				permutation(n+size(reqDim1)+size(reqDim2))=reqDim3(n)
+				permutation(reqDim3(n))=n+size(reqDim1)+size(reqDim2)
 				newdims(3)=newdims(3)*dims(reqDim3(n))
 			enddo
             do n=1,5
@@ -4096,19 +4096,28 @@ function Tensor2PseudoInverseDiagonal(this,inTolerance) result(theInverse)
    class(Tensor2),intent(IN) :: this
    type(Tensor2) :: theInverse
    real(8),intent(IN),optional :: inTolerance
+   real(8),allocatable :: absValues(:)
    real(8) :: Tolerance
    integer :: dims(2),n
 
    if(this%Initialized) then
-        if (present(inTolerance)) then
-            Tolerance=inTolerance
-        else
-            Tolerance=DefaultToleranceForPseudoInverse
-        endif
         dims=shape(this%data)
+        allocate (absValues(minval(dims)))
+        do n=1,minval(dims)
+           absValues(n)=abs(this%data(n,n))
+        enddo
+        if (present(inTolerance)) then
+            Tolerance=inTolerance*maxval(absValues)
+        else
+            Tolerance=DefaultToleranceForPseudoInverse*maxval(absValues)
+        endif
         theInverse=new_Tensor(dims(1),dims(2),ZERO)
         do n=1,minval(dims)
-            if(abs(this%data(n,n)).gt.Tolerance) theInverse%data(n,n)=ONE/this%data(n,n)
+            if(abs(this%data(n,n)).gt.Tolerance) then
+               theInverse%data(n,n)=ONE/this%data(n,n)
+            else
+               print *,'Warning min value for inverse was found'
+            endif
         enddo
      else
         call ThrowException('Tensor2PseudoInverseDiagonal','Tensor not initialized',NoErrorCode,CriticalError)
