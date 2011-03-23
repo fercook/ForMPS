@@ -560,28 +560,29 @@ module PEPSTensor_Class
 
 !##################################################################
 
-    subroutine HighOrderSVDofPEPS(aPEPS,CoreTensor,UMatrices,maxBondDim)
+    subroutine HighOrderSVDofPEPS(aPEPS,CoreTensor,UMatrices,maxBondDim,whichDirections,SigmaMatrices)
         class(PEPSTensor),intent(IN) :: aPEPS
-        integer,intent(IN),optional :: maxBondDim(4)
-        type(Tensor2) ,intent(OUT):: UMatrices(LEFT:DOWN)
-        type(Tensor2) :: U(5)
+        integer,intent(IN),optional :: maxBondDim(:),whichDirections(:)
+        type(Tensor2) ,intent(OUT):: UMatrices(:)
+        type(Tensor2) ,intent(OUT),optional :: SigmaMatrices(:)
         type(PEPSTensor), intent(OUT) :: CoreTensor
-        type(PEPSTensor) :: TempTensor
-        type(Tensor2) :: SpinUMatrix
-        integer :: newBondDim(5)
+        integer :: oldBondDims(4)
+        integer :: numOfDimsToSVD
 
         if(aPEPS%Isinitialized()) then
-            if (present(maxBondDim) ) then
-                newBondDim(1:4)=maxBondDim
-                newBondDim(5)=aPEPS%GetSpin()
-                call SingularValueDecomposition(aPEPS,TempTensor,U, newBondDim)
+            if (present(maxBondDim) .and. present(whichDirections) ) then
+               if (present(SigmaMatrices)) then
+                  call SingularValueDecomposition(aPEPS,CoreTensor,UMatrices, maxBondDim, whichDirections ,SigmaMatrices)
+               else
+                  call SingularValueDecomposition(aPEPS,CoreTensor,UMatrices, maxBondDim, whichDirections )
+               endif
+            else if (present(maxBondDim) .and. .not.present(whichDirections)) then
+               call SingularValueDecomposition(aPEPS,CoreTensor,UMatrices, maxBondDim, [LEFT, RIGHT, UP, DOWN])
             else
-                call SingularValueDecomposition(aPEPS,TempTensor,U)
+               !Return order is Left-Right-Up-Down
+               oldBondDims=aPEPS%GetBonds()
+               call SingularValueDecomposition(aPEPS,CoreTensor,UMatrices, oldBondDims, [LEFT, RIGHT, UP, DOWN])
             endif
-            !The spin dimension is not decomposed and returned as is
-            CoreTensor=nModeProduct(U(5),TempTensor,FIFTH)
-            !Return order is Left-Right-Up-Down
-            UMatrices=U(1:4)
         else
             call ThrowException('HighOrderSVDofPEPS','Tensor not initialized',NoErrorCode,CriticalError)
         endif

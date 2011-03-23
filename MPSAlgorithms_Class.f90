@@ -27,8 +27,8 @@ module MPSAlgorithms_Class
 
   implicit none
 
-    integer :: MaxSweeps = 4
-    integer :: ApproximationTolerance = 1.0D-9
+    integer :: MaxSweeps = 8
+    integer :: ApproximationTolerance = 1.0D-10
 
     interface Approximate
         module procedure Approximate_MPS

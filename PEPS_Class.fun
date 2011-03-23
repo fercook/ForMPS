@@ -46,8 +46,9 @@ test MPS_Core_Extraction
     aPEPS=new_PEPS(XLength,YLength,2,5)
     call aPEPS%CanonizeAt(XcanonPos,YCanonPos,HORIZONTAL,5,6)
     call aPEPS%PrintBondDimensions('PEPS map')
-	anMPS=GetPEPSColAsMPS(aPEPS,XcanonPos,[1,YLength])
-	call anMPS%PrintBondDimensions('Core MPS')
+
+    anMPS=GetPEPSColAsMPS(aPEPS,XcanonPos,[1,YLength])
+	 call anMPS%PrintBondDimensions('Core MPS')
 
 	aPTensor=aPEPS%GetTensorAt(XcanonPos,YcanonPos+1)
 	aMatrix=aPTensor%CollapseAllIndicesBut(DOWN)
@@ -64,6 +65,7 @@ test MPS_Core_Extraction
    do y=1,YCanonPos-1
 	   aMatrix=LeftAtSite(aMultiplicator,y)
 	   dims=aMatrix%GetDimensions()
+	   print *,'Left dims at ',y,'=',dims
 	   TheId=Identity(dims(1))
 	   print *,'Diff of LEft at ',y,' with identity',Norm(aMatrix-TheId)
 	   assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
@@ -72,6 +74,7 @@ test MPS_Core_Extraction
    do y=YLength,YCanonPos+1,-1
    	aMatrix=RightAtSite(aMultiplicator,y)
 	  dims=aMatrix%GetDimensions()
+      print *,'Right dims at ',y,'=',dims
    	TheId=Identity(dims(1))
    	print *,'Diff of Right at ',y,' with identity',Norm(aMatrix-TheId)
    	assert_equal_within(Norm(aMatrix-TheId),0.0d0,1.0d-12)
@@ -184,7 +187,7 @@ test MPS_Row_Extraction
     aPEPS=new_PEPS(6,4,2,5)
     call aPEPS%CanonizeAt(4,2,HORIZONTAL,6,6)
     do theRow=1,4
-	    anMPS=GetRowAsMPS(aPEPS,theRow,[1,3])
+	   anMPS=GetRowAsMPS(aPEPS,theRow,[1,3])
     	aMultiplicator=new_Multiplicator(anMPS)
 		aMatrix=LeftAtSite(aMultiplicator,3)
 		dims=aMatrix%GetDimensions()

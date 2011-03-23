@@ -36,7 +36,7 @@ module PEPSAlgorithms_Class
 
   implicit none
 
-    real(8) :: PSEUDOINVERSETOLERANCE = 1.0d-4
+    real(8) :: PSEUDOINVERSETOLERANCE = 1.0d-8
 
     interface Approximate
         module procedure Approximate_PEPS
@@ -275,6 +275,7 @@ module PEPSAlgorithms_Class
       type(Multiplicator) :: aMultiplicator
       type(MPS) :: MPSAbove,MPSBelow,CoreMPSBelow,CoreMPSAbove
       integer :: x,y,dims(2)
+      integer :: iTemp(2)
 
       if (present(anotherPEPS)) then
          belowPEPS => anotherPEPS
@@ -293,6 +294,7 @@ module PEPSAlgorithms_Class
                   MPSBelow=belowPEPS%GetRowAsMPS(y,[1,CorePosition-1])
                   aMultiplicator=new_Multiplicator(MPSAbove,MPSBelow)
                   LeftMatrices(y)=LeftAtSite(aMultiplicator,CorePosition-1)
+                  !iTemp=LeftMatrices(y)%GetDimensions()
                else
                   LeftMatrices(y)=Identity(1)
                endif
@@ -315,6 +317,7 @@ module PEPSAlgorithms_Class
                   MPSBelow=belowPEPS%GetColAsMPS(x,[1,CorePosition-1])
                   aMultiplicator=new_Multiplicator(MPSAbove,MPSBelow)
                   LeftMatrices(x)=LeftAtSite(aMultiplicator,CorePosition-1)
+                  if (Debug) Print *,'Left matrices x=',x,Norm(LeftMatrices(x)-Identity(onePEPS%GetBondAt(x,CorePosition,DOWN)))
                else
                   LeftMatrices(x)=Identity(1)
                endif
@@ -323,6 +326,7 @@ module PEPSAlgorithms_Class
                   MPSBelow=belowPEPS%GetColAsMPS(x,[CorePosition+1,dims(2)])
                   aMultiplicator=new_Multiplicator(MPSAbove,MPSBelow)
                   RightMatrices(x)=RightAtSite(aMultiplicator,1)
+                  if (Debug) Print *,'Right matrix x=',x,Norm(LeftMatrices(x)-Identity(onePEPS%GetBondAt(x,CorePosition,UP)))
                else
                   RightMatrices(x)=Identity(1)
                endif

@@ -3701,7 +3701,7 @@ end function Take_Slice_Of_Tensor5
 
       if(this%Initialized) then
          dims=shape(this%data)
-         aDiagonalTensor=new_Tensor(dims(1),dims(2),ZERO)
+         aDiagonalTensor=new_Tensor(minval(dims),minval(dims),ZERO)
          do n=1,minval(dims)
             aDiagonalTensor%data(n,n)=this%data(n,n)
          enddo
@@ -4499,30 +4499,59 @@ end function Tensor4Trace
 
   !##################################################################
 
-  subroutine SingularValueDecompositionTensor5(this,Sigma,U,RankTruncation)
+  subroutine SingularValueDecompositionTensor5(this,Sigma,U,RankTruncation,whichDimensions,SingularValues)
     class(Tensor5),intent(IN) :: this
     class(Tensor5),intent(OUT) :: Sigma
-    type(Tensor2),intent(OUT) :: U(5)
-    integer,intent(IN),optional :: RankTruncation(5)
+    type(Tensor2),intent(OUT) :: U(:)
+    type(Tensor2),intent(OUT),optional :: SingularValues(:)
+    integer,intent(IN),optional :: RankTruncation(:),whichDimensions(:)
+    integer,allocatable :: dimensionsToSVD(:)
     type(Tensor2) :: Unfolding,UnfoldedSigma,VTFromUnfolding
-    integer :: n,dims(2)
+    integer :: n,dims(2),numOfDimsToSVD
 
-    do n=1,5
-        Unfolding=this%Unfold(n)
+    if (present(whichDimensions)) then
+      numOfDimsToSVD=size(whichDimensions,1)
+      if (numOfDimsToSVD.ne.size(U,1)) then
+         call ThrowException('SingularValueDecomposition','# of dims requested does not match number of matrices',NoErrorCode,CriticalError)
+         return
+      endif
+      allocate(dimensionsToSVD(numOfDimsToSVD))
+      do n=1,numOfDimsToSVD
+         dimensionsToSVD(n)=whichDimensions(n)
+      enddo
+    else
+      numOfDimsToSVD=5
+      allocate(dimensionsToSVD(5))
+      do n=1,5
+         dimensionsToSVD(n)=n
+      enddo
+    endif
+
+    do n=1,numOfDimsToSVD
+        Unfolding=this%Unfold(dimensionsToSVD(n))
         call Unfolding%SVD(U(n),UnfoldedSigma,VTFromUnfolding)
+        if (present(SingularValues)) then
+           SingularValues(n)=TakeDiagonalPart(UnfoldedSigma)
+ !          if (debug) call SingularValues(n)%PrintDimensions('Obtained dims of Sigma')
+        endif
+
     enddo
     if (present(RankTruncation)) then
-        do n=1,5
+        do n=1,numOfDimsToSVD
             dims=shape(U(n)%data)
             U(n)=TensorSlice(U(n), [1,dims(1)], [1,min(dims(2),RankTruncation(n))])
+            if (present(SingularValues)) then
+               dims=shape(SingularValues(n)%data)
+!               if (debug) print *,'requested truncation of Sigma',[1,RankTruncation(n)], [1,RankTruncation(n)]
+               SingularValues(n)=TensorSlice(SingularValues(n), [1,min(dims(1),RankTruncation(n))], [1,min(dims(2),RankTruncation(n))])
+            endif
         enddo
     endif
-    Sigma=nModeProduct(ConjugateTranspose(U(5)), &
-            & nModeProduct(ConjugateTranspose(U(4)), &
-               & nModeProduct(ConjugateTranspose(U(3)), &
-                & nModeProduct(ConjugateTranspose(U(2)), &
-                    & nModeProduct(ConjugateTranspose(U(1)),   this,  &
-           & FIRST),SECOND),THIRD),FOURTH),FIFTH)
+
+    Sigma=this
+    do n=1,numOfDimsToSVD
+      Sigma=nModeProduct( ConjugateTranspose(U(n)), Sigma, [dimensionsToSVD(n)] )
+    enddo
 
   end subroutine SingularValueDecompositionTensor5
 
