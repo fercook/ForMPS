@@ -48,18 +48,19 @@ test PEPS_Canonization_Routines
     type(PEPSTensor) :: aTensor
     integer :: dims(4)
     complex(8) :: overlapBS
+    real(8) :: theNorm
 
     aPEPS=new_PEPS(4,4,2,2)
     call Normalize(aPEPS)
     print *,'Norm of big overlap is',Overlap_PEPS(aPEPS,aPEPS)
     smallPEPS=aPEPS
-    call smallPEPS%CanonizeAt(3,2,HORIZONTAL,6,6)
-    overlapBS=Overlap_PEPS(smallPEPS,smallPEPS)
-    print *,'Norm of canonical state is',overlapBS
-    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-9)
+    call smallPEPS%CanonizeAt(2,2,VERTICAL,8,8,theNorm)
     call smallPEPS%PrintbondDimensions()
     assert_true(smallPEPS%IsPEPSWellFormed())
-    overlapBS=Overlap_PEPS(aPEPS,smallPEPS)
+    overlapBS=Overlap_PEPS(smallPEPS,smallPEPS)
+    print *,'Norm of canonical state is',overlapBS,theNorm
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+    overlapBS=Overlap_PEPS(smallPEPS,aPEPS)
     print *, 'overlap BTW peps and Canonized PEPS (EXACT): ',abs(overlapBS)**2
     assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-9)
 
@@ -67,10 +68,10 @@ test PEPS_Canonization_Routines
     call Normalize(aPEPS)
     smallPEPS=aPEPS
     print *,'About to canonize...'
-    call smallPEPS%CanonizeAt(3,2,HORIZONTAL,6,6)
+    call smallPEPS%CanonizeAt(3,2,VERTICAL,6,6)
     overlapBS=Overlap_PEPS(aPEPS,smallPEPS)
     print *, 'overlap BTW peps and Canonized PEPS (H small bond): ',abs(overlapBS)**2
-    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-6)
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-5)
 
 end test
 
@@ -523,20 +524,38 @@ end test
 test Canonical_Overlap
     type(PEPS) :: onePEPS,twoPEPS,smallPEPS1,smallPEPS2
     complex(8) :: overlapBS,overlapNormal
+    real(8) :: someNorm1,someNorm2
+    integer,parameter :: XcanonPos=2,YcanonPos=3
 
     onePEPS=new_PEPS(4,4,2,2)
+    call Normalize(onePEPS)
+
     smallPEPS1=onePEPS
-    call smallPEPS1%CanonizeAt(2,2,HORIZONTAL,6,6)
-    overlapBS=Overlap(smallPEPS1,CorePosition=2, CoreDirection=VERTICAL)
+    call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm1)
+    overlapBS=Overlap(smallPEPS1,onePEPS)
+    print *, 'overlap BTW Canonized PEPS and full PEPS A: ',abs(overlapBS)**2
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+
+    overlapBS=Overlap(smallPEPS1,CorePosition=YcanonPos, CoreDirection=HORIZONTAL)
+    print *, 'overlap BTW Canonized PEPSs (CANON METHOD): ',abs(overlapBS)**2
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+    overlapBS=Overlap(smallPEPS1,smallPEPS1)
     print *, 'overlap BTW Canonized PEPSs (EXACT): ',abs(overlapBS)**2
     assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
 
     twoPEPS=new_PEPS(4,4,2,2)
+    call Normalize(twoPEPS)
     smallPEPS2=twoPEPS
-    call smallPEPS2%CanonizeAt(2,2,HORIZONTAL,6,6)
+    call smallPEPS2%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm2)
+    overlapBS=Overlap(smallPEPS2,twoPEPS)
+    print *, 'overlap BTW Canonized PEPS and full PEPS B: ',abs(overlapBS)**2
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+
     overlapNormal=Overlap(onePEPS,twoPEPS)
-    overlapBS=Overlap(smallPEPS1,smallPEPS2,CorePosition=2, CoreDirection=VERTICAL)
-    assert_equal_within(abs(overlapBS-overlapNormal),0.0d0,1.0d-10)
+    overlapBS=Overlap(smallPEPS1,smallPEPS2,CorePosition=YcanonPos, CoreDirection=HORIZONTAL)
+    print *,abs(overlapNormal),abs(overlapBS)
+    print *, 'difference in overlap calculated normally and canonically: ',abs(overlapBS)-abs(overlapNormal)
+    assert_equal_within(abs(overlapBS)-abs(overlapNormal),0.0d0,1.0d-10)
 
 end test
 

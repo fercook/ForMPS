@@ -26,7 +26,18 @@ teardown
 
 end teardown
 
+test VERTICAL_Canon_ofSmallPEPS
 
+    type(PEPS) :: aPEPS,smallPEPS
+    real(8) :: theNorm
+
+    aPEPS=new_PEPS(4,4,2,2)
+    smallPEPS=aPEPS
+    call smallPEPS%CanonizeAt(2,2,VERTICAL,6,6,theNorm)
+    print *,'Vertical PEPS Norm:',theNorm
+    assert_true(smallPEPS%IsPEPSWellFormed())
+
+end test
 
 test MPS_Core_Extraction
 
@@ -81,7 +92,10 @@ test MPS_Core_Extraction
    enddo
 
 	theOverlap=Overlap_MPS(anMPS,anMPS)
-	print *,theOverlap
+	print *,'Overlap of core with itself:',theOverlap
+   assert_equal_within(abs(theOverlap)**2,1.0d0,1.0d-6)
+   theOverlap=TensorTrace( (LeftAtSite(aMultiplicator,YcanonPos))*(RightAtSite(aMultiplicator,YcanonPos+1)) )
+  print *,'Overlap computed by hand:',theOverlap
 	assert_equal_within(abs(theOverlap)**2,1.0d0,1.0d-6)
 
 end test

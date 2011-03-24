@@ -317,7 +317,7 @@ module PEPSAlgorithms_Class
                   MPSBelow=belowPEPS%GetColAsMPS(x,[1,CorePosition-1])
                   aMultiplicator=new_Multiplicator(MPSAbove,MPSBelow)
                   LeftMatrices(x)=LeftAtSite(aMultiplicator,CorePosition-1)
-                  if (Debug) Print *,'Left matrices x=',x,Norm(LeftMatrices(x)-Identity(onePEPS%GetBondAt(x,CorePosition,DOWN)))
+                  !if (Debug) Print *,'Left matrices x=',x,Norm(LeftMatrices(x)-Identity(onePEPS%GetBondAt(x,CorePosition,DOWN)))
                else
                   LeftMatrices(x)=Identity(1)
                endif
@@ -326,7 +326,7 @@ module PEPSAlgorithms_Class
                   MPSBelow=belowPEPS%GetColAsMPS(x,[CorePosition+1,dims(2)])
                   aMultiplicator=new_Multiplicator(MPSAbove,MPSBelow)
                   RightMatrices(x)=RightAtSite(aMultiplicator,1)
-                  if (Debug) Print *,'Right matrix x=',x,Norm(LeftMatrices(x)-Identity(onePEPS%GetBondAt(x,CorePosition,UP)))
+                  !if (Debug) Print *,'Right matrix x=',x,Norm(LeftMatrices(x)-Identity(onePEPS%GetBondAt(x,CorePosition,UP)))
                else
                   RightMatrices(x)=Identity(1)
                endif

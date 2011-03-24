@@ -214,13 +214,13 @@ module PEPSTensor_Class
             newDims(2)=oldDims(reorderedDims(2))
             newDims(3)=integerONE
             newDims(4)=integerONE
-            newDims(5)=oldDims(reorderedDims(3))
          else if (DirectionOfBonds.eq.VERTICAL) then
             newDims(1)=integerONE
             newDims(2)=integerONE
             newDims(3)=oldDims(reorderedDims(1))
             newDims(4)=oldDims(reorderedDims(2))
          endif
+         newDims(5)=oldDims(reorderedDims(3))
          this=TensorReshape( TensorTranspose(tensor,reorderedDims) , newDims)
       endif
 
