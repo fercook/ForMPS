@@ -26,21 +26,68 @@ teardown
 
 end teardown
 
-!test MPS_MemoryDrawn
-!
-!  type(Tensor3) :: atensor
-!type(Tensor1) :: avector
-!type(Tensor2) :: amatrix
-!
-!  print *,'Before requesting memory'
-!  aVector=New_Tensor(16*256*256)
-!  print *,'V'
-!  aMatrix=New_Tensor(16*256,256)
-!  print *,'M'
-!  aTensor=New_Tensor(256,256,16)
-!  print *,'After requesting memory'
-!
-!end test
+
+test Canonical_Overlap_VerticalCanon
+    type(PEPS) :: onePEPS,twoPEPS,smallPEPS1,smallPEPS2
+    complex(8) :: overlapBS,overlapNormal
+    real(8) :: someNorm1,someNorm2
+    integer,parameter :: XcanonPos=2,YcanonPos=3
+
+    onePEPS=new_PEPS(4,4,2,2)
+    call Normalize(onePEPS)
+
+    smallPEPS1=onePEPS
+    call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm1)
+    overlapBS=Overlap(smallPEPS1,onePEPS)
+    print *, 'overlap BTW Canonized PEPS and full PEPS A: ',abs(overlapBS)**2
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+
+    overlapBS=Overlap(smallPEPS1,CorePosition=YcanonPos, CoreDirection=HORIZONTAL)
+    print *, 'overlap BTW Canonized PEPSs (CANON METHOD): ',abs(overlapBS)**2
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+    overlapBS=Overlap(smallPEPS1,smallPEPS1)
+    print *, 'overlap BTW Canonized PEPSs (EXACT): ',abs(overlapBS)**2
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+
+    twoPEPS=new_PEPS(4,4,2,2)
+    call Normalize(twoPEPS)
+    smallPEPS2=twoPEPS
+    call smallPEPS2%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm2)
+    overlapBS=Overlap(smallPEPS2,twoPEPS)
+    print *, 'overlap BTW Canonized PEPS and full PEPS B: ',abs(overlapBS)**2
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+
+    overlapNormal=Overlap(onePEPS,twoPEPS)
+    overlapBS=Overlap(smallPEPS1,smallPEPS2,CorePosition=YcanonPos, CoreDirection=HORIZONTAL)
+    print *,abs(overlapNormal),abs(overlapBS)
+    print *, 'difference in overlap calculated normally and canonically: ',abs(overlapBS)-abs(overlapNormal)
+    assert_equal_within(abs(overlapBS)-abs(overlapNormal),0.0d0,1.0d-10)
+
+end test
+
+test Canonical_Overlap_HorizontalCanon
+    type(PEPS) :: onePEPS,twoPEPS,smallPEPS1,smallPEPS2
+    complex(8) :: overlapBS,overlapNormal
+    real(8) :: someNorm1,someNorm2
+    integer,parameter :: XcanonPos=2,YcanonPos=3
+
+    onePEPS=new_PEPS(4,4,2,2)
+    call Normalize(onePEPS)
+
+    smallPEPS1=onePEPS
+    call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,HORIZONTAL,6,6,someNorm1)
+    overlapBS=Overlap(smallPEPS1,onePEPS)
+    print *, 'overlap BTW Canonized PEPS and full PEPS A: ',abs(overlapBS)**2
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+
+    overlapBS=Overlap(smallPEPS1,CorePosition=XcanonPos, CoreDirection=VERTICAL)
+    print *, 'overlap BTW Canonized PEPSs (CANON METHOD): ',abs(overlapBS)**2
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+    overlapBS=Overlap(smallPEPS1,smallPEPS1)
+    print *, 'overlap BTW Canonized PEPSs (EXACT): ',abs(overlapBS)**2
+    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+
+end test
 
 
 test PEPS_Canonization_Routines
@@ -92,21 +139,11 @@ test OverlapAlgorithm
   call Normalize(aPEPS)
   overlap12 = Overlap_PEPS(aPEPS,aPEPS)
   print *,'OVERLAP AFTER NORMALIZATION',overlap12
-!!  assert_equal_within(abs(overlap12)**2,1.0d0,1.0d-8)
+  assert_equal_within(abs(overlap12)**2,1.0d0,1.0d-8)
 
   assert_false(WasThereError())
 
   error= aPEPS%Delete()
-
-  aPEPS=new_PEPS(length,width,spin,bond)
-  call aPEPS%ScaleBy(ONE/(2.0d0)**(1.0d0/2.0d0))
-  overlap12 = Overlap_PEPS(aPEPS)
-  print *,'SECOND OVERLAP',overlap12
-
-  print *,'About to NORMALIZE ----------'
-  call Normalize(aPEPS)
-  overlap12 = Overlap_PEPS(aPEPS,aPEPS)
-  print *,'OVERLAP AFTER NORMALIZATION',overlap12
 
 end test
 
@@ -521,43 +558,381 @@ test ExptValueHamiltonianCol
 end test
 
 
-test Canonical_Overlap
-    type(PEPS) :: onePEPS,twoPEPS,smallPEPS1,smallPEPS2
-    complex(8) :: overlapBS,overlapNormal
-    real(8) :: someNorm1,someNorm2
-    integer,parameter :: XcanonPos=2,YcanonPos=3
 
-    onePEPS=new_PEPS(4,4,2,2)
-    call Normalize(onePEPS)
 
-    smallPEPS1=onePEPS
-    call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm1)
-    overlapBS=Overlap(smallPEPS1,onePEPS)
-    print *, 'overlap BTW Canonized PEPS and full PEPS A: ',abs(overlapBS)**2
-    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+test ControlledOverlap
 
-    overlapBS=Overlap(smallPEPS1,CorePosition=YcanonPos, CoreDirection=HORIZONTAL)
-    print *, 'overlap BTW Canonized PEPSs (CANON METHOD): ',abs(overlapBS)**2
-    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
-    overlapBS=Overlap(smallPEPS1,smallPEPS1)
-    print *, 'overlap BTW Canonized PEPSs (EXACT): ',abs(overlapBS)**2
-    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+    type(PEPS) :: onePEPS,twoPEPS
+    complex(8) :: overlapSingle,overlapDouble
+    complex(8),allocatable :: localState(:,:,:,:,:)
+    integer,parameter :: BondDim=2,SpinDim=2,XSIZE=4,YSIZE=4
+    integer :: l,r,u,d,s,n,m
+    complex(8) :: A(SpinDim,BondDim,BondDim),AL(SpinDim,integerONE,BondDim),AR(SpinDim,BondDim,integerONE)
+    type(PEPSTensor) :: tempPEPS
+    complex(8) :: AIdentity(1,1,1)
+    real(8) :: overlap12
 
-    twoPEPS=new_PEPS(4,4,2,2)
-    call Normalize(twoPEPS)
-    smallPEPS2=twoPEPS
-    call smallPEPS2%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm2)
-    overlapBS=Overlap(smallPEPS2,twoPEPS)
-    print *, 'overlap BTW Canonized PEPS and full PEPS B: ',abs(overlapBS)**2
-    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+    A=ZERO    !BondDim = 2
+        A(1,1,1)=ONE;       A(1,2,2)=0.5d0*II
+        A(2,1,2)=ONE;
+    AL=ZERO;   AR=ZERO;
+        AL(1,1,1)=ONE;      AL(2,1,2)=ONE;
+        AR(1,2,1)=ONE;      AR(2,1,1)=ONE;
 
-    overlapNormal=Overlap(onePEPS,twoPEPS)
-    overlapBS=Overlap(smallPEPS1,smallPEPS2,CorePosition=YcanonPos, CoreDirection=HORIZONTAL)
-    print *,abs(overlapNormal),abs(overlapBS)
-    print *, 'difference in overlap calculated normally and canonically: ',abs(overlapBS)-abs(overlapNormal)
-    assert_equal_within(abs(overlapBS)-abs(overlapNormal),0.0d0,1.0d-10)
+    onePEPS=new_PEPS(Xsize,Ysize,SpinDim,BondDim)
+    allocate(localState(2,BondDim,BondDim,BondDim,BondDim))
+    localState=ZERO
+    do l=1,BondDim
+     do r=1,BondDim
+     do u=1,BondDim
+      do d=1,BondDim
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=A(s,l,r)*A(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    do m=2,Ysize-1
+      do n=2,Xsize-1
+        call onePEPS%SetTensorAt(n,m,tempPEPS)
+      enddo
+    enddo
+
+    deallocate(localState)
+    allocate(localState(2,integerONE,BondDim,BondDim,BondDim))
+    localState=ZERO
+    do l=1,1
+     do r=1,BondDim
+     do u=1,BondDim
+      do d=1,BondDim
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=AL(s,l,r)*A(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    do n=2,Ysize-1
+        call onePEPS%SetTensorAt(1,n,tempPEPS)
+    enddo
+
+    deallocate(localState)
+    allocate(localState(2,BondDim,integerONE,BondDim,BondDim))
+    localState=ZERO
+    do l=1,BondDim
+     do r=1,1
+     do u=1,BondDim
+      do d=1,BondDim
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=AR(s,l,r)*A(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    do n=2,Ysize-1
+        call onePEPS%SetTensorAt(Xsize,n,tempPEPS)
+    enddo
+
+    deallocate(localState)
+    allocate(localState(2,BondDim,BondDim,integerONE,BondDim))
+    localState=ZERO
+    do l=1,BondDim
+     do r=1,BondDim
+     do u=1,1
+      do d=1,BondDim
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=A(s,l,r)*AL(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    do n=2,Xsize-1
+        call onePEPS%SetTensorAt(n,Ysize,tempPEPS)
+    enddo
+
+    deallocate(localState)
+    allocate(localState(2,BondDim,BondDim,BondDim,integerONE))
+    localState=ZERO
+    do l=1,BondDim
+     do r=1,BondDim
+     do u=1,BondDim
+      do d=1,1
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=A(s,l,r)*AR(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    do n=2,Xsize-1
+        call onePEPS%SetTensorAt(n,1,tempPEPS)
+    enddo
+
+
+   deallocate(localState)
+    allocate(localState(2,integerONE,BondDim,BondDim,integerONE))
+    localState=ZERO
+    do l=1,1
+     do r=1,BondDim
+     do u=1,BondDim
+      do d=1,1
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=AL(s,l,r)*AR(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    call onePEPS%SetTensorAt(1,1,tempPEPS)
+
+   deallocate(localState)
+    allocate(localState(2,integerONE,BondDim,integerONE,BondDim))
+    localState=ZERO
+    do l=1,1
+     do r=1,BondDim
+     do u=1,1
+      do d=1,BondDim
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=AL(s,l,r)*AL(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    call onePEPS%SetTensorAt(1,Ysize,tempPEPS)
+
+   deallocate(localState)
+    allocate(localState(2,BondDim,integerONE,integerONE,BondDim))
+    localState=ZERO
+    do l=1,BondDim
+     do r=1,1
+     do u=1,1
+      do d=1,BondDim
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=AR(s,l,r)*AL(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    call onePEPS%SetTensorAt(Xsize,Ysize,tempPEPS)
+
+
+   deallocate(localState)
+    allocate(localState(2,BondDim,integerONE,BondDim,integerONE))
+    localState=ZERO
+    do l=1,BondDim
+     do r=1,1
+     do u=1,BondDim
+      do d=1,1
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=AR(s,l,r)*AR(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    call onePEPS%SetTensorAt(Xsize,1,tempPEPS)
+
+    overlap12 = Overlap_PEPS(onePEPS,onePEPS)
+    print *,overlap12
+    assert_equal_within(overlap12,0,005859375.0d0,1.0d-12)
+
+
+
+    A=ZERO    !BondDim = 2
+        A(1,1,1)=ONE;       A(1,2,2)=0.3d0*II
+        A(2,1,2)=ONE;
+    AL=ZERO;   AR=ZERO;
+        AL(1,1,1)=ONE;      AL(2,1,2)=ONE;
+        AR(1,2,1)=ONE;      AR(2,1,1)=ONE;
+
+   deallocate (localState)
+    twoPEPS=new_PEPS(Xsize,Ysize,SpinDim,BondDim)
+    allocate(localState(2,BondDim,BondDim,BondDim,BondDim))
+    localState=ZERO
+    do l=1,BondDim
+     do r=1,BondDim
+     do u=1,BondDim
+      do d=1,BondDim
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=A(s,l,r)*A(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    do m=2,Ysize-1
+      do n=2,Xsize-1
+        call twoPEPS%SetTensorAt(n,m,tempPEPS)
+      enddo
+    enddo
+
+    deallocate(localState)
+    allocate(localState(2,integerONE,BondDim,BondDim,BondDim))
+    localState=ZERO
+    do l=1,1
+     do r=1,BondDim
+     do u=1,BondDim
+      do d=1,BondDim
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=AL(s,l,r)*A(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    do n=2,Ysize-1
+        call twoPEPS%SetTensorAt(1,n,tempPEPS)
+    enddo
+
+    deallocate(localState)
+    allocate(localState(2,BondDim,integerONE,BondDim,BondDim))
+    localState=ZERO
+    do l=1,BondDim
+     do r=1,1
+     do u=1,BondDim
+      do d=1,BondDim
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=AR(s,l,r)*A(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    do n=2,Ysize-1
+        call twoPEPS%SetTensorAt(Xsize,n,tempPEPS)
+    enddo
+
+    deallocate(localState)
+    allocate(localState(2,BondDim,BondDim,integerONE,BondDim))
+    localState=ZERO
+    do l=1,BondDim
+     do r=1,BondDim
+     do u=1,1
+      do d=1,BondDim
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=A(s,l,r)*AL(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    do n=2,Xsize-1
+        call twoPEPS%SetTensorAt(n,Ysize,tempPEPS)
+    enddo
+
+    deallocate(localState)
+    allocate(localState(2,BondDim,BondDim,BondDim,integerONE))
+    localState=ZERO
+    do l=1,BondDim
+     do r=1,BondDim
+     do u=1,BondDim
+      do d=1,1
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=A(s,l,r)*AR(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    do n=2,Xsize-1
+        call twoPEPS%SetTensorAt(n,1,tempPEPS)
+    enddo
+
+
+   deallocate(localState)
+    allocate(localState(2,integerONE,BondDim,BondDim,integerONE))
+    localState=ZERO
+    do l=1,1
+     do r=1,BondDim
+     do u=1,BondDim
+      do d=1,1
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=AL(s,l,r)*AR(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    call twoPEPS%SetTensorAt(1,1,tempPEPS)
+
+   deallocate(localState)
+    allocate(localState(2,integerONE,BondDim,integerONE,BondDim))
+    localState=ZERO
+    do l=1,1
+     do r=1,BondDim
+     do u=1,1
+      do d=1,BondDim
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=AL(s,l,r)*AL(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    call twoPEPS%SetTensorAt(1,Ysize,tempPEPS)
+
+   deallocate(localState)
+    allocate(localState(2,BondDim,integerONE,integerONE,BondDim))
+    localState=ZERO
+    do l=1,BondDim
+     do r=1,1
+     do u=1,1
+      do d=1,BondDim
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=AR(s,l,r)*AL(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    call twoPEPS%SetTensorAt(Xsize,Ysize,tempPEPS)
+
+
+   deallocate(localState)
+    allocate(localState(2,BondDim,integerONE,BondDim,integerONE))
+    localState=ZERO
+    do l=1,BondDim
+     do r=1,1
+     do u=1,BondDim
+      do d=1,1
+      do s=1,SpinDim
+        localState(s,l,r,u,d)=AR(s,l,r)*AR(s,u,d)
+      enddo
+      enddo
+     enddo
+     enddo
+    enddo
+    tempPEPS=new_PEPSTensor(localState(1,:,:,:,:),localState(2,:,:,:,:))
+    call twoPEPS%SetTensorAt(Xsize,1,tempPEPS)
+
+    overlap12 = Overlap_PEPS(onePEPS,twoPEPS)
+    print *,overlap12
+    assert_equal_within(overlap12,0,000273375d0,1.0d-12)
 
 end test
+
 
 
 
