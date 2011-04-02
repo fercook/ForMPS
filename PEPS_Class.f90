@@ -712,8 +712,16 @@ Module PEPS_Class
             TransverseDoNotPush=LEFT
       end select
 
+!         if (debug) print *, 'Canonizing site',Xcol,Yrow
+!         if (debug) call aPEPS%TensorCollection(Xcol,Yrow)%Print('The Tensor')
+
+
       !First join spin dimension of tensor with the leg opposite the push direction
       tempTensor4=aPEPS%TensorCollection(Xcol,Yrow)%JoinSpinWith(DirectionOppositeTo(directionToPush))
+
+!         if (debug) call tempTensor4%Print('The Tensor Joined with spin')
+
+
       !Need to prepare the truncation of bonds
       BondSizes=aPEPS%TensorCollection(Xcol,Yrow)%GetBonds()
       spin=aPEPS%TensorCollection(Xcol,Yrow)%GetSpin()
@@ -733,6 +741,10 @@ Module PEPS_Class
         tempPEPSTensor=ApplyMatrixToBond(aPEPS%TensorCollection(Xcol+abs(deltaY),Yrow+abs(deltaX)), &
            & TensorTranspose(Umatrices(TransversePush)),directionOppositeTo(TransversePush))
         call aPEPS%SetTensorAt(Xcol+abs(deltaY),Yrow+abs(deltaX),tempPEPSTensor)
+
+ !       if (debug) call Umatrices(TransversePush)%Print('Transverse matrix')
+      else
+         pushTensor=nModeProduct(Umatrices(TransversePush),pushTensor,[TransversePush])
       endif
 
       !and now push longitudinal matrix first, tensor comes later (this reduces cost because matrix is truncated)
@@ -741,6 +753,8 @@ Module PEPS_Class
             & TensorTranspose(Umatrices(directionToPush)),DirectionOppositeTo(directionToPush))
          tempPEPSTensor=ApplyMPOToBond(tempPEPSTensor,pushTensor,DirectionOppositeTo(directionToPush))
          call aPEPS%SetTensorAt(Xcol+deltaX,Yrow+deltaY,tempPEPSTensor)
+      else
+         call ThrowException('FullCanonizePEPSSite','Should not push core tensor outside boundaries',NoErrorCode,CriticalError)
       endif
 
       !Finally reconstruct a new PEPSTensor on site from the remaining Umatrix
@@ -750,14 +764,16 @@ Module PEPS_Class
                &  [ BondLimits(RIGHT), BondSizes(RIGHT), spin ] )
             tempPEPSTensor=new_PEPSTensor(tempTensor3, 3, HORIZONTAL)
          case (RIGHT)
-            tempTensor3 = TensorReshape( Umatrices(LEFT), &
-               &  [ BondSizes(LEFT), spin, BondLimits(LEFT) ] )
-            tempPEPSTensor=new_PEPSTensor(tempTensor3, 2, HORIZONTAL)
+       !     if (debug) call Umatrices(LEFT)%Print('Matrix to be converted')
+            tempTensor3 = TensorTranspose( TensorReshape( Umatrices(LEFT), &
+               &  [ BondSizes(LEFT), spin, BondLimits(LEFT) ] ) ,[1,3,2] )
+            tempPEPSTensor=new_PEPSTensor(tempTensor3, 3, HORIZONTAL, [1,1])
          case (UP)
             tempTensor3 = TensorReshape( TensorTranspose(Umatrices(DOWN)), & !Second index of U is always the one corresponding to core tensor
                &  [ BondLimits(DOWN), BondSizes(DOWN), spin ] )
             tempPEPSTensor=new_PEPSTensor(tempTensor3, 3, VERTICAL)
          case (DOWN)
+        !    if (debug) call Umatrices(UP)%Print('Matrix to be converted')
             tempTensor3 = TensorReshape( Umatrices(UP), &
                &  [ BondSizes(UP), spin, BondLimits(UP) ] )
             tempPEPSTensor=new_PEPSTensor(tempTensor3, 2, VERTICAL)

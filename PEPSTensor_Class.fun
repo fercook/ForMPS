@@ -132,12 +132,25 @@ test go_to_mps_and_back
 
   aPEPS=new_PEPSTensor(spin,LSbond,RSbond,USbond,DSbond)
   aMPSt=aPEPS%AsMPSTensor(LEFT,RIGHT)
-  call aMPSt%PrintDimensions()
+  call aMPSt%PrintDimensions('Horizontal with trans bonds')
   anotherPEPS=new_PEPSTensor(aMPSt,3,HORIZONTAL,[USbond,DSbond])
   assert_equal_within(Norm(aPEPS-anotherPEPS),0.0d0,1.0d-15)
 
+  aPEPS=new_PEPSTensor(spin,LSbond,RSbond,integerONE,integerONE)
+  aMPSt=aPEPS%AsMPSTensor(LEFT,RIGHT)
+  call aMPSt%PrintDimensions('Horizontal w/o trans bonds')
+  anotherPEPS=new_PEPSTensor(aMPSt,3,HORIZONTAL)
+  assert_equal_within(Norm(aPEPS-anotherPEPS),0.0d0,1.0d-15)
+
+  aMPSt=new_MPSTensor(TensorTranspose(aMPSt,[1,3,2]))
+  call aMPSt%PrintDimensions('Transposed MPS spin')
+  anotherPEPS=new_PEPSTensor(aMPSt,2,HORIZONTAL)
+  assert_equal_within(Norm(aPEPS-anotherPEPS),0.0d0,1.0d-15)
+
+
+  aPEPS=new_PEPSTensor(spin,LSbond,RSbond,USbond,DSbond)
   aMPSt=aPEPS%AsMPSTensor(DOWN,UP)
-  call aMPSt%PrintDimensions()
+  call aMPSt%PrintDimensions('Vertical with trans bonds')
   anotherPEPS=new_PEPSTensor(aMPSt,3,VERTICAL,[LSbond,RSbond])
   call anotherPeps%PrintDimensions()
   assert_equal_within(Norm(aPEPS-anotherPEPS),0.0d0,1.0d-15)

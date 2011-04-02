@@ -3449,25 +3449,35 @@ end function JoinIndicesOfTensor4
         	newdims=integerONE
             !Ugly code follows. How to write this cleaner while kepping the interface?
             do n=1,size(reqDim1)
-				permutation(n)=reqDim1(n)
+				permutation(reqDim1(n))=n
 				newdims(1)=newdims(1)*dims(reqDim1(n))
 			enddo
 			do n=1,size(reqDim2)
-				permutation(n+size(reqDim1))=reqDim2(n)
+				permutation(reqDim2(n))=n+size(reqDim1)
 				newdims(2)=newdims(2)*dims(reqDim2(n))
 			enddo
 			do n=1,size(reqDim3)
-				permutation(n+size(reqDim1)+size(reqDim2))=reqDim3(n)
+				permutation(reqDim3(n))=n+size(reqDim1)+size(reqDim2)
 				newdims(3)=newdims(3)*dims(reqDim3(n))
 			enddo
 			do n=1,size(reqDim4)
-				permutation(n+size(reqDim1)+size(reqDim2)+size(reqDim3))=reqDim4(n)
+				permutation(reqDim4(n))=n+size(reqDim1)+size(reqDim2)+size(reqDim3)
 				newdims(4)=newdims(4)*dims(reqDim4(n))
 			enddo
-            do n=1,5
-                ReshapedDims(permutation(n))=dims(n)
-            enddo
-            if(product(dims).eq.product(newdims)) then
+         do n=1,5
+            ReshapedDims(permutation(n))=dims(n)
+         enddo
+         if(product(dims).eq.product(newdims)) then
+!            if (debug) print *,'From Flatten 5-3'
+!            if (debug) print *,'Original dims'
+!            if (debug) print *,'--- ',dims
+!            if (debug) print *,'Permutation '
+!            if (debug) print *,'--- ',permutation
+!            if (debug) print *,'Permuted dims'
+!            if (debug) print *,'--- ',ReshapedDims
+!            if (debug) print *,'Requested dims'
+!            if (debug) print *,'--- ',newdims
+!
 				aTensor=new_Tensor( reshape( reshape(this%data,ReshapedDims,ORDER=permutation),newdims))
 			else
 				call ThrowException('Tensor4FromJoinedTensor5','Dims look incorrect',NoErrorCode,CriticalError)
