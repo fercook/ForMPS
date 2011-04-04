@@ -27,56 +27,349 @@ teardown
 end teardown
 
 
-test crossed_OVerlaps
-    type(PEPS) :: onePEPS,twoPEPS,smallPEPS1,smallPEPS2
-    complex(8) :: overlapCN,overlapCC,overlapNC,overlapNN,overlapNormal
-    real(8) :: someNorm1,someNorm2
-    integer :: x,y
-    integer,parameter :: XcanonPos=2,YcanonPos=2, Xlength=4,Ylength=4
-    integer,parameter :: MaxLongitudinalBond=6,MaxTransverseBond=6
+!test Canonical_Overlap_VerticalCanon
+!    type(PEPS) :: onePEPS,twoPEPS,smallPEPS1,smallPEPS2
+!    complex(8) :: overlapBS,overlapNormal, overlapCanon
+!    real(8) :: someNorm1,someNorm2
+!    integer,parameter :: XcanonPos=2,YcanonPos=2
+!
+!    onePEPS=new_PEPS(4,4,2,2)
+!    twoPEPS=new_PEPS(4,4,2,2)
+!
+!   overlapNormal=Overlap(onePEPS,twoPEPS)
+!
+!   print *,'Correct overlap:',Abs(overlapNormal)
+!
+!   smallPEPS1=onePEPS
+!   smallPEPS2=twoPEPS
+!
+!   call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm1)
+!   call smallPEPS2%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm2)
+!
+!   overlapCanon=sqrt(abs(someNorm1)*abs(someNorm2))*Overlap(smallPEPS1,smallPEPS2, CorePosition=YcanonPos, CoreDirection=HORIZONTAL)
+!    print *, 'difference in overlap calculated normally and canonically: ',abs(overlapCanon)-abs(overlapNormal)
+!   assert_equal_within(abs(overlapCanon)/abs(overlapNormal),1.0d0,1.0d-10)
+!
+!    overlapNormal=Overlap(onePEPS,onePEPS)
+!    overlapBS=sqrt(abs(someNorm1))*Overlap(smallPEPS1,onePEPS)
+!    print *, 'overlap BTW Canonized PEPS and full PEPS A: ',abs(overlapBS),overlapNormal
+!    assert_equal_within(abs(overlapBS)/abs(overlapNormal),1.0d0,1.0d-10)
+!
+!    overlapBS=Overlap(smallPEPS1,smallPEPS1, CorePosition=YcanonPos, CoreDirection=HORIZONTAL)
+!    print *, 'Module of Canonized PEPSs (CANON METHOD): ',abs(overlapBS)**2
+!    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+!    overlapBS=Overlap(smallPEPS1,smallPEPS1)
+!    print *, 'Module of Canonized PEPSs (EXACT): ',abs(overlapBS)**2
+!    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+!
+!    overlapNormal=Overlap(twoPEPS,twoPEPS)
+!    overlapBS=sqrt(abs(someNorm2))*Overlap(smallPEPS2,twoPEPS)
+!    print *, 'overlap BTW Canonized PEPS and full PEPS B: ',abs(overlapBS),abs(overlapNormal)
+!    assert_equal_within(abs(overlapBS)/abs(overlapNormal),1.0d0,1.0d-10)
+!
+!end test
+!
+!test Canonical_Overlap_HorizontalCanon
+!    type(PEPS) :: onePEPS,twoPEPS,smallPEPS1,smallPEPS2
+!    complex(8) :: overlapBS,overlapNormal
+!    real(8) :: someNorm1,someNorm2
+!    integer,parameter :: XcanonPos=2,YcanonPos=3
+!
+!    onePEPS=new_PEPS(4,4,2,2)
+!    call Normalize(onePEPS)
+!
+!    smallPEPS1=onePEPS
+!    call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,HORIZONTAL,6,6,someNorm1)
+!    overlapBS=Overlap(smallPEPS1,onePEPS)
+!    print *, 'overlap BTW Canonized PEPS and full PEPS A: ',abs(overlapBS)**2
+!    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+!
+!    overlapBS=Overlap(smallPEPS1,CorePosition=XcanonPos, CoreDirection=VERTICAL)
+!    print *, 'overlap BTW Canonized PEPSs (CANON METHOD): ',abs(overlapBS)**2
+!    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+!    overlapBS=Overlap(smallPEPS1,smallPEPS1)
+!    print *, 'overlap BTW Canonized PEPSs (EXACT): ',abs(overlapBS)**2
+!    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+!
+!    twoPEPS=new_PEPS(4,4,2,2)
+!    call Normalize(twoPEPS)
+!    smallPEPS2=twoPEPS
+!    call smallPEPS2%CanonizeAt(XcanonPos,YcanonPos,HORIZONTAL,6,6,someNorm2)
+!    overlapBS=Overlap(smallPEPS2,twoPEPS)
+!    print *, 'overlap BTW Canonized PEPS and full PEPS B: ',abs(overlapBS)**2
+!    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
+!
+!    overlapNormal=Overlap(onePEPS,twoPEPS)
+!    overlapBS=Overlap(smallPEPS1,smallPEPS2,CorePosition=XcanonPos, CoreDirection=VERTICAL)
+!    print *,abs(overlapNormal),abs(overlapBS)
+!    print *, 'difference in overlap calculated normally and canonically: ',abs(overlapBS)-abs(overlapNormal)
+!    assert_equal_within(abs(overlapBS)-abs(overlapNormal),0.0d0,1.0d-10)
+!
+!end test
+!
 
-    onePEPS=new_PEPS(Xlength,Ylength,2,2)
-    call Normalize(onePEPS)
-    smallPEPS1=onePEPS
-    twoPEPS=new_PEPS(Xlength,Ylength,2,2)
-    call Normalize(twoPEPS)
-    smallPEPS2=twoPEPS
 
-   call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm1)
-   call smallPEPS2%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm2)
-
-   overlapNN=Overlap(onePEPS,twoPEPS)
-   overlapCN=Overlap(smallPEPS1,twoPEPS)
-   overlapNC=Overlap(onePEPS,smallPEPS2)
-   overlapCC=Overlap(smallPEPS1,smallPEPS2)
-
-   print *,'Overlaps:'
-   print *,' - NN = ',overlapNN
-   print *,' - CN = ',overlapCN
-   print *,' - NC = ',overlapNC
-   print *,' - CC = ',overlapCC
-end test
-
-
-
-test Horiz_Vertical_Canon
+test Horiz_Vertical_Canon_Overlap
 
    type(PEPS) :: onePEPS,twoPEPS,smallPEPS1,smallPEPS2
    type(PEPSTensor) :: aTensor
    type(Tensor2) :: aMatrix
    integer :: l,r,u,d,s,x,y
    complex(8) :: overlapCanon,overlapNormal
+   real(8) :: someNorm1,someNorm2
    complex(8),allocatable :: anArray(:,:,:,:,:)
+   integer,parameter :: XcanonPos=2,YcanonPos=2, Xlength=4,Ylength=4
+   integer,parameter :: MaxLongitudinalBond=6,MaxTransverseBond=6
+   complex(8) :: EXACTOVERLAP
 
-   onePEPS=new_PEPS(4,4,2,2)
-   twoPEPS=new_PEPS(4,4,2,2)
+   EXACTOVERLAP=1.591182839737796D38 - 9.271418372179549D20 * II
+
+   onePEPS=new_PEPS(Xlength,Ylength,2,2)
+   twoPEPS=new_PEPS(Xlength,Ylength,2,2)
+   allocate (anArray(2,2,2,2,2))
+   do x=2,3
+   do y=2,3
+   do s=1,2
+   do l=1,2
+   do r=1,2
+   do u=1,2
+   do d=1,2
+      anArray(l,r,u,d,s)=(II*(s-1)+l*3.0d0+(r/(x**2+II*sqrt(1.0d0*y)))**2+Sqrt(1.0d0*u)+II*log(1.0d0*d))
+   enddo
+   enddo
+   enddo
+   enddo
+   enddo
+    aTensor=new_PEPSTensor(new_Tensor(AnArray))
+    call onePEPS%SetTensorAt(x,y,aTensor)
+    aTensor=0.5*ONE*aTensor
+    call twoPEPS%SetTensorAt(x,y,aTensor)
+   enddo
+   enddo
+
+   !LEFT COL
+   deallocate(anArray)
+   allocate (anArray(1,2,2,2,2))
+   x=1
+   do y=2,3
+   do s=1,2
+   do l=1,1
+   do r=1,2
+   do u=1,2
+   do d=1,2
+      anArray(l,r,u,d,s)=(II*(s-1)+l*3.0d0+(r/(x**2+II*sqrt(1.0d0*y)))**2+Sqrt(1.0d0*u)+II*log(1.0d0*d))
+   enddo
+   enddo
+   enddo
+   enddo
+   enddo
+     aTensor=new_PEPSTensor(new_Tensor(AnArray))
+     call onePEPS%SetTensorAt(x,y,aTensor)
+     aTensor=0.25*ONE*aTensor
+     call twoPEPS%SetTensorAt(x,y,aTensor)
+   enddo
+
+!RIGHT COL
+   deallocate(anArray)
+   allocate (anArray(2,1,2,2,2))
+   x=4
+   do y=2,3
+   do s=1,2
+   do l=1,2
+   do r=1,1
+   do u=1,2
+   do d=1,2
+      anArray(l,r,u,d,s)=(II*(s-1)+l*3.0d0+(r/(x**2+II*sqrt(1.0d0*y)))**2+Sqrt(1.0d0*u)+II*log(1.0d0*d))
+   enddo
+   enddo
+   enddo
+   enddo
+   enddo
+   aTensor=new_PEPSTensor(new_Tensor(AnArray))
+     call onePEPS%SetTensorAt(x,y,aTensor)
+   aTensor=0.25*ONE*aTensor
+     call twoPEPS%SetTensorAt(x,y,aTensor)
+   enddo
+
+!LOWER ROW
+   deallocate(anArray)
+   allocate (anArray(2,2,2,1,2))
+   y=1
+   do x=2,3
+   do s=1,2
+   do l=1,2
+   do r=1,2
+   do u=1,2
+   do d=1,1
+      anArray(l,r,u,d,s)=(II*(s-1)+l*3.0d0+(r/(x**2+II*sqrt(1.0d0*y)))**2+Sqrt(1.0d0*u)+II*log(1.0d0*d))
+   enddo
+   enddo
+   enddo
+   enddo
+   enddo
+   aTensor=new_PEPSTensor(new_Tensor(AnArray))
+     call onePEPS%SetTensorAt(x,y,aTensor)
+   aTensor=0.25*ONE*aTensor
+     call twoPEPS%SetTensorAt(x,y,aTensor)
+   enddo
+
+!UPPER ROW
+   deallocate(anArray)
+   allocate (anArray(2,2,1,2,2))
+   y=4
+   do x=2,3
+   do s=1,2
+   do l=1,2
+   do r=1,2
+   do u=1,1
+   do d=1,2
+      anArray(l,r,u,d,s)=(II*(s-1)+l*3.0d0+(r/(x**2+II*sqrt(1.0d0*y)))**2+Sqrt(1.0d0*u)+II*log(1.0d0*d))
+   enddo
+   enddo
+   enddo
+   enddo
+   enddo
+   aTensor=new_PEPSTensor(new_Tensor(AnArray))
+     call onePEPS%SetTensorAt(x,y,aTensor)
+   aTensor=0.25*ONE*aTensor
+     call twoPEPS%SetTensorAt(x,y,aTensor)
+   enddo
+
+   !1,1
+   deallocate(anArray)
+   allocate (anArray(1,2,2,1,2))
+   x=1
+   y=1
+   do s=1,2
+   do l=1,1
+   do r=1,2
+   do u=1,2
+   do d=1,1
+      anArray(l,r,u,d,s)=(II*(s-1)+l*3.0d0+(r/(x**2+II*sqrt(1.0d0*y)))**2+Sqrt(1.0d0*u)+II*log(1.0d0*d))
+   enddo
+   enddo
+   enddo
+   enddo
+   enddo
+   aTensor=new_PEPSTensor(new_Tensor(AnArray))
+   call onePEPS%SetTensorAt(x,y,aTensor)
+   aTensor=3.0*ONE*aTensor
+   call twoPEPS%SetTensorAt(x,y,aTensor)
+
+   !4,1
+   x=4
+   y=1
+   deallocate(anArray)
+   allocate (anArray(2,1,2,1,2))
+   do s=1,2
+   do l=1,2
+   do r=1,1
+   do u=1,2
+   do d=1,1
+      anArray(l,r,u,d,s)=(II*(s-1)+l*3.0d0+(r/(x**2+II*sqrt(1.0d0*y)))**2+Sqrt(1.0d0*u)+II*log(1.0d0*d))
+   enddo
+   enddo
+   enddo
+   enddo
+   enddo
+   aTensor=new_PEPSTensor(new_Tensor(AnArray))
+   call onePEPS%SetTensorAt(x,y,aTensor)
+   aTensor=3.0*ONE*aTensor
+   call twoPEPS%SetTensorAt(x,y,aTensor)
+
+   !1,4
+   x=1
+   y=4
+   deallocate(anArray)
+   allocate (anArray(1,2,1,2,2))
+   do s=1,2
+   do l=1,1
+   do r=1,2
+   do u=1,1
+   do d=1,2
+      anArray(l,r,u,d,s)=(II*(s-1)+l*3.0d0+(r/(x**2+II*sqrt(1.0d0*y)))**2+Sqrt(1.0d0*u)+II*log(1.0d0*d))
+   enddo
+   enddo
+   enddo
+   enddo
+   enddo
+   aTensor=new_PEPSTensor(new_Tensor(AnArray))
+   call onePEPS%SetTensorAt(x,y,aTensor)
+   aTensor=3.0*ONE*aTensor
+   call twoPEPS%SetTensorAt(x,y,aTensor)
+
+   !4,4
+   x=4
+   y=4
+   deallocate(anArray)
+   allocate (anArray(2,1,1,2,2))
+   do s=1,2
+   do l=1,2
+   do r=1,1
+   do u=1,1
+   do d=1,2
+      anArray(l,r,u,d,s)=(II*(s-1)+l*3.0d0+(r/(x**2+II*sqrt(1.0d0*y)))**2+Sqrt(1.0d0*u)+II*log(1.0d0*d))
+   enddo
+   enddo
+   enddo
+   enddo
+   enddo
+   aTensor=new_PEPSTensor(new_Tensor(AnArray))
+   call onePEPS%SetTensorAt(x,y,aTensor)
+   aTensor=3.0*ONE*aTensor
+   call twoPEPS%SetTensorAt(x,y,aTensor)
+
+   overlapNormal=Overlap(onePEPS,twoPEPS)
+   assert_equal_within(abs(overlapNormal)/abs(EXACTOVERLAP),1.0d0,1.0d-10)
+
+   print *,'Correct overlap:',Abs(overlapNormal)/abs(EXACTOVERLAP)
+
+   smallPEPS1=onePEPS
+   smallPEPS2=twoPEPS
+
+   call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,HORIZONTAL,6,6,someNorm1)
+   call smallPEPS2%CanonizeAt(XcanonPos,YcanonPos,HORIZONTAL,6,6,someNorm2)
+
+   overlapCanon=sqrt(abs(someNorm1)*abs(someNorm2))*Overlap(smallPEPS1,smallPEPS2, CorePosition=XcanonPos, CoreDirection=VERTICAL)
+   print *,'Canonized overlap HORIZONTAL:',abs(overlapCanon)
+   assert_equal_within(abs(overlapCanon)/abs(EXACTOVERLAP),1.0d0,1.0d-10)
+
+   smallPEPS1=onePEPS
+   smallPEPS2=twoPEPS
+
+   call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm1)
+   call smallPEPS2%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm2)
+
+   overlapCanon=sqrt(abs(someNorm1)*abs(someNorm2))*Overlap(smallPEPS1,smallPEPS2, CorePosition=YcanonPos, CoreDirection=HORIZONTAL)
+   print *,'Canonized overlap VERTICAL:',abs(overlapCanon)
+   assert_equal_within(abs(overlapCanon)/abs(EXACTOVERLAP),1.0d0,1.0d-10)
+
+end test
+
+
+test Construction_Symmetric_PEPS
+
+   type(PEPS) :: onePEPS,twoPEPS,smallPEPS1,smallPEPS2
+   type(PEPSTensor) :: aTensor
+   type(Tensor2) :: aMatrix
+   integer :: l,r,u,d,s,x,y
+   complex(8) :: overlapCanon,overlapNormal
+   real(8) :: someNorm1,someNorm2
+   complex(8),allocatable :: anArray(:,:,:,:,:)
+   integer,parameter :: XcanonPos=2,YcanonPos=2, Xlength=4,Ylength=4
+   integer,parameter :: MaxLongitudinalBond=6,MaxTransverseBond=6
+   real(8),parameter :: EXACTOVERLAP=1.64795536830051617144832D23
+
+
+   onePEPS=new_PEPS(Xlength,Ylength,2,2)
+   twoPEPS=new_PEPS(Xlength,Ylength,2,2)
    allocate (anArray(2,2,2,2,2))
    do s=1,2
    do l=1,2
    do r=1,2
    do u=1,2
    do d=1,2
-      anArray(l,r,u,d,s)=10*(s-1)+l+r+u+d-4
+      anArray(l,r,u,d,s)=II*(s-1)+l+r+u+d-4
    enddo
    enddo
    enddo
@@ -103,7 +396,7 @@ test Horiz_Vertical_Canon
    do r=1,2
    do u=1,2
    do d=1,2
-      anArray(l,r,u,d,s)=10*(s-1)+l+r+u+d-4
+      anArray(l,r,u,d,s)=II*(s-1)+l+r+u+d-4
    enddo
    enddo
    enddo
@@ -126,7 +419,7 @@ test Horiz_Vertical_Canon
    do r=1,1
    do u=1,2
    do d=1,2
-      anArray(l,r,u,d,s)=10*(s-1)+l+r+u+d-4
+      anArray(l,r,u,d,s)=II*(s-1)+l+r+u+d-4
    enddo
    enddo
    enddo
@@ -149,7 +442,7 @@ test Horiz_Vertical_Canon
    do r=1,2
    do u=1,2
    do d=1,1
-      anArray(l,r,u,d,s)=10*(s-1)+l+r+u+d-4
+      anArray(l,r,u,d,s)=II*(s-1)+l+r+u+d-4
    enddo
    enddo
    enddo
@@ -172,7 +465,7 @@ test Horiz_Vertical_Canon
    do r=1,2
    do u=1,1
    do d=1,2
-      anArray(l,r,u,d,s)=10*(s-1)+l+r+u+d-4
+      anArray(l,r,u,d,s)=II*(s-1)+l+r+u+d-4
    enddo
    enddo
    enddo
@@ -195,7 +488,7 @@ test Horiz_Vertical_Canon
    do r=1,2
    do u=1,2
    do d=1,1
-      anArray(l,r,u,d,s)=10*(s-1)+l+r+u+d-4
+      anArray(l,r,u,d,s)=II*(s-1)+l+r+u+d-4
    enddo
    enddo
    enddo
@@ -214,7 +507,7 @@ test Horiz_Vertical_Canon
    do r=1,1
    do u=1,2
    do d=1,1
-      anArray(l,r,u,d,s)=10*(s-1)+l+r+u+d-4
+      anArray(l,r,u,d,s)=II*(s-1)+l+r+u+d-4
    enddo
    enddo
    enddo
@@ -233,7 +526,7 @@ test Horiz_Vertical_Canon
    do r=1,2
    do u=1,1
    do d=1,2
-      anArray(l,r,u,d,s)=10*(s-1)+l+r+u+d-4
+      anArray(l,r,u,d,s)=II*(s-1)+l+r+u+d-4
    enddo
    enddo
    enddo
@@ -252,7 +545,7 @@ test Horiz_Vertical_Canon
    do r=1,1
    do u=1,1
    do d=1,2
-      anArray(l,r,u,d,s)=10*(s-1)+l+r+u+d-4
+      anArray(l,r,u,d,s)=II*(s-1)+l+r+u+d-4
    enddo
    enddo
    enddo
@@ -263,11 +556,6 @@ test Horiz_Vertical_Canon
    aTensor=3.0*ONE*aTensor
    call twoPEPS%SetTensorAt(4,4,aTensor)
 
-
-   smallPEPS1=onePEPS
-   smallPEPS2=onePEPS
-
-
    do y=1,4
       aTensor=onePEPS%GetTensorAt(1,y)
       aMatrix=aTensor%CollapseAllIndicesBut(RIGHT)
@@ -275,23 +563,35 @@ test Horiz_Vertical_Canon
       assert_equal_within(aMatrix.absdiff.aTensor%CollapseAllIndicesBut(DOWN),0.0d0,1.0d-10)
    enddo
 
-!   overlapNormal=Overlap(onePEPS,twoPEPS)
-!   overlapCanon=Overlap(smallPEPS1,smallPEPS2)
-!   print *,'Initial overlaps:',Abs(overlapNormal),Abs(overlapCanon)
+   overlapNormal=Overlap(onePEPS,twoPEPS)
+   assert_equal_within(abs(overlapNormal)/EXACTOVERLAP,1.0d0,1.0d-10)
 
-   call DecouplePEPSVerticallyAtCol(smallPEPS1,1,RIGHT,6,6)
-   call DecouplePEPSHorizontallyAtRow(smallPEPS2,4,DOWN,6,6)
+   print *,'Correct overlap:',Abs(overlapNormal)/EXACTOVERLAP
 
-!   do y=1,4
-!      print *,'Tensor number:',y
-!      aTensor=smallPEPS1%GetTensorAt(1,y)
-!      call aTensor%Print('Horizontal PEPS:')
-!      aTensor=smallPEPS2%GetTensorAt(y,4)
-!      call aTensor%Print('Vertical PEPS:')
-!   enddo
+   smallPEPS1=onePEPS
+   smallPEPS2=twoPEPS
 
+   call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,HORIZONTAL,6,6,someNorm1)
+   call smallPEPS2%CanonizeAt(XcanonPos,YcanonPos,HORIZONTAL,6,6,someNorm2)
+
+   overlapCanon=sqrt(abs(someNorm1)*abs(someNorm2))*Overlap(smallPEPS1,smallPEPS2, CorePosition=XcanonPos, CoreDirection=VERTICAL)
+   print *,'Canonized overlap HORIZONTAL:',abs(overlapCanon)
+   assert_equal_within(abs(overlapCanon)/EXACTOVERLAP,1.0d0,1.0d-10)
+
+   smallPEPS1=onePEPS
+   smallPEPS2=twoPEPS
+
+   call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm1)
+   call smallPEPS2%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm2)
+
+   overlapCanon=sqrt(abs(someNorm1)*abs(someNorm2))*Overlap(smallPEPS1,smallPEPS2, CorePosition=YcanonPos, CoreDirection=HORIZONTAL)
+   print *,'Canonized overlap VERTICAL:',abs(overlapCanon)
+   assert_equal_within(abs(overlapCanon)/EXACTOVERLAP,1.0d0,1.0d-10)
 
 end test
+
+
+
 
 test gradual_Canonification_Horiz
     type(PEPS) :: onePEPS,twoPEPS,smallPEPS1,smallPEPS2
@@ -401,82 +701,7 @@ end test
 
 
 
-test Canonical_Overlap_VerticalCanon
-    type(PEPS) :: onePEPS,twoPEPS,smallPEPS1,smallPEPS2
-    complex(8) :: overlapBS,overlapNormal
-    real(8) :: someNorm1,someNorm2
-    integer,parameter :: XcanonPos=2,YcanonPos=3
 
-    onePEPS=new_PEPS(4,4,2,2)
-    call Normalize(onePEPS)
-
-    smallPEPS1=onePEPS
-    call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm1)
-    overlapBS=Overlap(smallPEPS1,onePEPS)
-    print *, 'overlap BTW Canonized PEPS and full PEPS A: ',abs(overlapBS)**2
-    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
-
-    overlapBS=Overlap(smallPEPS1,smallPEPS1,CorePosition=YcanonPos, CoreDirection=HORIZONTAL)
-    print *, 'overlap BTW Canonized PEPSs (CANON METHOD): ',abs(overlapBS)**2
-    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
-    overlapBS=Overlap(smallPEPS1,smallPEPS1)
-    print *, 'overlap BTW Canonized PEPSs (EXACT): ',abs(overlapBS)**2
-    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
-
-    twoPEPS=new_PEPS(4,4,2,2)
-    call Normalize(twoPEPS)
-    smallPEPS2=twoPEPS
-    call smallPEPS2%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm2)
-    overlapBS=Overlap(smallPEPS2,twoPEPS)
-    print *, 'overlap BTW Canonized PEPS and full PEPS B: ',abs(overlapBS)**2
-    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
-
-    overlapNormal=Overlap(onePEPS,twoPEPS)
-    overlapBS=Overlap(smallPEPS1,smallPEPS2,CorePosition=YcanonPos, CoreDirection=HORIZONTAL)
-    print *,abs(overlapNormal),abs(overlapBS)
-    print *, 'difference in overlap calculated normally and canonically: ',abs(overlapBS)-abs(overlapNormal)
-    assert_equal_within(abs(overlapBS)-abs(overlapNormal),0.0d0,1.0d-10)
-
-end test
-
-test Canonical_Overlap_HorizontalCanon
-    type(PEPS) :: onePEPS,twoPEPS,smallPEPS1,smallPEPS2
-    complex(8) :: overlapBS,overlapNormal
-    real(8) :: someNorm1,someNorm2
-    integer,parameter :: XcanonPos=2,YcanonPos=3
-
-    onePEPS=new_PEPS(4,4,2,2)
-    call Normalize(onePEPS)
-
-    smallPEPS1=onePEPS
-    call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,HORIZONTAL,6,6,someNorm1)
-    overlapBS=Overlap(smallPEPS1,onePEPS)
-    print *, 'overlap BTW Canonized PEPS and full PEPS A: ',abs(overlapBS)**2
-    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
-
-    overlapBS=Overlap(smallPEPS1,CorePosition=XcanonPos, CoreDirection=VERTICAL)
-    print *, 'overlap BTW Canonized PEPSs (CANON METHOD): ',abs(overlapBS)**2
-    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
-    overlapBS=Overlap(smallPEPS1,smallPEPS1)
-    print *, 'overlap BTW Canonized PEPSs (EXACT): ',abs(overlapBS)**2
-    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
-
-    twoPEPS=new_PEPS(4,4,2,2)
-    call Normalize(twoPEPS)
-    smallPEPS2=twoPEPS
-    call smallPEPS2%CanonizeAt(XcanonPos,YcanonPos,HORIZONTAL,6,6,someNorm2)
-    overlapBS=Overlap(smallPEPS2,twoPEPS)
-    print *, 'overlap BTW Canonized PEPS and full PEPS B: ',abs(overlapBS)**2
-    assert_equal_within(abs(overlapBS)**2,1.0d0,1.0d-10)
-
-    overlapNormal=Overlap(onePEPS,twoPEPS)
-    overlapBS=Overlap(smallPEPS1,smallPEPS2,CorePosition=XcanonPos, CoreDirection=VERTICAL)
-    print *,abs(overlapNormal),abs(overlapBS)
-    print *, 'difference in overlap calculated normally and canonically: ',abs(overlapBS)-abs(overlapNormal)
-    assert_equal_within(abs(overlapBS)-abs(overlapNormal),0.0d0,1.0d-10)
-
-
-end test
 
 
 test PEPS_Canonization_Routines
@@ -1322,6 +1547,58 @@ test ControlledOverlap
     assert_equal_within(overlap12,0,000273375d0,1.0d-12)
 
 end test
+
+
+
+test crossed_OVerlaps
+    type(PEPS) :: onePEPS,twoPEPS,smallPEPS1,smallPEPS2
+    complex(8) :: overlapCN,overlapCC,overlapNC,overlapNN,overlapNormal
+    real(8) :: someNorm1,someNorm2
+    integer :: x,y
+    integer,parameter :: XcanonPos=2,YcanonPos=2, Xlength=4,Ylength=4
+    integer,parameter :: MaxLongitudinalBond=6,MaxTransverseBond=6
+
+    onePEPS=new_PEPS(Xlength,Ylength,2,2)
+    call Normalize(onePEPS)
+    twoPEPS=new_PEPS(Xlength,Ylength,2,2)
+    call Normalize(twoPEPS)
+
+    smallPEPS1=onePEPS
+    smallPEPS2=twoPEPS
+   call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm1)
+   call smallPEPS2%CanonizeAt(XcanonPos,YcanonPos,VERTICAL,6,6,someNorm2)
+
+   overlapNN=Overlap(onePEPS,twoPEPS)
+   overlapCN=Overlap(smallPEPS1,twoPEPS)
+   overlapNC=Overlap(onePEPS,smallPEPS2)
+   overlapCC=Overlap(smallPEPS1,smallPEPS2)
+
+   assert_equal_within(abs(overlapNN)-abs(overlapCN),0.0d0,1.0d-10)
+   assert_equal_within(abs(overlapNN)-abs(overlapNC),0.0d0,1.0d-10)
+   assert_equal_within(abs(overlapNN)-abs(overlapCC),0.0d0,1.0d-10)
+
+   smallPEPS1=onePEPS
+   smallPEPS2=twoPEPS
+   call smallPEPS1%CanonizeAt(XcanonPos,YcanonPos,HORIZONTAL,6,6,someNorm1)
+   call smallPEPS2%CanonizeAt(XcanonPos,YcanonPos,HORIZONTAL,6,6,someNorm2)
+
+   overlapNN=Overlap(onePEPS,twoPEPS)
+   overlapCN=Overlap(smallPEPS1,twoPEPS)
+   overlapNC=Overlap(onePEPS,smallPEPS2)
+   overlapCC=Overlap(smallPEPS1,smallPEPS2)
+
+   assert_equal_within(abs(overlapNN)-abs(overlapCN),0.0d0,1.0d-10)
+   assert_equal_within(abs(overlapNN)-abs(overlapNC),0.0d0,1.0d-10)
+   assert_equal_within(abs(overlapNN)-abs(overlapCC),0.0d0,1.0d-10)
+
+   print *,'Overlaps:'
+   print *,' - Normal/Normal = ',overlapNN
+   print *,' - Canon/Normal  = ',overlapCN
+   print *,' - Normal/Canon  = ',overlapNC
+   print *,' - Canon/Canon   = ',overlapCC
+
+end test
+
 
 
 
