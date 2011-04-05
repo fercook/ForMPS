@@ -1,6 +1,6 @@
 module CommonModules
 
-	use Multiplicator
+	use Multiplicator_Class
 	use MPSAlgorithms_Class
 
 end module CommonModules

@@ -111,7 +111,7 @@ end test
 
 test ApproximateLargeSpinMPS
   type(MPS) :: smallMPS,bigMPS
-  integer :: length=20,spin=20,bondBig=20,bondSmall=2,site
+  integer :: length=20,spin=10,bondBig=20,bondSmall=5,site
   real(8) :: overlap12
   type(MPSTensor) :: localTensor
 
@@ -119,7 +119,7 @@ test ApproximateLargeSpinMPS
   call Normalize(bigMPS)
 
   smallMPS=Approximate(bigMPS,bondSmall,overlap12)
-  assert_equal_within(overlap12,1.0d0,1.0D-5)
+  assert_equal_within(overlap12,1.0d0,1.0D-4)
 
   print *,'Approximated overlap :',overlap12
   print *,'Big bond:',bondBig
