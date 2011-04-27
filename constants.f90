@@ -69,8 +69,10 @@ module Constants
   integer,parameter :: ALLTENSORS = 1313789
   integer,parameter :: NOLIMIT = 9999999
 
-  logical,parameter :: Verbose = .true.
-  logical,parameter :: Debug = .true.
+  logical,parameter :: DefaultVerbose = .true.
+  logical,parameter :: DefaultDebug = .true.
+
+  logical :: Verbose, Debug
 
   interface operator (.equalvector.)
      module procedure AreIntVectorsEqual

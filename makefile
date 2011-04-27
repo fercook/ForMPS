@@ -6,8 +6,11 @@ ARCH:=$(shell uname)
 
 ifeq ($(ARCH),Darwin)
 SYS = MacOSX-x86-64
-LAPACK=-framework vecLib
+#LAPACK=-framework vecLib
 #-L$MKLPATH -I$MKLINCLUDE -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lpthread
+MKLPATH=/opt/intel/composerxe/mkl/lib
+MKLINCLUDE=/opt/intel/composerxe/mkl/include
+LAPACK=-L$(MKLPATH) -I$(MKLINCLUDE) -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread
 BLAS=
 FLAGS=$(LAPACK) -Wl,-stack_size -Wl,0x40000000
 RM=rm
@@ -22,7 +25,6 @@ endif
 ifeq ($(ARCH),Linux)
 MKLPATH=/opt/intel/composerxe-2011/mkl/lib/intel64/
 MKLINCLUDE=/opt/intel/composerxe-2011/mkl/include/intel64/lp64/
-FLAGS = -O3 -i8
 SYS = Linux-x86-64
 LAPACK=-L${MKLPATH} -I${MKLINCLUDE} -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread
 BLAS=
@@ -67,6 +69,10 @@ IsingTest: $(OBJS) Ising_helper.f90 Ising_tester.f90
 	$(FCOMP) $(FLAGS) $(DEBUGFLAG) -c Ising_helper.f90
 	$(FCOMP) $(FLAGS) $(DEBUGFLAG) $(OBJS) Ising_helper.o Ising_tester.f90 ${LINKFLAGS} -o IsingTest
 
+IsingZ: $(OBJS) isingZhelper.f90 isingZ.f90
+	$(FCOMP) $(FLAGS) -c isingZhelper.f90
+	$(FCOMP) $(FLAGS) $(OBJS) isingZhelper.o isingZ.f90 ${LINKFLAGS} -o Zfunction
+	
 clean:
 	@ ${RM} -rf *.o *.mod $(BINARIES) *.gcov *.gcda *.gcno *.dyn profiles/*
 	funit --clean

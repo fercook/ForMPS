@@ -63,10 +63,10 @@ subroutine prepareIsingPEPO(aPEPO,Xsize,Ysize,tau,field)
         AR(1,1,1)=ONE;    AR(1,2,1)=ZERO
         AR(2,1,1)=ZERO;   AR(2,2,1)=ONE
 
-    spinPart(1,1,:,:)=cosht*identity-sinhtH*pauliX
-    spinPart(1,2,:,:)=cosht*pauliZ-sinhtH*matmul(pauliZ,pauliX)
-    spinPart(2,1,:,:)=cosht*pauliZ-sinhtH*matmul(pauliZ,pauliX)
-    spinPart(2,2,:,:)=cosht*identity-sinhtH*pauliX
+    spinPart(1,1,:,:)=cosht*identity -sinhtH*pauliX
+    spinPart(1,2,:,:)=cosht*pauliZ -sinhtH*matmul(pauliZ,pauliX)
+    spinPart(2,1,:,:)=cosht*pauliZ -sinhtH*matmul(pauliZ,pauliX)
+    spinPart(2,2,:,:)=cosht*identity -sinhtH*pauliX
 
     aPEPO=new_PEPO(Xsize,Ysize,SpinDim,BondDim)
     if (allocated(localMatrix)) deallocate(localMatrix)
